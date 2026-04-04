@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Malay-RU Dictionary Shell</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Unbounded:wght@400;600;800&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="bg-shape bg-shape-1" aria-hidden="true"></div>
+    <div class="bg-shape bg-shape-2" aria-hidden="true"></div>
+
+    <main class="app-shell">
+      <header class="hero card">
+        <p class="eyebrow">Электронный словарь</p>
+        <h1>Малайско-русская оболочка</h1>
+        <p class="hero-text">
+          Загрузите PDF, получите быстрый поиск по словарным строкам и просмотр
+          страницы, откуда взята статья.
+        </p>
+      </header>
+
+      <section class="controls card">
+        <div class="controls-top">
+          <label class="upload-button" for="pdfFile">
+            <input id="pdfFile" type="file" accept="application/pdf,.pdf" />
+            <span>Выбрать PDF словаря</span>
+          </label>
+
+          <div class="file-meta" id="fileMeta">Файл еще не выбран</div>
+        </div>
+
+        <div class="search-row">
+          <input
+            id="searchInput"
+            type="search"
+            placeholder="Введите слово на малайском или русском"
+            disabled
+          />
+          <button id="searchButton" disabled>Поиск</button>
+        </div>
+
+        <div class="status-block">
+          <div class="progress-track" aria-hidden="true">
+            <div id="progressBar" class="progress-bar"></div>
+          </div>
+          <p id="statusText">Ожидание загрузки PDF...</p>
+        </div>
+      </section>
+
+      <section class="workspace">
+        <aside class="result-panel card">
+          <div class="panel-head">
+            <h2>Найденные статьи</h2>
+            <span id="resultCount" class="result-count">0</span>
+          </div>
+          <ul id="resultList" class="result-list"></ul>
+        </aside>
+
+        <section class="viewer card">
+          <div class="viewer-toolbar">
+            <div class="pager">
+              <button id="prevPage" disabled>Назад</button>
+              <span id="pageLabel">Страница -/-</span>
+              <button id="nextPage" disabled>Вперед</button>
+            </div>
+            <div class="zoom-controls">
+              <button id="zoomOut" disabled>-</button>
+              <span id="zoomValue">100%</span>
+              <button id="zoomIn" disabled>+</button>
+            </div>
+          </div>
+
+          <div class="canvas-frame">
+            <canvas id="pdfCanvas"></canvas>
+          </div>
+        </section>
+      </section>
+
+      <section class="note card">
+        <h2>Как это работает</h2>
+        <p>
+          Если в PDF есть текстовый слой, индекс собирается автоматически и поиск
+          работает как по малайским заголовкам, так и по русским переводам.
+        </p>
+        <p>
+          Если PDF состоит только из сканов без текста, интерфейс останется
+          рабочим в режиме просмотра страниц. Для полного поиска понадобится OCR
+          в отдельном шаге.
+        </p>
+      </section>
+    </main>
+
+    <script type="module" src="./app.js"></script>
+  </body>
+</html>
