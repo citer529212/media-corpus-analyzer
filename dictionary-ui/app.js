@@ -28,7 +28,7 @@ const ui = {
 };
 
 const SEARCH_HISTORY_KEY = "dictionary-shell:search-history:v2";
-const INDEX_VERSION = "v3-columns";
+const INDEX_VERSION = "v4-columns-context";
 const MAX_RESULTS = 300;
 const MAX_HISTORY_ITEMS = 8;
 
@@ -372,6 +372,65 @@ function extractEntry(line, page, localLineIndex) {
   return null;
 }
 
+function looksLikeTranslationLine(text) {
+  const line = cleanupLine(text);
+  if (!line || line.length < 2) {
+    return false;
+  }
+  return /[а-яё]/i.test(line);
+}
+
+function extractEntryWithContext(lines, index, page) {
+  const line = cleanupLine(lines[index] || "");
+  if (!line) {
+    return null;
+  }
+
+  // Case 1: headword-only line, translation in the next line(s).
+  if (looksLikeHeadword(line)) {
+    const next = cleanupLine(lines[index + 1] || "");
+    const next2 = cleanupLine(lines[index + 2] || "");
+
+    if (looksLikeTranslationLine(next)) {
+      return {
+        id: `entry-${page}-${index}-ctx1`,
+        type: "entry",
+        title: cleanHeadword(line),
+        body: next,
+        page,
+      };
+    }
+
+    if (looksLikeTranslationLine(next2)) {
+      return {
+        id: `entry-${page}-${index}-ctx2`,
+        type: "entry",
+        title: cleanHeadword(line),
+        body: next2,
+        page,
+      };
+    }
+  }
+
+  // Case 2: first token is headword, translation moved to the next line.
+  const firstToken = cleanHeadword(line.split(/\s+/)[0] || "");
+  const next = cleanupLine(lines[index + 1] || "");
+  if (looksLikeHeadword(firstToken) && looksLikeTranslationLine(next)) {
+    const normalizedLine = normalizeText(line);
+    if (!/[а-яё]/i.test(line) && normalizedLine.length <= 38) {
+      return {
+        id: `entry-${page}-${index}-ctx3`,
+        type: "entry",
+        title: firstToken,
+        body: next,
+        page,
+      };
+    }
+  }
+
+  return null;
+}
+
 function splitIntoColumns(textItems, pageWidth) {
   if (textItems.length < 80) {
     return [textItems];
@@ -549,7 +608,8 @@ async function buildTextIndex(cacheKey) {
 
     state.pageTexts.push(lines.join("\n"));
 
-    lines.forEach((line, index) => {
+    for (let index = 0; index < lines.length; index += 1) {
+      const line = lines[index];
       state.lines.push({
         id: `line-${pageNum}-${index}`,
         type: "fulltext",
@@ -558,11 +618,14 @@ async function buildTextIndex(cacheKey) {
         page: pageNum,
       });
 
-      const entry = extractEntry(line, pageNum, index);
+      let entry = extractEntry(line, pageNum, index);
+      if (!entry) {
+        entry = extractEntryWithContext(lines, index, pageNum);
+      }
       if (entry) {
         state.entries.push(entry);
       }
-    });
+    }
 
     const percent = Math.round((pageNum / pageCount) * 100);
     setProgress(percent);
