@@ -869,7 +869,7 @@ function computeBestAnswer(query) {
     return groupedEntries[0];
   }
 
-  return searchFulltext(query)[0] || null;
+  return null;
 }
 
 function renderBestAnswer() {
@@ -886,9 +886,9 @@ function renderBestAnswer() {
   const hit = state.bestAnswer;
 
   if (!hit) {
-    ui.answerTitle.textContent = `Ничего не найдено для “${query}”`;
+    ui.answerTitle.textContent = `Точного словарного совпадения нет: “${query}”`;
     ui.answerBody.textContent =
-      "Попробуйте похожее написание или переключите режим на “Весь текст”.";
+      "Попробуйте другое написание. Фрагменты OCR не показываются как лучший ответ, чтобы не вводить в заблуждение.";
     ui.answerMeta.innerHTML = "";
     return;
   }
