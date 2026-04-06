@@ -21,6 +21,33 @@ python3 -m http.server 8080
 Если текстовый слой есть, поиск заработает сразу.
 Если это только изображения страниц, нужен отдельный OCR-этап для полноценного поиска.
 
+## Режим "как онлайн-словарь" (JSON-база)
+
+Лучшее качество поиска дает не OCR-фрагменты, а отдельная словарная база
+`headword -> translation -> page`.
+
+### 1) Получить sidecar-текст из OCR-PDF
+
+```bash
+cd dictionary-ui
+./tools/make_sidecar.sh \
+"/Users/mariatocinova/Downloads/Большой малайско-русский словарь_OCR.pdf" \
+"/Users/mariatocinova/Downloads/dictionary_sidecar.txt"
+```
+
+### 2) Собрать JSON-словарь
+
+```bash
+python3 ./tools/build_dictionary_json_from_sidecar.py \
+  --sidecar "/Users/mariatocinova/Downloads/dictionary_sidecar.txt" \
+  --output "./data/dictionary.json"
+```
+
+### 3) Запустить сайт
+
+После появления `dictionary-ui/data/dictionary.json` интерфейс автоматически
+подхватит JSON-базу и будет искать по ней в приоритете.
+
 ## Публикация на GitHub
 
 В репозитории уже добавлен workflow для GitHub Pages:

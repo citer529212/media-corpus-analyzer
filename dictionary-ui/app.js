@@ -29,6 +29,7 @@ const ui = {
 
 const SEARCH_HISTORY_KEY = "dictionary-shell:search-history:v2";
 const INDEX_VERSION = "v4-columns-context";
+const BUNDLED_DICTIONARY_URL = "./data/dictionary.json";
 const MAX_RESULTS = 300;
 const MAX_HISTORY_ITEMS = 8;
 
@@ -559,6 +560,36 @@ function deduplicateEntries(entries) {
   return result;
 }
 
+async function loadBundledDictionary() {
+  try {
+    const response = await fetch(BUNDLED_DICTIONARY_URL, { cache: "no-store" });
+    if (!response.ok) {
+      return false;
+    }
+
+    const payload = await response.json();
+    if (!payload || !Array.isArray(payload.entries) || payload.entries.length === 0) {
+      return false;
+    }
+
+    state.entries = deduplicateEntries(
+      payload.entries
+        .filter((entry) => entry && entry.title && entry.body)
+        .map((entry, i) => ({
+          id: entry.id || `json-${i}`,
+          type: "entry",
+          title: cleanupLine(String(entry.title)),
+          body: cleanupLine(String(entry.body)),
+          page: Number(entry.page) || 1,
+        }))
+    );
+    hydrateEntries(state.entries);
+    return state.entries.length > 0;
+  } catch {
+    return false;
+  }
+}
+
 function hydrateEntries(entries) {
   entries.forEach((entry) => {
     entry._normTitle = normalizeText(entry.title);
@@ -1069,6 +1100,18 @@ async function loadPdfFile(file) {
 
   await renderCurrentPage();
   updateViewerControls();
+
+  const bundledLoaded = await loadBundledDictionary();
+  if (bundledLoaded) {
+    state.lines = [];
+    state.pageTexts = [];
+    setSearchAvailability(true);
+    setProgress(100);
+    setStatus(`Готово: загружена JSON-база (${state.entries.length} словарных статей).`);
+    runSearch();
+    renderHistory();
+    return;
+  }
 
   const cacheKey = buildCacheKey(file);
   await buildTextIndex(cacheKey);
