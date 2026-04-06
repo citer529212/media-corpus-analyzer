@@ -41,6 +41,7 @@ const state = {
   zoom: 1,
   renderToken: 0,
   selectedResultId: null,
+  bestAnswer: null,
   searchMode: "entries",
   history: [],
   activeQuery: "",
@@ -658,6 +659,19 @@ function mergeResults(query) {
   return [...groupedEntries.slice(0, 180), ...fulltext.slice(0, 120)].slice(0, MAX_RESULTS);
 }
 
+function computeBestAnswer(query) {
+  if (!query) {
+    return null;
+  }
+
+  const bestEntry = groupEntryResults(searchEntries(query), query)[0];
+  if (bestEntry) {
+    return bestEntry;
+  }
+
+  return searchFulltext(query)[0] || null;
+}
+
 function renderBestAnswer() {
   const query = state.activeQuery;
 
@@ -669,8 +683,7 @@ function renderBestAnswer() {
     return;
   }
 
-  const entryHit = state.results.find((item) => item.type === "entry");
-  const hit = entryHit || state.results[0];
+  const hit = state.bestAnswer;
 
   if (!hit) {
     ui.answerTitle.textContent = `Ничего не найдено для “${query}”`;
@@ -687,7 +700,7 @@ function renderBestAnswer() {
   const typeChip = document.createElement("span");
   typeChip.className = "answer-chip";
   typeChip.textContent =
-    hit.type === "entry" ? "словарная статья" : "найдено в полном тексте";
+    hit.type === "entry" ? "словарная статья (приоритет)" : "найдено в полном тексте";
   ui.answerMeta.append(typeChip);
 
   const pageMeta = document.createElement("span");
@@ -754,6 +767,7 @@ function runSearch() {
 
   const query = ui.searchInput.value.trim();
   state.activeQuery = query;
+  state.bestAnswer = computeBestAnswer(query);
 
   state.results = mergeResults(query);
 
@@ -776,9 +790,9 @@ function runSearch() {
     pushHistory(query);
   }
 
-  if (state.results.length && query) {
-    state.selectedResultId = state.results[0].id;
-    state.currentPage = state.results[0].page;
+  if (state.bestAnswer && query) {
+    state.selectedResultId = state.bestAnswer.id;
+    state.currentPage = state.bestAnswer.page;
     void renderCurrentPage();
   }
 
@@ -825,6 +839,7 @@ async function loadPdfFile(file) {
   state.pageTexts = [];
   state.results = [];
   state.selectedResultId = null;
+  state.bestAnswer = null;
   state.currentPage = 1;
   state.zoom = 1;
   state.activeQuery = "";
