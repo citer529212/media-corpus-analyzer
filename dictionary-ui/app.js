@@ -170,6 +170,9 @@ function updateViewerControls() {
   ui.nextPage.disabled = !hasPdf || state.currentPage >= state.pdfDoc.numPages;
   ui.zoomOut.disabled = !hasPdf;
   ui.zoomIn.disabled = !hasPdf;
+  if (!hasPdf) {
+    ui.pageLabel.textContent = "PDF не загружен";
+  }
 }
 
 function updateZoomLabel() {
@@ -1024,7 +1027,9 @@ function renderResults() {
       state.selectedResultId = result.id;
       state.currentPage = result.page;
       renderResults();
-      void renderCurrentPage();
+      if (state.pdfDoc) {
+        void renderCurrentPage();
+      }
     });
 
     ui.resultList.append(item);
@@ -1032,11 +1037,6 @@ function renderResults() {
 }
 
 function runSearch() {
-  if (!state.pdfDoc) {
-    renderBestAnswer();
-    return;
-  }
-
   const query = ui.searchInput.value.trim();
   state.activeQuery = query;
   state.bestAnswer = computeBestAnswer(query);
@@ -1065,7 +1065,9 @@ function runSearch() {
   if (state.bestAnswer && query) {
     state.selectedResultId = state.bestAnswer.id;
     state.currentPage = state.bestAnswer.page;
-    void renderCurrentPage();
+    if (state.pdfDoc) {
+      void renderCurrentPage();
+    }
   }
 
   renderBestAnswer();
@@ -1165,3 +1167,27 @@ updateViewerControls();
 updateZoomLabel();
 setProgress(0);
 renderBestAnswer();
+
+async function initAutonomousDictionary() {
+  setStatus("Загрузка встроенной словарной базы...");
+  setProgress(35);
+
+  const bundledLoaded = await loadBundledDictionary();
+  if (!bundledLoaded) {
+    setStatus("Не удалось загрузить встроенную JSON-базу.");
+    return;
+  }
+
+  setSearchAvailability(true);
+  updateModeButtons();
+  renderHistory();
+  setProgress(100);
+  setStatus(
+    state.curatedOnly
+      ? `Автономный режим: загружено ${state.entries.length} проверенных словарных статей.`
+      : `Автономный режим: загружено ${state.entries.length} словарных статей.`
+  );
+  runSearch();
+}
+
+void initAutonomousDictionary();

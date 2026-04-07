@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Malay-RU Dictionary Shell</title>
+    <title>Большой малайско-русский словарь</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -19,10 +19,10 @@
     <main class="app-shell">
       <header class="hero card">
         <p class="eyebrow">Электронный словарь</p>
-        <h1>Малайско-русская оболочка</h1>
+        <h1>Большой малайско-русский словарь Т.В.Дорофеева Е.С.Кукушкина В.А.Погадаев</h1>
         <p class="hero-text">
-          Загрузите PDF, получите быстрый поиск по словарным строкам и просмотр
-          страницы, откуда взята статья.
+          Словарь работает автономно сразу после открытия сайта. Загрузка PDF
+          нужна только для просмотра сканов страниц.
         </p>
       </header>
 
@@ -33,7 +33,7 @@
             <span>Выбрать PDF словаря</span>
           </label>
 
-          <div class="file-meta" id="fileMeta">Файл еще не выбран</div>
+          <div class="file-meta" id="fileMeta">PDF не загружен (необязательно)</div>
         </div>
 
         <div class="search-row">
@@ -65,14 +65,14 @@
           <div class="progress-track" aria-hidden="true">
             <div id="progressBar" class="progress-bar"></div>
           </div>
-          <p id="statusText">Ожидание загрузки PDF...</p>
+          <p id="statusText">Запуск автономной словарной базы...</p>
         </div>
       </section>
 
       <section class="answer card" id="answerCard">
         <div class="answer-head">Лучший ответ</div>
         <h2 id="answerTitle">Введите слово для поиска</h2>
-        <p id="answerBody">Загрузите OCR-PDF и начните ввод. Система покажет наиболее точный перевод.</p>
+        <p id="answerBody">Начните ввод. Система покажет наиболее точный перевод.</p>
         <div id="answerMeta" class="answer-meta"></div>
       </section>
 
@@ -108,13 +108,12 @@
       <section class="note card">
         <h2>Как это работает</h2>
         <p>
-          Если в PDF есть текстовый слой, индекс собирается автоматически и поиск
-          работает в двух режимах: по словарным статьям и по полному OCR-тексту.
+          Поиск работает по встроенной проверенной JSON-базе и не требует
+          загрузки PDF.
         </p>
         <p>
-          Если PDF состоит только из сканов без текста, интерфейс останется
-          рабочим в режиме просмотра страниц. Для полного поиска понадобится OCR
-          в отдельном шаге.
+          При желании можно загрузить PDF только для просмотра страниц в
+          правой панели.
         </p>
       </section>
     </main>
