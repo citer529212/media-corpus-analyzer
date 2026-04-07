@@ -31,6 +31,7 @@ const SEARCH_HISTORY_KEY = "dictionary-shell:search-history:v2";
 const INDEX_VERSION = "v4-columns-context";
 const CURATED_DICTIONARY_URL = "./data/dictionary_curated.json";
 const BUNDLED_DICTIONARY_URL = "./data/dictionary.json";
+const TARGET_AUTONOMOUS_ENTRIES = 10_000;
 const MAX_RESULTS = 300;
 const MAX_HISTORY_ITEMS = 8;
 
@@ -599,18 +600,142 @@ async function loadDictionaryFromUrl(url, options = {}) {
   }
 }
 
-async function loadBundledDictionary() {
-  const curatedLoaded = await loadDictionaryFromUrl(CURATED_DICTIONARY_URL, {
-    verified: true,
-  });
-  if (curatedLoaded) {
-    state.curatedOnly = true;
-    state.searchMode = "entries";
-    return true;
+function normalizeIncomingEntry(entry, fallbackId, options = {}) {
+  return {
+    id: entry.id || `${options.idPrefix || "json"}-${fallbackId}`,
+    type: "entry",
+    title: cleanupLine(String(entry.title || "")),
+    body: cleanupLine(String(entry.body || "")),
+    page: Number(entry.page) || 1,
+    verified: Boolean(options.verified || entry.verified),
+  };
+}
+
+async function fetchDictionaryEntries(url, options = {}) {
+  try {
+    const response = await fetch(url, { cache: "no-store" });
+    if (!response.ok) {
+      return [];
+    }
+
+    const payload = await response.json();
+    if (!payload || !Array.isArray(payload.entries) || payload.entries.length === 0) {
+      return [];
+    }
+
+    return payload.entries
+      .filter((entry) => entry && entry.title && entry.body)
+      .map((entry, i) => normalizeIncomingEntry(entry, i, options));
+  } catch {
+    return [];
+  }
+}
+
+function isSupplementEntryQuality(entry) {
+  const title = (entry.title || "").trim();
+  const body = (entry.body || "").trim();
+
+  if (title.length < 2 || title.length > 48) {
+    return false;
+  }
+  if (body.length < 3 || body.length > 260) {
+    return false;
+  }
+  if (!/^[a-z][a-z\s'().-]*$/i.test(title)) {
+    return false;
+  }
+  if (/\d/.test(title)) {
+    return false;
+  }
+  if (title.split(/\s+/).length > 4) {
+    return false;
+  }
+  if (!/[а-яё]/i.test(body)) {
+    return false;
   }
 
-  state.curatedOnly = false;
-  return loadDictionaryFromUrl(BUNDLED_DICTIONARY_URL, { verified: false });
+  const cyr = (body.match(/[а-яё]/gi) || []).length;
+  const lat = (body.match(/[a-z]/gi) || []).length;
+  const letters = cyr + lat;
+  if (letters > 0 && cyr / letters < 0.35) {
+    return false;
+  }
+
+  if (/[_@#^{}[\]|\\]/.test(body)) {
+    return false;
+  }
+
+  return true;
+}
+
+function combineEntriesToTarget(curatedEntries, bundledEntries, targetCount) {
+  const result = [];
+  const seen = new Set();
+
+  const pushUnique = (entry) => {
+    const key = `${normalizeText(entry.title)}|${normalizeText(entry.body)}`;
+    if (seen.has(key)) {
+      return;
+    }
+    seen.add(key);
+    result.push(entry);
+  };
+
+  curatedEntries.forEach(pushUnique);
+  if (result.length >= targetCount) {
+    return result.slice(0, targetCount);
+  }
+
+  for (const entry of bundledEntries) {
+    if (!isSupplementEntryQuality(entry)) {
+      continue;
+    }
+
+    const supplement = {
+      ...entry,
+      verified: false,
+    };
+    pushUnique(supplement);
+
+    if (result.length >= targetCount) {
+      break;
+    }
+  }
+
+  return result;
+}
+
+async function loadBundledDictionary() {
+  const curatedEntries = await fetchDictionaryEntries(CURATED_DICTIONARY_URL, {
+    verified: true,
+    idPrefix: "curated",
+  });
+  const bundledEntries = await fetchDictionaryEntries(BUNDLED_DICTIONARY_URL, {
+    verified: false,
+    idPrefix: "bundle",
+  });
+
+  if (!curatedEntries.length && !bundledEntries.length) {
+    return false;
+  }
+
+  let finalEntries = [];
+  if (curatedEntries.length) {
+    finalEntries = combineEntriesToTarget(
+      curatedEntries,
+      bundledEntries,
+      TARGET_AUTONOMOUS_ENTRIES
+    );
+    state.curatedOnly = true;
+    state.searchMode = "entries";
+  } else {
+    finalEntries = bundledEntries.slice(0, TARGET_AUTONOMOUS_ENTRIES);
+    state.curatedOnly = false;
+  }
+
+  state.entries = deduplicateEntries(finalEntries);
+  hydrateEntries(state.entries);
+  return state.entries.length > 0;
 }
 
 function hydrateEntries(entries) {
@@ -774,6 +899,10 @@ function searchEntries(query) {
 
       if (state.curatedOnly && score > 2.2) {
         score = 99;
+      }
+
+      if (score < 99 && entry.verified) {
+        score = Math.max(0, score - 0.18);
       }
 
       // For one-word queries, prefer one-word headwords over phrases.
