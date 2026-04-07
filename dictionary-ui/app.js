@@ -856,6 +856,39 @@ function rankMatch(haystack, query) {
   return 99;
 }
 
+function computeBodyNoisePenalty(entry) {
+  const bodyRaw = (entry?.body || "").trim();
+  if (!bodyRaw) {
+    return 0.9;
+  }
+
+  const cyr = (bodyRaw.match(/[а-яё]/gi) || []).length;
+  const lat = (bodyRaw.match(/[a-z]/gi) || []).length;
+  const digits = (bodyRaw.match(/\d/g) || []).length;
+  const bad = (bodyRaw.match(/[|{}[\]<>_]/g) || []).length;
+
+  let penalty = 0;
+
+  // Penalize OCR-like garbage where latin noise dominates over Russian translation.
+  if (cyr > 0 && lat > cyr * 0.7) {
+    penalty += 0.95;
+  } else if (cyr === 0 && lat > 0) {
+    penalty += 1.2;
+  }
+
+  if (digits > 6) {
+    penalty += 0.45;
+  }
+  if (bad > 0) {
+    penalty += 0.75;
+  }
+  if (bodyRaw.length > 180) {
+    penalty += 0.45;
+  }
+
+  return penalty;
+}
+
 function searchEntries(query) {
   if (!query) {
     return state.entries.slice(0, MAX_RESULTS).map((entry) => ({
@@ -903,6 +936,10 @@ function searchEntries(query) {
 
       if (score < 99 && entry.verified) {
         score = Math.max(0, score - 0.18);
+      }
+
+      if (score < 99) {
+        score += computeBodyNoisePenalty(entry);
       }
 
       // For one-word queries, prefer one-word headwords over phrases.
