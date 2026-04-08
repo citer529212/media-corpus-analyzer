@@ -76238,6 +76238,2946 @@
       "body": "результ. форма: результат/состояние: тень",
       "page": 1,
       "verified": true
+    },
+    {
+      "id": "cur-10892",
+      "title": "terbayarkan",
+      "body": "результ. форма: каузативная форма: платить",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-10893",
+      "title": "terbebankan",
+      "body": "результ. форма: каузативная форма: нагрузка",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-10894",
+      "title": "terbebaskan",
+      "body": "результ. форма: каузативная форма: свободный",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-10895",
+      "title": "terbedahkan",
+      "body": "результ. форма: каузативная форма: операция",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-10896",
+      "title": "terbedilkan",
+      "body": "результ. форма: каузативная форма: ружье",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-10897",
+      "title": "terbekalkan",
+      "body": "результ. форма: каузативная форма: запас",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-10898",
+      "title": "terbekaskan",
+      "body": "результ. форма: каузативная форма: бывший",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-10899",
+      "title": "terbelahkan",
+      "body": "результ. форма: каузативная форма: делить",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-10900",
+      "title": "terbelaskan",
+      "body": "результ. форма: каузативная форма: сострадание",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-10901",
+      "title": "terbelonkan",
+      "body": "результ. форма: каузативная форма: воздушный шар",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-10902",
+      "title": "terbelumkan",
+      "body": "результ. форма: каузативная форма: еще не",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-10903",
+      "title": "terbencikan",
+      "body": "результ. форма: каузативная форма: ненавидеть",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-10904",
+      "title": "terbendakan",
+      "body": "результ. форма: каузативная форма: вещь",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-10905",
+      "title": "terbengisan",
+      "body": "результ. форма: результат/состояние: свирепый",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-10906",
+      "title": "terbengkoki",
+      "body": "результ. форма: транзитивная форма: кривой",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-10907",
+      "title": "terbenihkan",
+      "body": "результ. форма: каузативная форма: семя",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-10908",
+      "title": "terbentukan",
+      "body": "результ. форма: результат/состояние: форма",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-10909",
+      "title": "berjarak",
+      "body": "действ. форма: расстояние",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-10910",
+      "title": "berjasad",
+      "body": "действ. форма: тело",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-10911",
+      "title": "berjatuh",
+      "body": "действ. форма: падать",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-10912",
+      "title": "berjejak",
+      "body": "действ. форма: след",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-10913",
+      "title": "berjelas",
+      "body": "действ. форма: ясный",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-10914",
+      "title": "berjenis",
+      "body": "действ. форма: тип",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-10915",
+      "title": "berjenuh",
+      "body": "действ. форма: усталый",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-10916",
+      "title": "berjepun",
+      "body": "действ. форма: Япония",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-10917",
+      "title": "berjerih",
+      "body": "действ. форма: труд",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-10918",
+      "title": "berjerit",
+      "body": "действ. форма: кричать",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-10919",
+      "title": "berjimat",
+      "body": "действ. форма: экономить",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-10920",
+      "title": "berjinak",
+      "body": "действ. форма: ручной",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-10921",
+      "title": "berjiran",
+      "body": "действ. форма: сосед",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-10922",
+      "title": "berjisim",
+      "body": "действ. форма: масса",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-10923",
+      "title": "berjodoh",
+      "body": "действ. форма: пара",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-10924",
+      "title": "berjohan",
+      "body": "действ. форма: чемпион",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-10925",
+      "title": "berjoran",
+      "body": "действ. форма: удочка",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-10926",
+      "title": "berjubah",
+      "body": "действ. форма: мантия",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-10927",
+      "title": "berjubin",
+      "body": "действ. форма: плитка",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-10928",
+      "title": "berjudul",
+      "body": "действ. форма: заголовок",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-10929",
+      "title": "berjujur",
+      "body": "действ. форма: честный",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-10930",
+      "title": "berjulat",
+      "body": "действ. форма: диапазон",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-10931",
+      "title": "berjumbo",
+      "body": "действ. форма: большой",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-10932",
+      "title": "berkabar",
+      "body": "действ. форма: известие",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-10933",
+      "title": "berkabel",
+      "body": "действ. форма: кабель",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-10934",
+      "title": "berkabin",
+      "body": "действ. форма: кабина",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-10935",
+      "title": "berkabur",
+      "body": "действ. форма: размытый",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-10936",
+      "title": "berkadar",
+      "body": "действ. форма: ставка",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-10937",
+      "title": "berkadet",
+      "body": "действ. форма: кадет",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-10938",
+      "title": "berkagum",
+      "body": "действ. форма: восхищаться",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-10939",
+      "title": "berkakak",
+      "body": "действ. форма: старшая сестра",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-10940",
+      "title": "berkalah",
+      "body": "действ. форма: проигрывать",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-10941",
+      "title": "berkalam",
+      "body": "действ. форма: перо",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-10942",
+      "title": "berkamar",
+      "body": "действ. форма: комната",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-10943",
+      "title": "berkamil",
+      "body": "действ. форма: совершенный",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-10944",
+      "title": "berkamus",
+      "body": "действ. форма: словарь",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-10945",
+      "title": "berkanak",
+      "body": "действ. форма: ребенок",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-10946",
+      "title": "berkanan",
+      "body": "действ. форма: правый",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-10947",
+      "title": "berkanta",
+      "body": "действ. форма: линза",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-10948",
+      "title": "berkapak",
+      "body": "действ. форма: топор",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-10949",
+      "title": "berkapal",
+      "body": "действ. форма: корабль",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-10950",
+      "title": "berkapan",
+      "body": "действ. форма: когда",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-10951",
+      "title": "berkapas",
+      "body": "действ. форма: хлопок",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-10952",
+      "title": "berkaram",
+      "body": "действ. форма: тонуть",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-10953",
+      "title": "berkarat",
+      "body": "действ. форма: ржавчина",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-10954",
+      "title": "berkarya",
+      "body": "действ. форма: произведение",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-10955",
+      "title": "berkasar",
+      "body": "действ. форма: грубый",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-10956",
+      "title": "berkasih",
+      "body": "действ. форма: любовь",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-10957",
+      "title": "berkasut",
+      "body": "действ. форма: обувь",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-10958",
+      "title": "berkatak",
+      "body": "действ. форма: лягушка",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-10959",
+      "title": "berkatil",
+      "body": "действ. форма: кровать",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-10960",
+      "title": "berkatup",
+      "body": "действ. форма: клапан",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-10961",
+      "title": "berkawad",
+      "body": "действ. форма: строевой марш",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-10962",
+      "title": "berkawan",
+      "body": "действ. форма: друг",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-10963",
+      "title": "berkicap",
+      "body": "действ. форма: соевый соус",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-10964",
+      "title": "berkilas",
+      "body": "действ. форма: мгновение",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-10965",
+      "title": "berkilat",
+      "body": "действ. форма: молния",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-10966",
+      "title": "berkilos",
+      "body": "действ. форма: килограммы",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-10967",
+      "title": "berkipas",
+      "body": "действ. форма: вентилятор",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-10968",
+      "title": "berkisah",
+      "body": "действ. форма: история",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-10969",
+      "title": "berkitab",
+      "body": "действ. форма: книга",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-10970",
+      "title": "berkitar",
+      "body": "действ. форма: цикл",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-10971",
+      "title": "berkodok",
+      "body": "действ. форма: лягушка",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-10972",
+      "title": "berkokoh",
+      "body": "действ. форма: крепкий",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-10973",
+      "title": "berkolam",
+      "body": "действ. форма: пруд",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-10974",
+      "title": "berkolej",
+      "body": "действ. форма: колледж",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-10975",
+      "title": "berkolor",
+      "body": "действ. форма: нижнее белье",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-10976",
+      "title": "berkomen",
+      "body": "действ. форма: комментарий",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-10977",
+      "title": "berkomit",
+      "body": "действ. форма: коммит",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-10978",
+      "title": "berkorek",
+      "body": "действ. форма: зажигалка",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-10979",
+      "title": "berkotor",
+      "body": "действ. форма: грязный",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-10980",
+      "title": "berkreol",
+      "body": "действ. форма: креольский",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-10981",
+      "title": "berkubah",
+      "body": "действ. форма: купол",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-10982",
+      "title": "berkubis",
+      "body": "действ. форма: капуста",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-10983",
+      "title": "berkudus",
+      "body": "действ. форма: святой",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-10984",
+      "title": "berkulit",
+      "body": "действ. форма: кожа",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-10985",
+      "title": "berkuman",
+      "body": "действ. форма: микроб",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-10986",
+      "title": "berkunci",
+      "body": "действ. форма: ключ",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-10987",
+      "title": "berkupon",
+      "body": "действ. форма: купон",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-10988",
+      "title": "berkurus",
+      "body": "действ. форма: худой",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-10989",
+      "title": "berkurva",
+      "body": "действ. форма: кривая",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-10990",
+      "title": "berkusam",
+      "body": "действ. форма: тусклый",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-10991",
+      "title": "berkusut",
+      "body": "действ. форма: спутанный",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-10992",
+      "title": "berkutip",
+      "body": "действ. форма: собирать",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-10993",
+      "title": "berlabah",
+      "body": "действ. форма: паук",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-10994",
+      "title": "berlabel",
+      "body": "действ. форма: ярлык",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-10995",
+      "title": "berlafal",
+      "body": "действ. форма: произношение",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-10996",
+      "title": "berlafaz",
+      "body": "действ. форма: произносить",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-10997",
+      "title": "berlagak",
+      "body": "действ. форма: манера",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-10998",
+      "title": "berlahap",
+      "body": "действ. форма: жадный",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-10999",
+      "title": "berlahir",
+      "body": "действ. форма: родиться",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11000",
+      "title": "berlakar",
+      "body": "действ. форма: набросок",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11001",
+      "title": "berlalat",
+      "body": "действ. форма: муха",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11002",
+      "title": "berlaman",
+      "body": "действ. форма: страница",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11003",
+      "title": "berlamar",
+      "body": "действ. форма: свататься",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11004",
+      "title": "berlampu",
+      "body": "действ. форма: лампа",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11005",
+      "title": "berlanun",
+      "body": "действ. форма: пират",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11006",
+      "title": "berlapan",
+      "body": "действ. форма: восемь",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11007",
+      "title": "berlapar",
+      "body": "действ. форма: голодный",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11008",
+      "title": "berlapis",
+      "body": "действ. форма: слой",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11009",
+      "title": "berlapor",
+      "body": "действ. форма: сообщать",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11010",
+      "title": "berlapuk",
+      "body": "действ. форма: ветхий",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11011",
+      "title": "berlaras",
+      "body": "действ. форма: настраивать",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11012",
+      "title": "berlaris",
+      "body": "действ. форма: ходовой",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11013",
+      "title": "berlarut",
+      "body": "действ. форма: растворяться",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11014",
+      "title": "berlarva",
+      "body": "действ. форма: личинка",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11015",
+      "title": "berlasak",
+      "body": "действ. форма: активный",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11016",
+      "title": "berlatar",
+      "body": "действ. форма: фон",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11017",
+      "title": "berlawak",
+      "body": "действ. форма: шутка",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11018",
+      "title": "berlawan",
+      "body": "действ. форма: противник",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11019",
+      "title": "berlawat",
+      "body": "действ. форма: посещать",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11020",
+      "title": "berlayak",
+      "body": "действ. форма: достойный",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11021",
+      "title": "berlayan",
+      "body": "действ. форма: обслуживать",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11022",
+      "title": "berlayar",
+      "body": "действ. форма: экран",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11023",
+      "title": "berlazat",
+      "body": "действ. форма: вкусный",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11024",
+      "title": "berlazim",
+      "body": "действ. форма: обычный",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11025",
+      "title": "berlegap",
+      "body": "действ. форма: непрозрачный",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11026",
+      "title": "berlekat",
+      "body": "действ. форма: приклеиваться",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11027",
+      "title": "berlekuk",
+      "body": "действ. форма: впадина",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11028",
+      "title": "berlelah",
+      "body": "действ. форма: усталый",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11029",
+      "title": "berlelap",
+      "body": "действ. форма: крепко спать",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11030",
+      "title": "berlemah",
+      "body": "действ. форма: слабый",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11031",
+      "title": "berlensa",
+      "body": "действ. форма: линза",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11032",
+      "title": "berlesap",
+      "body": "действ. форма: исчезать",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11033",
+      "title": "berletak",
+      "body": "действ. форма: класть",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11034",
+      "title": "berletih",
+      "body": "действ. форма: усталый",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11035",
+      "title": "berletup",
+      "body": "действ. форма: взрываться",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11036",
+      "title": "berlewah",
+      "body": "действ. форма: избыточный",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11037",
+      "title": "berlewat",
+      "body": "действ. форма: поздний",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11038",
+      "title": "berlibur",
+      "body": "действ. форма: отпуск",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11039",
+      "title": "berlicin",
+      "body": "действ. форма: гладкий",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11040",
+      "title": "berlidah",
+      "body": "действ. форма: язык",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11041",
+      "title": "berlilin",
+      "body": "действ. форма: свеча",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11042",
+      "title": "berlimit",
+      "body": "действ. форма: лимит",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11043",
+      "title": "berlipat",
+      "body": "действ. форма: складывать",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11044",
+      "title": "berliput",
+      "body": "действ. форма: покрывать",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11045",
+      "title": "berlirik",
+      "body": "действ. форма: лирический текст",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11046",
+      "title": "berlisan",
+      "body": "действ. форма: устный",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11047",
+      "title": "berlitar",
+      "body": "действ. форма: цепь",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11048",
+      "title": "berlitup",
+      "body": "действ. форма: закрывать",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11049",
+      "title": "berlogik",
+      "body": "действ. форма: логика",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11050",
+      "title": "berlucut",
+      "body": "действ. форма: разоружать",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11051",
+      "title": "berludah",
+      "body": "действ. форма: плевать",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11052",
+      "title": "berluhur",
+      "body": "действ. форма: благородный",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11053",
+      "title": "berlulus",
+      "body": "действ. форма: сдать",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11054",
+      "title": "berlumba",
+      "body": "действ. форма: гонка",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11055",
+      "title": "berlunak",
+      "body": "действ. форма: мягкий",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11056",
+      "title": "berlunas",
+      "body": "действ. форма: погасить",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11057",
+      "title": "berlurah",
+      "body": "действ. форма: глава района",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11058",
+      "title": "berlurus",
+      "body": "действ. форма: прямой",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11059",
+      "title": "berlusuh",
+      "body": "действ. форма: потрепанный",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11060",
+      "title": "berlutut",
+      "body": "действ. форма: колено",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11061",
+      "title": "berluwes",
+      "body": "действ. форма: гибкий",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11062",
+      "title": "bermabuk",
+      "body": "действ. форма: пьяный",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11063",
+      "title": "bermacam",
+      "body": "действ. форма: вид",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11064",
+      "title": "bermahal",
+      "body": "действ. форма: дорогой",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11065",
+      "title": "bermahir",
+      "body": "действ. форма: умелый",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11066",
+      "title": "bermakam",
+      "body": "действ. форма: могила",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11067",
+      "title": "bermakin",
+      "body": "действ. форма: становиться все более",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11068",
+      "title": "bermakna",
+      "body": "действ. форма: значение",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11069",
+      "title": "bermakro",
+      "body": "действ. форма: макро-",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11070",
+      "title": "bermalam",
+      "body": "действ. форма: ночь",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11071",
+      "title": "bermalap",
+      "body": "действ. форма: тусклый",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11072",
+      "title": "bermalas",
+      "body": "действ. форма: ленивый",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11073",
+      "title": "bermalim",
+      "body": "действ. форма: штурман",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11074",
+      "title": "bermampu",
+      "body": "действ. форма: мочь",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11075",
+      "title": "bermandi",
+      "body": "действ. форма: мыться",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11076",
+      "title": "bermanis",
+      "body": "действ. форма: сладкий",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11077",
+      "title": "bermapan",
+      "body": "действ. форма: устоявшийся",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11078",
+      "title": "bermarah",
+      "body": "действ. форма: сердитый",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11079",
+      "title": "bermarin",
+      "body": "действ. форма: мариновать",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11080",
+      "title": "bermasam",
+      "body": "действ. форма: кислый",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11081",
+      "title": "bermasih",
+      "body": "действ. форма: еще",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11082",
+      "title": "bermasin",
+      "body": "действ. форма: соленый",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11083",
+      "title": "bermawar",
+      "body": "действ. форма: роза",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11084",
+      "title": "bermayat",
+      "body": "действ. форма: труп",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11085",
+      "title": "bermikro",
+      "body": "действ. форма: микро-",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11086",
+      "title": "bermilik",
+      "body": "действ. форма: принадлежать",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11087",
+      "title": "bermimpi",
+      "body": "действ. форма: сон",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11088",
+      "title": "berminat",
+      "body": "действ. форма: интерес",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11089",
+      "title": "berminda",
+      "body": "действ. форма: ум",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11090",
+      "title": "berminim",
+      "body": "действ. форма: минимальный",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11091",
+      "title": "berminit",
+      "body": "действ. форма: минута",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11092",
+      "title": "bermitos",
+      "body": "действ. форма: миф",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11093",
+      "title": "bermobil",
+      "body": "действ. форма: автомобиль",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11094",
+      "title": "bermodal",
+      "body": "действ. форма: капитал",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11095",
+      "title": "bermodel",
+      "body": "действ. форма: модель",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11096",
+      "title": "bermoden",
+      "body": "действ. форма: современный",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11097",
+      "title": "bermodul",
+      "body": "действ. форма: модуль",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11098",
+      "title": "bermohon",
+      "body": "действ. форма: просить",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11099",
+      "title": "bermolek",
+      "body": "действ. форма: хороший",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11100",
+      "title": "bermomen",
+      "body": "действ. форма: момент",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11101",
+      "title": "bermoral",
+      "body": "действ. форма: мораль",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11102",
+      "title": "bermotif",
+      "body": "действ. форма: мотив",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11103",
+      "title": "bermotor",
+      "body": "действ. форма: мотор",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11104",
+      "title": "bermudah",
+      "body": "действ. форма: легкий",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11105",
+      "title": "bermulur",
+      "body": "действ. форма: растягиваться",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11106",
+      "title": "bermulus",
+      "body": "действ. форма: гладкий",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11107",
+      "title": "bermulut",
+      "body": "действ. форма: рот",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11108",
+      "title": "bermurah",
+      "body": "действ. форма: дешевый",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11109",
+      "title": "bermurid",
+      "body": "действ. форма: ученик",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11110",
+      "title": "bermurka",
+      "body": "действ. форма: гнев",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11111",
+      "title": "bermurni",
+      "body": "действ. форма: чистый",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11112",
+      "title": "bermusim",
+      "body": "действ. форма: сезон",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11113",
+      "title": "bermusuh",
+      "body": "действ. форма: враг",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11114",
+      "title": "bermuzik",
+      "body": "действ. форма: музыка",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11115",
+      "title": "bernafas",
+      "body": "действ. форма: дыхание",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11116",
+      "title": "bernamun",
+      "body": "действ. форма: однако",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11117",
+      "title": "bernanas",
+      "body": "действ. форма: ананас",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11118",
+      "title": "bernanti",
+      "body": "действ. форма: потом",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11119",
+      "title": "bernasib",
+      "body": "действ. форма: судьба",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11120",
+      "title": "bernatal",
+      "body": "действ. форма: рождественский",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11121",
+      "title": "bernazam",
+      "body": "действ. форма: назм",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11122",
+      "title": "bernazar",
+      "body": "действ. форма: обет",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11123",
+      "title": "bernenek",
+      "body": "действ. форма: бабушка",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11124",
+      "title": "bernikah",
+      "body": "действ. форма: брак",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11125",
+      "title": "bernikel",
+      "body": "действ. форма: никель",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11126",
+      "title": "bernipis",
+      "body": "действ. форма: тонкий",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11127",
+      "title": "bernisan",
+      "body": "действ. форма: надгробие",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11128",
+      "title": "bernobat",
+      "body": "действ. форма: королевский оркестр",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11129",
+      "title": "bernodul",
+      "body": "действ. форма: узелок",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11130",
+      "title": "bernomad",
+      "body": "действ. форма: кочевник",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11131",
+      "title": "bernovel",
+      "body": "действ. форма: роман",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11132",
+      "title": "bernovis",
+      "body": "действ. форма: новичок",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11133",
+      "title": "bernyala",
+      "body": "действ. форма: пламя",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11134",
+      "title": "bernyata",
+      "body": "действ. форма: явный",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11135",
+      "title": "bernyawa",
+      "body": "действ. форма: жизнь",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11136",
+      "title": "bernyeri",
+      "body": "действ. форма: боль",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11137",
+      "title": "berobjek",
+      "body": "действ. форма: объект",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11138",
+      "title": "berobrol",
+      "body": "действ. форма: болтать",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11139",
+      "title": "berofset",
+      "body": "действ. форма: смещение",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11140",
+      "title": "beroktaf",
+      "body": "действ. форма: октава",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11141",
+      "title": "berombak",
+      "body": "действ. форма: волна",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11142",
+      "title": "beromset",
+      "body": "действ. форма: оборот",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11143",
+      "title": "beroptik",
+      "body": "действ. форма: оптика",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11144",
+      "title": "berorang",
+      "body": "действ. форма: человек",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11145",
+      "title": "berorgan",
+      "body": "действ. форма: орган",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11146",
+      "title": "berpacat",
+      "body": "действ. форма: пиявка",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11147",
+      "title": "berpadan",
+      "body": "действ. форма: совпадать",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11148",
+      "title": "berpadat",
+      "body": "действ. форма: плотный",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11149",
+      "title": "berpagar",
+      "body": "действ. форма: забор",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11150",
+      "title": "berpahat",
+      "body": "действ. форма: резец",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11151",
+      "title": "berpahit",
+      "body": "действ. форма: горький",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11152",
+      "title": "berpakar",
+      "body": "действ. форма: эксперт",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11153",
+      "title": "berpaket",
+      "body": "действ. форма: пакет",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11154",
+      "title": "berpaksi",
+      "body": "действ. форма: ось",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11155",
+      "title": "berpalam",
+      "body": "действ. форма: пробка",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11156",
+      "title": "berpalet",
+      "body": "действ. форма: палитра",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11157",
+      "title": "berpalit",
+      "body": "действ. форма: мазать",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11158",
+      "title": "berpalsu",
+      "body": "действ. форма: фальшивый",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11159",
+      "title": "berpamer",
+      "body": "действ. форма: показывать",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11160",
+      "title": "berpanas",
+      "body": "действ. форма: жаркий",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11161",
+      "title": "berpanca",
+      "body": "действ. форма: пять",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11162",
+      "title": "berpanel",
+      "body": "действ. форма: панель",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11163",
+      "title": "berpanen",
+      "body": "действ. форма: урожай",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11164",
+      "title": "berpanik",
+      "body": "действ. форма: паника",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11165",
+      "title": "berpanji",
+      "body": "действ. форма: знамя",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11166",
+      "title": "berpanti",
+      "body": "действ. форма: приют",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11167",
+      "title": "berpapan",
+      "body": "действ. форма: доска",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11168",
+      "title": "berparah",
+      "body": "действ. форма: тяжелый",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11169",
+      "title": "berparit",
+      "body": "действ. форма: канава",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11170",
+      "title": "berparut",
+      "body": "действ. форма: терка",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11171",
+      "title": "berpasak",
+      "body": "действ. форма: колышек",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11172",
+      "title": "berpasar",
+      "body": "действ. форма: рынок",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11173",
+      "title": "berpasca",
+      "body": "действ. форма: пост-",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11174",
+      "title": "berpasif",
+      "body": "действ. форма: пассивный",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11175",
+      "title": "berpasir",
+      "body": "действ. форма: песок",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11176",
+      "title": "berpasti",
+      "body": "действ. форма: точно",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11177",
+      "title": "berpaten",
+      "body": "действ. форма: патент",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11178",
+      "title": "berpatuh",
+      "body": "действ. форма: послушный",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11179",
+      "title": "berpatut",
+      "body": "действ. форма: следует",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11180",
+      "title": "berpayah",
+      "body": "действ. форма: трудный",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11181",
+      "title": "berpebas",
+      "body": "действ. форма: исполнитель/носитель действия: bas",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11182",
+      "title": "berpebeg",
+      "body": "действ. форма: исполнитель/носитель действия: beg",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11183",
+      "title": "berpebil",
+      "body": "действ. форма: исполнитель/носитель действия: bil",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11184",
+      "title": "berpebit",
+      "body": "действ. форма: исполнитель/носитель действия: bit",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11185",
+      "title": "berpebom",
+      "body": "действ. форма: исполнитель/носитель действия: bom",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11186",
+      "title": "berpebot",
+      "body": "действ. форма: исполнитель/носитель действия: bot",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11187",
+      "title": "berpecah",
+      "body": "действ. форма: ломать",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11188",
+      "title": "berpecat",
+      "body": "действ. форма: увольнять",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11189",
+      "title": "berpecik",
+      "body": "действ. форма: исполнитель/носитель действия: cik",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11190",
+      "title": "berpecip",
+      "body": "действ. форма: исполнитель/носитель действия: cip",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11191",
+      "title": "berpedan",
+      "body": "действ. форма: исполнитель/носитель действия: dan",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11192",
+      "title": "berpedas",
+      "body": "действ. форма: острый",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11193",
+      "title": "berpegah",
+      "body": "действ. форма: исполнитель/носитель действия: gah",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11194",
+      "title": "berpegam",
+      "body": "действ. форма: исполнитель/носитель действия: gam",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11195",
+      "title": "berpegas",
+      "body": "действ. форма: исполнитель/носитель действия: gas",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11196",
+      "title": "berpegol",
+      "body": "действ. форма: исполнитель/носитель действия: gol",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11197",
+      "title": "berpegun",
+      "body": "действ. форма: неподвижный",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11198",
+      "title": "berpehad",
+      "body": "действ. форма: исполнитель/носитель действия: had",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11199",
+      "title": "berpehak",
+      "body": "действ. форма: исполнитель/носитель действия: hak",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11200",
+      "title": "berpehal",
+      "body": "действ. форма: исполнитель/носитель действия: hal",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11201",
+      "title": "berpejam",
+      "body": "действ. форма: закрывать",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11202",
+      "title": "berpejok",
+      "body": "действ. форма: исполнитель/носитель действия: jok",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11203",
+      "title": "berpejom",
+      "body": "действ. форма: исполнитель/носитель действия: jom",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11204",
+      "title": "berpejun",
+      "body": "действ. форма: исполнитель/носитель действия: jun",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11205",
+      "title": "berpejus",
+      "body": "действ. форма: исполнитель/носитель действия: jus",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11206",
+      "title": "berpekad",
+      "body": "действ. форма: исполнитель/носитель действия: kad",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11207",
+      "title": "berpekak",
+      "body": "действ. форма: глухой",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11208",
+      "title": "berpekat",
+      "body": "действ. форма: густой",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11209",
+      "title": "berpekod",
+      "body": "действ. форма: исполнитель/носитель действия: kod",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11210",
+      "title": "berpekos",
+      "body": "действ. форма: исполнитель/носитель действия: kos",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11211",
+      "title": "berpekru",
+      "body": "действ. форма: исполнитель/носитель действия: kru",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11212",
+      "title": "berpelan",
+      "body": "действ. форма: план",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11213",
+      "title": "berpelif",
+      "body": "действ. форма: исполнитель/носитель действия: lif",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11214",
+      "title": "berpelik",
+      "body": "действ. форма: странный",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11215",
+      "title": "berpelot",
+      "body": "действ. форма: исполнитель/носитель действия: lot",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11216",
+      "title": "berpepaf",
+      "body": "действ. форма: исполнитель/носитель действия: paf",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11217",
+      "title": "berpepin",
+      "body": "действ. форма: исполнитель/носитель действия: pin",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11218",
+      "title": "berpepos",
+      "body": "действ. форма: исполнитель/носитель действия: pos",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11219",
+      "title": "berpepun",
+      "body": "действ. форма: исполнитель/носитель действия: pun",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11220",
+      "title": "berpesaf",
+      "body": "действ. форма: исполнитель/носитель действия: saf",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11221",
+      "title": "berpesah",
+      "body": "действ. форма: исполнитель действия: подтверждать",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11222",
+      "title": "berpesan",
+      "body": "действ. форма: сообщать",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11223",
+      "title": "berpesat",
+      "body": "действ. форма: бурный",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11224",
+      "title": "berpesos",
+      "body": "действ. форма: исполнитель/носитель действия: sos",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11225",
+      "title": "berpesup",
+      "body": "действ. форма: исполнитель/носитель действия: sup",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11226",
+      "title": "berpetak",
+      "body": "действ. форма: клетка",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11227",
+      "title": "berpeteh",
+      "body": "действ. форма: исполнитель/носитель действия: teh",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11228",
+      "title": "berpetes",
+      "body": "действ. форма: исполнитель/носитель действия: tes",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11229",
+      "title": "berpetik",
+      "body": "действ. форма: собирать",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11230",
+      "title": "berpetim",
+      "body": "действ. форма: исполнитель/носитель действия: tim",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11231",
+      "title": "berpetir",
+      "body": "действ. форма: молния",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11232",
+      "title": "berpewat",
+      "body": "действ. форма: исполнитель/носитель действия: wat",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11233",
+      "title": "berpeweb",
+      "body": "действ. форма: исполнитель/носитель действия: web",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11234",
+      "title": "berpeyam",
+      "body": "действ. форма: исполнитель/носитель действия: yam",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11235",
+      "title": "berpezat",
+      "body": "действ. форма: исполнитель/носитель действия: zat",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11236",
+      "title": "berpezon",
+      "body": "действ. форма: исполнитель/носитель действия: zon",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11237",
+      "title": "berpintu",
+      "body": "действ. форма: дверь",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11238",
+      "title": "berpisah",
+      "body": "действ. форма: разделять",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11239",
+      "title": "berpohon",
+      "body": "действ. форма: дерево",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11240",
+      "title": "berpokok",
+      "body": "действ. форма: дерево",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11241",
+      "title": "berpolis",
+      "body": "действ. форма: полиция",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11242",
+      "title": "berpucat",
+      "body": "действ. форма: бледный",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11243",
+      "title": "berpudar",
+      "body": "действ. форма: тускнеть",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11244",
+      "title": "berpukul",
+      "body": "действ. форма: бить",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11245",
+      "title": "berpulih",
+      "body": "действ. форма: восстанавливаться",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11246",
+      "title": "berpulsa",
+      "body": "действ. форма: баланс телефона",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11247",
+      "title": "berpunca",
+      "body": "действ. форма: причина",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11248",
+      "title": "berpundi",
+      "body": "действ. форма: мешочек",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11249",
+      "title": "berpunya",
+      "body": "действ. форма: иметь",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11250",
+      "title": "berpusat",
+      "body": "действ. форма: центр",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11251",
+      "title": "berputar",
+      "body": "действ. форма: вращать",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11252",
+      "title": "berputih",
+      "body": "действ. форма: белый",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11253",
+      "title": "berputus",
+      "body": "действ. форма: разорвать",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11254",
+      "title": "berrabak",
+      "body": "действ. форма: рваный",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11255",
+      "title": "berrabun",
+      "body": "действ. форма: близорукий",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11256",
+      "title": "berracik",
+      "body": "действ. форма: измельчать",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11257",
+      "title": "berradar",
+      "body": "действ. форма: радар",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11258",
+      "title": "berrafak",
+      "body": "действ. форма: поддержка",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11259",
+      "title": "berragut",
+      "body": "действ. форма: вырвать",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11260",
+      "title": "berrajin",
+      "body": "действ. форма: старательный",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11261",
+      "title": "berrakan",
+      "body": "действ. форма: товарищ",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11262",
+      "title": "berraket",
+      "body": "действ. форма: ракетка",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11263",
+      "title": "berrakit",
+      "body": "действ. форма: плот",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11264",
+      "title": "berraksa",
+      "body": "действ. форма: ртуть",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11265",
+      "title": "berrakus",
+      "body": "действ. форма: жадный",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11266",
+      "title": "berralat",
+      "body": "действ. форма: ошибка",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11267",
+      "title": "berramah",
+      "body": "действ. форма: дружелюбный",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11268",
+      "title": "berramal",
+      "body": "действ. форма: предсказывать",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11269",
+      "title": "berrambu",
+      "body": "действ. форма: предупреждающий знак",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11270",
+      "title": "berranum",
+      "body": "действ. форма: спелый",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11271",
+      "title": "berrapat",
+      "body": "действ. форма: близкий",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11272",
+      "title": "berrapuh",
+      "body": "действ. форма: хрупкий",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11273",
+      "title": "berrasmi",
+      "body": "действ. форма: официальный",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11274",
+      "title": "berrasuk",
+      "body": "действ. форма: входить",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11275",
+      "title": "berratib",
+      "body": "действ. форма: зикр",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11276",
+      "title": "berrawak",
+      "body": "действ. форма: случайный",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11277",
+      "title": "berrawan",
+      "body": "действ. форма: уязвимый",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11278",
+      "title": "berrayon",
+      "body": "действ. форма: район",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11279",
+      "title": "berrebah",
+      "body": "действ. форма: рухнуть",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11280",
+      "title": "berrebus",
+      "body": "действ. форма: варить",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11281",
+      "title": "berrebut",
+      "body": "действ. форма: оспаривать",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11282",
+      "title": "berredam",
+      "body": "действ. форма: приглушать",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11283",
+      "title": "berredha",
+      "body": "действ. форма: смиренно принимать",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11284",
+      "title": "berredup",
+      "body": "действ. форма: приглушенный",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11285",
+      "title": "berrekod",
+      "body": "действ. форма: запись",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11286",
+      "title": "berremeh",
+      "body": "действ. форма: незначительный",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11287",
+      "title": "berrenek",
+      "body": "действ. форма: низкорослый",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11288",
+      "title": "berrenti",
+      "body": "действ. форма: остановиться",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11289",
+      "title": "berresah",
+      "body": "действ. форма: беспокойный",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11290",
+      "title": "berresit",
+      "body": "действ. форма: чек",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11291",
+      "title": "berresmi",
+      "body": "действ. форма: официальный",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11292",
+      "title": "berrestu",
+      "body": "действ. форма: благословение",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11293",
+      "title": "berretak",
+      "body": "действ. форма: трещина",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11294",
+      "title": "berriang",
+      "body": "действ. форма: веселый",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11295",
+      "title": "berribut",
+      "body": "действ. форма: буря",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11296",
+      "title": "berridik",
+      "body": "действ. форма: насмехаться",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11297",
+      "title": "berrindu",
+      "body": "действ. форма: скучать",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11298",
+      "title": "berritma",
+      "body": "действ. форма: ритм",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11299",
+      "title": "berrizab",
+      "body": "действ. форма: резерв",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11300",
+      "title": "berroboh",
+      "body": "действ. форма: рушиться",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11301",
+      "title": "berrobot",
+      "body": "действ. форма: робот",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11302",
+      "title": "berroket",
+      "body": "действ. форма: ракета",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11303",
+      "title": "berrompi",
+      "body": "действ. форма: жилет",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11304",
+      "title": "berrosak",
+      "body": "действ. форма: сломанный",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11305",
+      "title": "berrosot",
+      "body": "действ. форма: падать",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11306",
+      "title": "berruang",
+      "body": "действ. форма: пространство",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11307",
+      "title": "berrujuk",
+      "body": "действ. форма: ссылаться",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11308",
+      "title": "berrukun",
+      "body": "действ. форма: гармония",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11309",
+      "title": "berrumah",
+      "body": "действ. форма: дом",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11310",
+      "title": "berrumit",
+      "body": "действ. форма: сложный",
+      "page": 1,
+      "verified": true
+    },
+    {
+      "id": "cur-11311",
+      "title": "berrumor",
+      "body": "действ. форма: слух",
+      "page": 1,
+      "verified": true
     }
   ]
 }
