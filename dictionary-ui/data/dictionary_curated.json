@@ -90938,6 +90938,3156 @@
       "body": "абстрактная форма: столовая",
       "page": 1,
       "verified": true
+    },
+    {
+      "id": "cur-12992",
+      "title": "beracara",
+      "body": "признак/состояние, связанное с: мероприятие",
+      "page": 18,
+      "verified": true
+    },
+    {
+      "id": "cur-12993",
+      "title": "berada",
+      "body": "признак/состояние, связанное с: есть",
+      "page": 19,
+      "verified": true
+    },
+    {
+      "id": "cur-12994",
+      "title": "beradaptasi",
+      "body": "признак/состояние, связанное с: адаптация",
+      "page": 20,
+      "verified": true
+    },
+    {
+      "id": "cur-12995",
+      "title": "beradat",
+      "body": "признак/состояние, связанное с: обычай",
+      "page": 20,
+      "verified": true
+    },
+    {
+      "id": "cur-12996",
+      "title": "beragama",
+      "body": "признак/состояние, связанное с: религия",
+      "page": 23,
+      "verified": true
+    },
+    {
+      "id": "cur-12997",
+      "title": "berair",
+      "body": "признак/состояние, связанное с: вода",
+      "page": 26,
+      "verified": true
+    },
+    {
+      "id": "cur-12998",
+      "title": "berakal",
+      "body": "признак/состояние, связанное с: разум",
+      "page": 28,
+      "verified": true
+    },
+    {
+      "id": "cur-12999",
+      "title": "berakar",
+      "body": "признак/состояние, связанное с: корень",
+      "page": 29,
+      "verified": true
+    },
+    {
+      "id": "cur-13000",
+      "title": "berakibat",
+      "body": "признак/состояние, связанное с: последствие",
+      "page": 30,
+      "verified": true
+    },
+    {
+      "id": "cur-13001",
+      "title": "beraktiviti",
+      "body": "признак/состояние, связанное с: активность",
+      "page": 31,
+      "verified": true
+    },
+    {
+      "id": "cur-13002",
+      "title": "beralamat",
+      "body": "признак/состояние, связанное с: адрес",
+      "page": 33,
+      "verified": true
+    },
+    {
+      "id": "cur-13003",
+      "title": "beralasan",
+      "body": "признак/состояние, связанное с: причина",
+      "page": 34,
+      "verified": true
+    },
+    {
+      "id": "cur-13004",
+      "title": "beralat",
+      "body": "признак/состояние, связанное с: инструмент",
+      "page": 35,
+      "verified": true
+    },
+    {
+      "id": "cur-13005",
+      "title": "beralih",
+      "body": "признак/состояние, связанное с: переносить",
+      "page": 36,
+      "verified": true
+    },
+    {
+      "id": "cur-13006",
+      "title": "beralkali",
+      "body": "признак/состояние, связанное с: щелочь",
+      "page": 37,
+      "verified": true
+    },
+    {
+      "id": "cur-13007",
+      "title": "beralur",
+      "body": "признак/состояние, связанное с: поток",
+      "page": 39,
+      "verified": true
+    },
+    {
+      "id": "cur-13008",
+      "title": "beramanat",
+      "body": "признак/состояние, связанное с: послание",
+      "page": 41,
+      "verified": true
+    },
+    {
+      "id": "cur-13009",
+      "title": "beranak",
+      "body": "признак/состояние, связанное с: ребенок",
+      "page": 46,
+      "verified": true
+    },
+    {
+      "id": "cur-13010",
+      "title": "berantara",
+      "body": "признак/состояние, связанное с: между",
+      "page": 55,
+      "verified": true
+    },
+    {
+      "id": "cur-13011",
+      "title": "beranting",
+      "body": "признак/состояние, связанное с: серьга",
+      "page": 754,
+      "verified": true
+    },
+    {
+      "id": "cur-13012",
+      "title": "berapi",
+      "body": "признак/состояние, связанное с: огонь",
+      "page": 57,
+      "verified": true
+    },
+    {
+      "id": "cur-13013",
+      "title": "berarah",
+      "body": "признак/состояние, связанное с: направление",
+      "page": 58,
+      "verified": true
+    },
+    {
+      "id": "cur-13014",
+      "title": "berarus",
+      "body": "признак/состояние, связанное с: течение",
+      "page": 62,
+      "verified": true
+    },
+    {
+      "id": "cur-13015",
+      "title": "berasal",
+      "body": "признак/состояние, связанное с: оригинал",
+      "page": 63,
+      "verified": true
+    },
+    {
+      "id": "cur-13016",
+      "title": "berasas",
+      "body": "признак/состояние, связанное с: основа",
+      "page": 63,
+      "verified": true
+    },
+    {
+      "id": "cur-13017",
+      "title": "berasrama",
+      "body": "признак/состояние, связанное с: общежитие",
+      "page": 65,
+      "verified": true
+    },
+    {
+      "id": "cur-13018",
+      "title": "berautonomi",
+      "body": "признак/состояние, связанное с: автономия",
+      "page": 68,
+      "verified": true
+    },
+    {
+      "id": "cur-13019",
+      "title": "berawalan",
+      "body": "признак/состояние, связанное с: приставка",
+      "page": 68,
+      "verified": true
+    },
+    {
+      "id": "cur-13020",
+      "title": "berawan",
+      "body": "признак/состояние, связанное с: облако",
+      "page": 69,
+      "verified": true
+    },
+    {
+      "id": "cur-13021",
+      "title": "berbahasa",
+      "body": "признак/состояние, связанное с: язык",
+      "page": 76,
+      "verified": true
+    },
+    {
+      "id": "cur-13022",
+      "title": "berbahaya",
+      "body": "признак/состояние, связанное с: опасность",
+      "page": 76,
+      "verified": true
+    },
+    {
+      "id": "cur-13023",
+      "title": "berbaja",
+      "body": "признак/состояние, связанное с: удобрение",
+      "page": 77,
+      "verified": true
+    },
+    {
+      "id": "cur-13024",
+      "title": "berbaju",
+      "body": "признак/состояние, связанное с: рубашка",
+      "page": 78,
+      "verified": true
+    },
+    {
+      "id": "cur-13025",
+      "title": "berbaki",
+      "body": "признак/состояние, связанное с: остаток на счете",
+      "page": 79,
+      "verified": true
+    },
+    {
+      "id": "cur-13026",
+      "title": "berbangga",
+      "body": "признак/состояние, связанное с: гордый",
+      "page": 84,
+      "verified": true
+    },
+    {
+      "id": "cur-13027",
+      "title": "berbangkit",
+      "body": "признак/состояние, связанное с: подниматься",
+      "page": 84,
+      "verified": true
+    },
+    {
+      "id": "cur-13028",
+      "title": "berbangsa",
+      "body": "признак/состояние, связанное с: нация",
+      "page": 84,
+      "verified": true
+    },
+    {
+      "id": "cur-13029",
+      "title": "berbantah",
+      "body": "признак/состояние, связанное с: возражать",
+      "page": 86,
+      "verified": true
+    },
+    {
+      "id": "cur-13030",
+      "title": "berbapa",
+      "body": "признак/состояние, связанное с: отец",
+      "page": 87,
+      "verified": true
+    },
+    {
+      "id": "cur-13031",
+      "title": "berbatu",
+      "body": "признак/состояние, связанное с: камень",
+      "page": 93,
+      "verified": true
+    },
+    {
+      "id": "cur-13032",
+      "title": "berbaur",
+      "body": "признак/состояние, связанное с: смешанный",
+      "page": 94,
+      "verified": true
+    },
+    {
+      "id": "cur-13033",
+      "title": "berbayang",
+      "body": "признак/состояние, связанное с: тень",
+      "page": 95,
+      "verified": true
+    },
+    {
+      "id": "cur-13034",
+      "title": "berbentuk",
+      "body": "признак/состояние, связанное с: форма",
+      "page": 107,
+      "verified": true
+    },
+    {
+      "id": "cur-13035",
+      "title": "berberita",
+      "body": "признак/состояние, связанное с: новости",
+      "page": 109,
+      "verified": true
+    },
+    {
+      "id": "cur-13036",
+      "title": "berbilang",
+      "body": "признак/состояние, связанное с: сказать",
+      "page": 115,
+      "verified": true
+    },
+    {
+      "id": "cur-13037",
+      "title": "berbingkai",
+      "body": "признак/состояние, связанное с: рамка",
+      "page": 116,
+      "verified": true
+    },
+    {
+      "id": "cur-13038",
+      "title": "berbintang",
+      "body": "признак/состояние, связанное с: звезда",
+      "page": 117,
+      "verified": true
+    },
+    {
+      "id": "cur-13039",
+      "title": "berbuah",
+      "body": "признак/состояние, связанное с: фрукт",
+      "page": 122,
+      "verified": true
+    },
+    {
+      "id": "cur-13040",
+      "title": "berbudaya",
+      "body": "признак/состояние, связанное с: культура",
+      "page": 125,
+      "verified": true
+    },
+    {
+      "id": "cur-13041",
+      "title": "berbuku",
+      "body": "признак/состояние, связанное с: книга",
+      "page": 127,
+      "verified": true
+    },
+    {
+      "id": "cur-13042",
+      "title": "berbulu",
+      "body": "признак/состояние, связанное с: шерсть",
+      "page": 108,
+      "verified": true
+    },
+    {
+      "id": "cur-13043",
+      "title": "berbungkus",
+      "body": "признак/состояние, связанное с: с собой (упаковать)",
+      "page": 131,
+      "verified": true
+    },
+    {
+      "id": "cur-13044",
+      "title": "bercabang",
+      "body": "признак/состояние, связанное с: ветвь",
+      "page": 134,
+      "verified": true
+    },
+    {
+      "id": "cur-13045",
+      "title": "bercahaya",
+      "body": "признак/состояние, связанное с: свет",
+      "page": 137,
+      "verified": true
+    },
+    {
+      "id": "cur-13046",
+      "title": "bercampur",
+      "body": "признак/состояние, связанное с: смешивать",
+      "page": 139,
+      "verified": true
+    },
+    {
+      "id": "cur-13047",
+      "title": "bercerai",
+      "body": "признак/состояние, связанное с: развод",
+      "page": 156,
+      "verified": true
+    },
+    {
+      "id": "cur-13048",
+      "title": "berceramah",
+      "body": "признак/состояние, связанное с: лекция",
+      "page": 156,
+      "verified": true
+    },
+    {
+      "id": "cur-13049",
+      "title": "bercerita",
+      "body": "признак/состояние, связанное с: история",
+      "page": 158,
+      "verified": true
+    },
+    {
+      "id": "cur-13050",
+      "title": "bercermin",
+      "body": "признак/состояние, связанное с: зеркало",
+      "page": 1028,
+      "verified": true
+    },
+    {
+      "id": "cur-13051",
+      "title": "bercita",
+      "body": "признак/состояние, связанное с: цель",
+      "page": 164,
+      "verified": true
+    },
+    {
+      "id": "cur-13052",
+      "title": "bercukai",
+      "body": "признак/состояние, связанное с: налог",
+      "page": 170,
+      "verified": true
+    },
+    {
+      "id": "cur-13053",
+      "title": "bercungkil",
+      "body": "признак/состояние, связанное с: поддевать",
+      "page": 171,
+      "verified": true
+    },
+    {
+      "id": "cur-13054",
+      "title": "bercuti",
+      "body": "признак/состояние, связанное с: выходной",
+      "page": 172,
+      "verified": true
+    },
+    {
+      "id": "cur-13055",
+      "title": "berdada",
+      "body": "признак/состояние, связанное с: грудь",
+      "page": 173,
+      "verified": true
+    },
+    {
+      "id": "cur-13056",
+      "title": "berdaging",
+      "body": "признак/состояние, связанное с: мясо",
+      "page": 174,
+      "verified": true
+    },
+    {
+      "id": "cur-13057",
+      "title": "berdamai",
+      "body": "признак/состояние, связанное с: мирный",
+      "page": 177,
+      "verified": true
+    },
+    {
+      "id": "cur-13058",
+      "title": "berdamping",
+      "body": "признак/состояние, связанное с: сопровождать",
+      "page": 178,
+      "verified": true
+    },
+    {
+      "id": "cur-13059",
+      "title": "berdaya",
+      "body": "признак/состояние, связанное с: сила",
+      "page": 183,
+      "verified": true
+    },
+    {
+      "id": "cur-13060",
+      "title": "berdebu",
+      "body": "признак/состояние, связанное с: пыль",
+      "page": 184,
+      "verified": true
+    },
+    {
+      "id": "cur-13061",
+      "title": "berdekatan",
+      "body": "признак/состояние, связанное с: близость",
+      "page": 186,
+      "verified": true
+    },
+    {
+      "id": "cur-13062",
+      "title": "berdemokrasi",
+      "body": "признак/состояние, связанное с: демократия",
+      "page": 187,
+      "verified": true
+    },
+    {
+      "id": "cur-13063",
+      "title": "berdengki",
+      "body": "признак/состояние, связанное с: зависть",
+      "page": 189,
+      "verified": true
+    },
+    {
+      "id": "cur-13064",
+      "title": "berdimensi",
+      "body": "признак/состояние, связанное с: измерение",
+      "page": 195,
+      "verified": true
+    },
+    {
+      "id": "cur-13065",
+      "title": "berdinding",
+      "body": "признак/состояние, связанное с: стена",
+      "page": 196,
+      "verified": true
+    },
+    {
+      "id": "cur-13066",
+      "title": "berdiploma",
+      "body": "признак/состояние, связанное с: диплом",
+      "page": 196,
+      "verified": true
+    },
+    {
+      "id": "cur-13067",
+      "title": "berdiskusi",
+      "body": "признак/состояние, связанное с: дискуссия",
+      "page": 197,
+      "verified": true
+    },
+    {
+      "id": "cur-13068",
+      "title": "berdukung",
+      "body": "признак/состояние, связанное с: поддерживать",
+      "page": 201,
+      "verified": true
+    },
+    {
+      "id": "cur-13069",
+      "title": "bereksperimen",
+      "body": "признак/состояние, связанное с: эксперимент",
+      "page": 206,
+      "verified": true
+    },
+    {
+      "id": "cur-13070",
+      "title": "beremas",
+      "body": "признак/состояние, связанное с: золото",
+      "page": 208,
+      "verified": true
+    },
+    {
+      "id": "cur-13071",
+      "title": "beremosi",
+      "body": "признак/состояние, связанное с: эмоция",
+      "page": 209,
+      "verified": true
+    },
+    {
+      "id": "cur-13072",
+      "title": "berenam",
+      "body": "признак/состояние, связанное с: шесть",
+      "page": 210,
+      "verified": true
+    },
+    {
+      "id": "cur-13073",
+      "title": "bererti",
+      "body": "признак/состояние, связанное с: значение",
+      "page": 195,
+      "verified": true
+    },
+    {
+      "id": "cur-13074",
+      "title": "beresok",
+      "body": "признак/состояние, связанное с: завтра",
+      "page": 213,
+      "verified": true
+    },
+    {
+      "id": "cur-13075",
+      "title": "beretika",
+      "body": "признак/состояние, связанное с: этика",
+      "page": 213,
+      "verified": true
+    },
+    {
+      "id": "cur-13076",
+      "title": "berevolusi",
+      "body": "признак/состояние, связанное с: эволюция",
+      "page": 213,
+      "verified": true
+    },
+    {
+      "id": "cur-13077",
+      "title": "bergam",
+      "body": "признак/состояние, связанное с: клей",
+      "page": 221,
+      "verified": true
+    },
+    {
+      "id": "cur-13078",
+      "title": "bergambar",
+      "body": "признак/состояние, связанное с: изображение",
+      "page": 222,
+      "verified": true
+    },
+    {
+      "id": "cur-13079",
+      "title": "bergantung",
+      "body": "признак/состояние, связанное с: вешать",
+      "page": 224,
+      "verified": true
+    },
+    {
+      "id": "cur-13080",
+      "title": "bergaya",
+      "body": "признак/состояние, связанное с: стиль",
+      "page": 227,
+      "verified": true
+    },
+    {
+      "id": "cur-13081",
+      "title": "bergelombang",
+      "body": "признак/состояние, связанное с: волна",
+      "page": 233,
+      "verified": true
+    },
+    {
+      "id": "cur-13082",
+      "title": "bergunting",
+      "body": "признак/состояние, связанное с: ножницы",
+      "page": 252,
+      "verified": true
+    },
+    {
+      "id": "cur-13083",
+      "title": "berguru",
+      "body": "признак/состояние, связанное с: учитель",
+      "page": 253,
+      "verified": true
+    },
+    {
+      "id": "cur-13084",
+      "title": "berhadapan",
+      "body": "признак/состояние, связанное с: вперед",
+      "page": 255,
+      "verified": true
+    },
+    {
+      "id": "cur-13085",
+      "title": "berhadiah",
+      "body": "признак/состояние, связанное с: подарок",
+      "page": 255,
+      "verified": true
+    },
+    {
+      "id": "cur-13086",
+      "title": "berhak",
+      "body": "признак/состояние, связанное с: право",
+      "page": 257,
+      "verified": true
+    },
+    {
+      "id": "cur-13087",
+      "title": "berhala",
+      "body": "признак/состояние, связанное с: направление",
+      "page": 109,
+      "verified": true
+    },
+    {
+      "id": "cur-13088",
+      "title": "berhaluan",
+      "body": "признак/состояние, связанное с: направление",
+      "page": 258,
+      "verified": true
+    },
+    {
+      "id": "cur-13089",
+      "title": "berhangat",
+      "body": "признак/состояние, связанное с: теплый",
+      "page": 261,
+      "verified": true
+    },
+    {
+      "id": "cur-13090",
+      "title": "berhati",
+      "body": "признак/состояние, связанное с: сердце",
+      "page": 267,
+      "verified": true
+    },
+    {
+      "id": "cur-13091",
+      "title": "berhias",
+      "body": "признак/состояние, связанное с: украшать",
+      "page": 271,
+      "verified": true
+    },
+    {
+      "id": "cur-13092",
+      "title": "berhikmat",
+      "body": "признак/состояние, связанное с: мудрость",
+      "page": 272,
+      "verified": true
+    },
+    {
+      "id": "cur-13093",
+      "title": "berhulu",
+      "body": "признак/состояние, связанное с: верховье",
+      "page": 278,
+      "verified": true
+    },
+    {
+      "id": "cur-13094",
+      "title": "beribu",
+      "body": "признак/состояние, связанное с: мать",
+      "page": 281,
+      "verified": true
+    },
+    {
+      "id": "cur-13095",
+      "title": "berikan",
+      "body": "признак/состояние, связанное с: рыба",
+      "page": 283,
+      "verified": true
+    },
+    {
+      "id": "cur-13096",
+      "title": "berikut",
+      "body": "признак/состояние, связанное с: следовать",
+      "page": 284,
+      "verified": true
+    },
+    {
+      "id": "cur-13097",
+      "title": "berilah",
+      "body": "признак/состояние, связанное с: божество",
+      "page": 257,
+      "verified": true
+    },
+    {
+      "id": "cur-13098",
+      "title": "berilmu",
+      "body": "признак/состояние, связанное с: знание",
+      "page": 285,
+      "verified": true
+    },
+    {
+      "id": "cur-13099",
+      "title": "berilustrasi",
+      "body": "признак/состояние, связанное с: иллюстрация",
+      "page": 285,
+      "verified": true
+    },
+    {
+      "id": "cur-13100",
+      "title": "beriman",
+      "body": "признак/состояние, связанное с: вера",
+      "page": 285,
+      "verified": true
+    },
+    {
+      "id": "cur-13101",
+      "title": "berinisiatif",
+      "body": "признак/состояние, связанное с: инициатива",
+      "page": 289,
+      "verified": true
+    },
+    {
+      "id": "cur-13102",
+      "title": "berinteraksi",
+      "body": "признак/состояние, связанное с: взаимодействие",
+      "page": 290,
+      "verified": true
+    },
+    {
+      "id": "cur-13103",
+      "title": "berirama",
+      "body": "признак/состояние, связанное с: ритм",
+      "page": 291,
+      "verified": true
+    },
+    {
+      "id": "cur-13104",
+      "title": "berisi",
+      "body": "признак/состояние, связанное с: содержимое",
+      "page": 292,
+      "verified": true
+    },
+    {
+      "id": "cur-13105",
+      "title": "beristeri",
+      "body": "признак/состояние, связанное с: жена",
+      "page": 293,
+      "verified": true
+    },
+    {
+      "id": "cur-13106",
+      "title": "beristiadat",
+      "body": "признак/состояние, связанное с: церемония",
+      "page": 293,
+      "verified": true
+    },
+    {
+      "id": "cur-13107",
+      "title": "berisyarat",
+      "body": "признак/состояние, связанное с: сигнал",
+      "page": 293,
+      "verified": true
+    },
+    {
+      "id": "cur-13108",
+      "title": "berjauh",
+      "body": "признак/состояние, связанное с: далеко",
+      "page": 309,
+      "verified": true
+    },
+    {
+      "id": "cur-13109",
+      "title": "berjawatan",
+      "body": "признак/состояние, связанное с: должность",
+      "page": 309,
+      "verified": true
+    },
+    {
+      "id": "cur-13110",
+      "title": "berjenama",
+      "body": "признак/состояние, связанное с: бренд",
+      "page": 315,
+      "verified": true
+    },
+    {
+      "id": "cur-13111",
+      "title": "berjentera",
+      "body": "признак/состояние, связанное с: механизм",
+      "page": 317,
+      "verified": true
+    },
+    {
+      "id": "cur-13112",
+      "title": "berjerebu",
+      "body": "признак/состояние, связанное с: дымка",
+      "page": 319,
+      "verified": true
+    },
+    {
+      "id": "cur-13113",
+      "title": "berjiwa",
+      "body": "признак/состояние, связанное с: душа",
+      "page": 323,
+      "verified": true
+    },
+    {
+      "id": "cur-13114",
+      "title": "berjuara",
+      "body": "признак/состояние, связанное с: чемпион",
+      "page": 710,
+      "verified": true
+    },
+    {
+      "id": "cur-13115",
+      "title": "berjumaat",
+      "body": "признак/состояние, связанное с: пятница",
+      "page": 328,
+      "verified": true
+    },
+    {
+      "id": "cur-13116",
+      "title": "berjumlah",
+      "body": "признак/состояние, связанное с: сумма",
+      "page": 328,
+      "verified": true
+    },
+    {
+      "id": "cur-13117",
+      "title": "berkain",
+      "body": "признак/состояние, связанное с: ткань",
+      "page": 337,
+      "verified": true
+    },
+    {
+      "id": "cur-13118",
+      "title": "berkaitan",
+      "body": "признак/состояние, связанное с: связь",
+      "page": 337,
+      "verified": true
+    },
+    {
+      "id": "cur-13119",
+      "title": "berkaki",
+      "body": "признак/состояние, связанное с: нога",
+      "page": 340,
+      "verified": true
+    },
+    {
+      "id": "cur-13120",
+      "title": "berkampung",
+      "body": "признак/состояние, связанное с: деревня",
+      "page": 345,
+      "verified": true
+    },
+    {
+      "id": "cur-13121",
+      "title": "berkandung",
+      "body": "признак/состояние, связанное с: содержать",
+      "page": 347,
+      "verified": true
+    },
+    {
+      "id": "cur-13122",
+      "title": "berkantor",
+      "body": "признак/состояние, связанное с: офис",
+      "page": 348,
+      "verified": true
+    },
+    {
+      "id": "cur-13123",
+      "title": "berkarbohidrat",
+      "body": "признак/состояние, связанное с: углевод",
+      "page": 353,
+      "verified": true
+    },
+    {
+      "id": "cur-13124",
+      "title": "berkata",
+      "body": "признак/состояние, связанное с: слово",
+      "page": 299,
+      "verified": true
+    },
+    {
+      "id": "cur-13125",
+      "title": "berkaum",
+      "body": "признак/состояние, связанное с: народность",
+      "page": 360,
+      "verified": true
+    },
+    {
+      "id": "cur-13126",
+      "title": "berkawasan",
+      "body": "признак/состояние, связанное с: район",
+      "page": 362,
+      "verified": true
+    },
+    {
+      "id": "cur-13127",
+      "title": "berkayu",
+      "body": "признак/состояние, связанное с: дерево (материал)",
+      "page": 364,
+      "verified": true
+    },
+    {
+      "id": "cur-13128",
+      "title": "berkebolehan",
+      "body": "признак/состояние, связанное с: способность",
+      "page": 119,
+      "verified": true
+    },
+    {
+      "id": "cur-13129",
+      "title": "berkecil",
+      "body": "признак/состояние, связанное с: маленький",
+      "page": 368,
+      "verified": true
+    },
+    {
+      "id": "cur-13130",
+      "title": "berkedai",
+      "body": "признак/состояние, связанное с: магазин",
+      "page": 370,
+      "verified": true
+    },
+    {
+      "id": "cur-13131",
+      "title": "berkedudukan",
+      "body": "признак/состояние, связанное с: положение",
+      "page": 200,
+      "verified": true
+    },
+    {
+      "id": "cur-13132",
+      "title": "berkehendak",
+      "body": "признак/состояние, связанное с: желание",
+      "page": 269,
+      "verified": true
+    },
+    {
+      "id": "cur-13133",
+      "title": "berkekurangan",
+      "body": "признак/состояние, связанное с: недостаток",
+      "page": 475,
+      "verified": true
+    },
+    {
+      "id": "cur-13134",
+      "title": "berkelakuan",
+      "body": "признак/состояние, связанное с: поведение",
+      "page": 487,
+      "verified": true
+    },
+    {
+      "id": "cur-13135",
+      "title": "berkelayakan",
+      "body": "признак/состояние, связанное с: квалификация",
+      "page": 513,
+      "verified": true
+    },
+    {
+      "id": "cur-13136",
+      "title": "berkelebihan",
+      "body": "признак/состояние, связанное с: преимущество",
+      "page": 517,
+      "verified": true
+    },
+    {
+      "id": "cur-13137",
+      "title": "berkelulusan",
+      "body": "признак/состояние, связанное с: одобрение",
+      "page": 565,
+      "verified": true
+    },
+    {
+      "id": "cur-13138",
+      "title": "berkemahuan",
+      "body": "признак/состояние, связанное с: желание",
+      "page": 576,
+      "verified": true
+    },
+    {
+      "id": "cur-13139",
+      "title": "berkemampuan",
+      "body": "признак/состояние, связанное с: способность",
+      "page": 588,
+      "verified": true
+    },
+    {
+      "id": "cur-13140",
+      "title": "berkembar",
+      "body": "признак/состояние, связанное с: близнец",
+      "page": 392,
+      "verified": true
+    },
+    {
+      "id": "cur-13141",
+      "title": "berkemudi",
+      "body": "признак/состояние, связанное с: руль",
+      "page": 394,
+      "verified": true
+    },
+    {
+      "id": "cur-13142",
+      "title": "berkemungkinan",
+      "body": "признак/состояние, связанное с: возможность",
+      "page": 637,
+      "verified": true
+    },
+    {
+      "id": "cur-13143",
+      "title": "berkenal",
+      "body": "признак/состояние, связанное с: знать",
+      "page": 397,
+      "verified": true
+    },
+    {
+      "id": "cur-13144",
+      "title": "berkepala",
+      "body": "признак/состояние, связанное с: голова",
+      "page": 404,
+      "verified": true
+    },
+    {
+      "id": "cur-13145",
+      "title": "berkepandaian",
+      "body": "признак/состояние, связанное с: умение",
+      "page": 684,
+      "verified": true
+    },
+    {
+      "id": "cur-13146",
+      "title": "berkepentingan",
+      "body": "признак/состояние, связанное с: важность",
+      "page": 708,
+      "verified": true
+    },
+    {
+      "id": "cur-13147",
+      "title": "berkeputusan",
+      "body": "признак/состояние, связанное с: решение",
+      "page": 742,
+      "verified": true
+    },
+    {
+      "id": "cur-13148",
+      "title": "berkerajaan",
+      "body": "признак/состояние, связанное с: правительство",
+      "page": 746,
+      "verified": true
+    },
+    {
+      "id": "cur-13149",
+      "title": "berkeras",
+      "body": "признак/состояние, связанное с: твердый",
+      "page": 410,
+      "verified": true
+    },
+    {
+      "id": "cur-13150",
+      "title": "berkereta",
+      "body": "признак/состояние, связанное с: машина",
+      "page": 413,
+      "verified": true
+    },
+    {
+      "id": "cur-13151",
+      "title": "berkering",
+      "body": "признак/состояние, связанное с: сухой",
+      "page": 415,
+      "verified": true
+    },
+    {
+      "id": "cur-13152",
+      "title": "berkesimpulan",
+      "body": "признак/состояние, связанное с: заключение",
+      "page": 858,
+      "verified": true
+    },
+    {
+      "id": "cur-13153",
+      "title": "berketakutan",
+      "body": "признак/состояние, связанное с: страх",
+      "page": 898,
+      "verified": true
+    },
+    {
+      "id": "cur-13154",
+      "title": "berketerampilan",
+      "body": "признак/состояние, связанное с: навык",
+      "page": 945,
+      "verified": true
+    },
+    {
+      "id": "cur-13155",
+      "title": "berketika",
+      "body": "признак/состояние, связанное с: когда",
+      "page": 426,
+      "verified": true
+    },
+    {
+      "id": "cur-13156",
+      "title": "berkhabar",
+      "body": "признак/состояние, связанное с: весть",
+      "page": 429,
+      "verified": true
+    },
+    {
+      "id": "cur-13157",
+      "title": "berkhianat",
+      "body": "признак/состояние, связанное с: предавать",
+      "page": 431,
+      "verified": true
+    },
+    {
+      "id": "cur-13158",
+      "title": "berkhidmat",
+      "body": "признак/состояние, связанное с: служба",
+      "page": 431,
+      "verified": true
+    },
+    {
+      "id": "cur-13159",
+      "title": "berkiasan",
+      "body": "признак/состояние, связанное с: переносный смысл",
+      "page": 433,
+      "verified": true
+    },
+    {
+      "id": "cur-13160",
+      "title": "berklip",
+      "body": "признак/состояние, связанное с: клип",
+      "page": 442,
+      "verified": true
+    },
+    {
+      "id": "cur-13161",
+      "title": "berkolesterol",
+      "body": "признак/состояние, связанное с: холестерин",
+      "page": 446,
+      "verified": true
+    },
+    {
+      "id": "cur-13162",
+      "title": "berkonflik",
+      "body": "признак/состояние, связанное с: конфликт",
+      "page": 449,
+      "verified": true
+    },
+    {
+      "id": "cur-13163",
+      "title": "berkongres",
+      "body": "признак/состояние, связанное с: конгресс",
+      "page": 450,
+      "verified": true
+    },
+    {
+      "id": "cur-13164",
+      "title": "berkonsultasi",
+      "body": "признак/состояние, связанное с: консультация",
+      "page": 451,
+      "verified": true
+    },
+    {
+      "id": "cur-13165",
+      "title": "berkontras",
+      "body": "признак/состояние, связанное с: контраст",
+      "page": 452,
+      "verified": true
+    },
+    {
+      "id": "cur-13166",
+      "title": "berkoperasi",
+      "body": "признак/состояние, связанное с: кооператив",
+      "page": 453,
+      "verified": true
+    },
+    {
+      "id": "cur-13167",
+      "title": "berkopiah",
+      "body": "признак/состояние, связанное с: тюбетейка",
+      "page": 453,
+      "verified": true
+    },
+    {
+      "id": "cur-13168",
+      "title": "berkota",
+      "body": "признак/состояние, связанное с: город",
+      "page": 456,
+      "verified": true
+    },
+    {
+      "id": "cur-13169",
+      "title": "berkrisis",
+      "body": "признак/состояние, связанное с: кризис",
+      "page": 458,
+      "verified": true
+    },
+    {
+      "id": "cur-13170",
+      "title": "berkuala",
+      "body": "признак/состояние, связанное с: устье",
+      "page": 459,
+      "verified": true
+    },
+    {
+      "id": "cur-13171",
+      "title": "berkualiti",
+      "body": "признак/состояние, связанное с: качество",
+      "page": 459,
+      "verified": true
+    },
+    {
+      "id": "cur-13172",
+      "title": "berkuasa",
+      "body": "признак/состояние, связанное с: власть",
+      "page": 460,
+      "verified": true
+    },
+    {
+      "id": "cur-13173",
+      "title": "berkuat",
+      "body": "признак/состояние, связанное с: сильный",
+      "page": 460,
+      "verified": true
+    },
+    {
+      "id": "cur-13174",
+      "title": "berkuku",
+      "body": "признак/состояние, связанное с: ноготь",
+      "page": 466,
+      "verified": true
+    },
+    {
+      "id": "cur-13175",
+      "title": "berkuliah",
+      "body": "признак/состояние, связанное с: лекция",
+      "page": 467,
+      "verified": true
+    },
+    {
+      "id": "cur-13176",
+      "title": "berkumpul",
+      "body": "признак/состояние, связанное с: собирать",
+      "page": 470,
+      "verified": true
+    },
+    {
+      "id": "cur-13177",
+      "title": "berkunjung",
+      "body": "признак/состояние, связанное с: посещать",
+      "page": 472,
+      "verified": true
+    },
+    {
+      "id": "cur-13178",
+      "title": "berkurang",
+      "body": "признак/состояние, связанное с: меньше",
+      "page": 475,
+      "verified": true
+    },
+    {
+      "id": "cur-13179",
+      "title": "berlaci",
+      "body": "признак/состояние, связанное с: ящик (в столе)",
+      "page": 481,
+      "verified": true
+    },
+    {
+      "id": "cur-13180",
+      "title": "berlada",
+      "body": "признак/состояние, связанное с: перец (специя)",
+      "page": 481,
+      "verified": true
+    },
+    {
+      "id": "cur-13181",
+      "title": "berlagu",
+      "body": "признак/состояние, связанное с: песня",
+      "page": 483,
+      "verified": true
+    },
+    {
+      "id": "cur-13182",
+      "title": "berlaku",
+      "body": "признак/состояние, связанное с: продаваться",
+      "page": 487,
+      "verified": true
+    },
+    {
+      "id": "cur-13183",
+      "title": "berlalu",
+      "body": "признак/состояние, связанное с: затем",
+      "page": 490,
+      "verified": true
+    },
+    {
+      "id": "cur-13184",
+      "title": "berlampin",
+      "body": "признак/состояние, связанное с: подгузник",
+      "page": 493,
+      "verified": true
+    },
+    {
+      "id": "cur-13185",
+      "title": "berlandas",
+      "body": "признак/состояние, связанное с: основа",
+      "page": 496,
+      "verified": true
+    },
+    {
+      "id": "cur-13186",
+      "title": "berlangganan",
+      "body": "признак/состояние, связанное с: подписка",
+      "page": 498,
+      "verified": true
+    },
+    {
+      "id": "cur-13187",
+      "title": "berlangsung",
+      "body": "признак/состояние, связанное с: прямо",
+      "page": 500,
+      "verified": true
+    },
+    {
+      "id": "cur-13188",
+      "title": "berlapang",
+      "body": "признак/состояние, связанное с: просторный",
+      "page": 504,
+      "verified": true
+    },
+    {
+      "id": "cur-13189",
+      "title": "berlauk",
+      "body": "признак/состояние, связанное с: гарнир",
+      "page": 511,
+      "verified": true
+    },
+    {
+      "id": "cur-13190",
+      "title": "berlembut",
+      "body": "признак/состояние, связанное с: мягкий",
+      "page": 528,
+      "verified": true
+    },
+    {
+      "id": "cur-13191",
+      "title": "berlengkap",
+      "body": "признак/состояние, связанное с: полный",
+      "page": 532,
+      "verified": true
+    },
+    {
+      "id": "cur-13192",
+      "title": "berlima",
+      "body": "признак/состояние, связанное с: пять",
+      "page": 545,
+      "verified": true
+    },
+    {
+      "id": "cur-13193",
+      "title": "berloghat",
+      "body": "признак/состояние, связанное с: акцент",
+      "page": 554,
+      "verified": true
+    },
+    {
+      "id": "cur-13194",
+      "title": "berlorong",
+      "body": "признак/состояние, связанное с: переулок",
+      "page": 559,
+      "verified": true
+    },
+    {
+      "id": "cur-13195",
+      "title": "berlumpur",
+      "body": "признак/состояние, связанное с: грязь",
+      "page": 566,
+      "verified": true
+    },
+    {
+      "id": "cur-13196",
+      "title": "bermagnet",
+      "body": "признак/состояние, связанное с: магнит",
+      "page": 574,
+      "verified": true
+    },
+    {
+      "id": "cur-13197",
+      "title": "bermahkota",
+      "body": "признак/состояние, связанное с: корона",
+      "page": 575,
+      "verified": true
+    },
+    {
+      "id": "cur-13198",
+      "title": "bermain",
+      "body": "признак/состояние, связанное с: играть",
+      "page": 197,
+      "verified": true
+    },
+    {
+      "id": "cur-13199",
+      "title": "bermandiri",
+      "body": "признак/состояние, связанное с: самостоятельный",
+      "page": 590,
+      "verified": true
+    },
+    {
+      "id": "cur-13200",
+      "title": "bermarkas",
+      "body": "признак/состояние, связанное с: штаб",
+      "page": 596,
+      "verified": true
+    },
+    {
+      "id": "cur-13201",
+      "title": "bermasalah",
+      "body": "признак/состояние, связанное с: проблема",
+      "page": 598,
+      "verified": true
+    },
+    {
+      "id": "cur-13202",
+      "title": "bermasyarakat",
+      "body": "признак/состояние, связанное с: общество",
+      "page": 601,
+      "verified": true
+    },
+    {
+      "id": "cur-13203",
+      "title": "bermatlamatkan",
+      "body": "признак/состояние, связанное с: целеполагать",
+      "page": 606,
+      "verified": true
+    },
+    {
+      "id": "cur-13204",
+      "title": "bermeditasi",
+      "body": "признак/состояние, связанное с: медитация",
+      "page": 608,
+      "verified": true
+    },
+    {
+      "id": "cur-13205",
+      "title": "bermesin",
+      "body": "признак/состояние, связанное с: машина",
+      "page": 619,
+      "verified": true
+    },
+    {
+      "id": "cur-13206",
+      "title": "bermesra",
+      "body": "признак/состояние, связанное с: дружелюбный",
+      "page": 619,
+      "verified": true
+    },
+    {
+      "id": "cur-13207",
+      "title": "bermesyuarat",
+      "body": "признак/состояние, связанное с: встреча",
+      "page": 620,
+      "verified": true
+    },
+    {
+      "id": "cur-13208",
+      "title": "bermeter",
+      "body": "признак/состояние, связанное с: метр",
+      "page": 620,
+      "verified": true
+    },
+    {
+      "id": "cur-13209",
+      "title": "bermewah",
+      "body": "признак/состояние, связанное с: роскошный",
+      "page": 621,
+      "verified": true
+    },
+    {
+      "id": "cur-13210",
+      "title": "bermigrasi",
+      "body": "признак/состояние, связанное с: миграция",
+      "page": 621,
+      "verified": true
+    },
+    {
+      "id": "cur-13211",
+      "title": "berminyak",
+      "body": "признак/состояние, связанное с: масло",
+      "page": 625,
+      "verified": true
+    },
+    {
+      "id": "cur-13212",
+      "title": "bermonolog",
+      "body": "признак/состояние, связанное с: монолог",
+      "page": 628,
+      "verified": true
+    },
+    {
+      "id": "cur-13213",
+      "title": "bermotivasi",
+      "body": "признак/состояние, связанное с: мотивация",
+      "page": 629,
+      "verified": true
+    },
+    {
+      "id": "cur-13214",
+      "title": "bermotosikal",
+      "body": "признак/состояние, связанное с: мотоцикл",
+      "page": 629,
+      "verified": true
+    },
+    {
+      "id": "cur-13215",
+      "title": "bermuafakat",
+      "body": "признак/состояние, связанное с: согласие",
+      "page": 630,
+      "verified": true
+    },
+    {
+      "id": "cur-13216",
+      "title": "bermuara",
+      "body": "признак/состояние, связанное с: устье",
+      "page": 630,
+      "verified": true
+    },
+    {
+      "id": "cur-13217",
+      "title": "bermuda",
+      "body": "признак/состояние, связанное с: молодой",
+      "page": 631,
+      "verified": true
+    },
+    {
+      "id": "cur-13218",
+      "title": "bermudarat",
+      "body": "признак/состояние, связанное с: вред",
+      "page": 632,
+      "verified": true
+    },
+    {
+      "id": "cur-13219",
+      "title": "bermuncung",
+      "body": "признак/состояние, связанное с: носик",
+      "page": 637,
+      "verified": true
+    },
+    {
+      "id": "cur-13220",
+      "title": "bermusyawarah",
+      "body": "признак/состояние, связанное с: совещание",
+      "page": 641,
+      "verified": true
+    },
+    {
+      "id": "cur-13221",
+      "title": "bermutu",
+      "body": "признак/состояние, связанное с: качество",
+      "page": 642,
+      "verified": true
+    },
+    {
+      "id": "cur-13222",
+      "title": "bernegara",
+      "body": "признак/состояние, связанное с: страна",
+      "page": 652,
+      "verified": true
+    },
+    {
+      "id": "cur-13223",
+      "title": "berniat",
+      "body": "признак/состояние, связанное с: намерение",
+      "page": 656,
+      "verified": true
+    },
+    {
+      "id": "cur-13224",
+      "title": "bernoda",
+      "body": "признак/состояние, связанное с: пятно",
+      "page": 658,
+      "verified": true
+    },
+    {
+      "id": "cur-13225",
+      "title": "bernombor",
+      "body": "признак/состояние, связанное с: номер",
+      "page": 658,
+      "verified": true
+    },
+    {
+      "id": "cur-13226",
+      "title": "beroperasi",
+      "body": "признак/состояние, связанное с: операция",
+      "page": 668,
+      "verified": true
+    },
+    {
+      "id": "cur-13227",
+      "title": "berotak",
+      "body": "признак/состояние, связанное с: мозг",
+      "page": 672,
+      "verified": true
+    },
+    {
+      "id": "cur-13228",
+      "title": "berotot",
+      "body": "признак/состояние, связанное с: мышца",
+      "page": 672,
+      "verified": true
+    },
+    {
+      "id": "cur-13229",
+      "title": "berpadanan",
+      "body": "признак/состояние, связанное с: соответствие",
+      "page": 674,
+      "verified": true
+    },
+    {
+      "id": "cur-13230",
+      "title": "berpadang",
+      "body": "признак/состояние, связанное с: поле",
+      "page": 675,
+      "verified": true
+    },
+    {
+      "id": "cur-13231",
+      "title": "berpadu",
+      "body": "признак/состояние, связанное с: крепкий",
+      "page": 676,
+      "verified": true
+    },
+    {
+      "id": "cur-13232",
+      "title": "berpahala",
+      "body": "признак/состояние, связанное с: награда (религ.)",
+      "page": 677,
+      "verified": true
+    },
+    {
+      "id": "cur-13233",
+      "title": "berpakai",
+      "body": "признак/состояние, связанное с: носить",
+      "page": 678,
+      "verified": true
+    },
+    {
+      "id": "cur-13234",
+      "title": "berpakaian",
+      "body": "признак/состояние, связанное с: одежда",
+      "page": 392,
+      "verified": true
+    },
+    {
+      "id": "cur-13235",
+      "title": "berpandang",
+      "body": "признак/состояние, связанное с: смотреть",
+      "page": 684,
+      "verified": true
+    },
+    {
+      "id": "cur-13236",
+      "title": "berpangkal",
+      "body": "признак/состояние, связанное с: основание",
+      "page": 686,
+      "verified": true
+    },
+    {
+      "id": "cur-13237",
+      "title": "berpanjang",
+      "body": "признак/состояние, связанное с: длинный",
+      "page": 688,
+      "verified": true
+    },
+    {
+      "id": "cur-13238",
+      "title": "berpantai",
+      "body": "признак/состояние, связанное с: пляж",
+      "page": 688,
+      "verified": true
+    },
+    {
+      "id": "cur-13239",
+      "title": "berpantang",
+      "body": "признак/состояние, связанное с: запрет",
+      "page": 579,
+      "verified": true
+    },
+    {
+      "id": "cur-13240",
+      "title": "berpantun",
+      "body": "признак/состояние, связанное с: пантун",
+      "page": 689,
+      "verified": true
+    },
+    {
+      "id": "cur-13241",
+      "title": "berpasang",
+      "body": "признак/состояние, связанное с: устанавливать",
+      "page": 692,
+      "verified": true
+    },
+    {
+      "id": "cur-13242",
+      "title": "berpasukan",
+      "body": "признак/состояние, связанное с: команда",
+      "page": 694,
+      "verified": true
+    },
+    {
+      "id": "cur-13243",
+      "title": "berpaut",
+      "body": "признак/состояние, связанное с: зацепить",
+      "page": 696,
+      "verified": true
+    },
+    {
+      "id": "cur-13244",
+      "title": "berpayung",
+      "body": "признак/состояние, связанное с: зонт",
+      "page": 697,
+      "verified": true
+    },
+    {
+      "id": "cur-13245",
+      "title": "berpedoman",
+      "body": "признак/состояние, связанное с: руководство",
+      "page": 699,
+      "verified": true
+    },
+    {
+      "id": "cur-13246",
+      "title": "berpekerjaan",
+      "body": "признак/состояние, связанное с: работа",
+      "page": 416,
+      "verified": true
+    },
+    {
+      "id": "cur-13247",
+      "title": "berpelajaran",
+      "body": "признак/состояние, связанное с: урок",
+      "page": 27,
+      "verified": true
+    },
+    {
+      "id": "cur-13248",
+      "title": "berpelayaran",
+      "body": "признак/состояние, связанное с: плавание",
+      "page": 515,
+      "verified": true
+    },
+    {
+      "id": "cur-13249",
+      "title": "berpendapatan",
+      "body": "признак/состояние, связанное с: доход",
+      "page": 766,
+      "verified": true
+    },
+    {
+      "id": "cur-13250",
+      "title": "berpendirian",
+      "body": "признак/состояние, связанное с: позиция",
+      "page": 196,
+      "verified": true
+    },
+    {
+      "id": "cur-13251",
+      "title": "berpengaruh",
+      "body": "признак/состояние, связанное с: влияние",
+      "page": 707,
+      "verified": true
+    },
+    {
+      "id": "cur-13252",
+      "title": "berpenguasaan",
+      "body": "признак/состояние, связанное с: владение",
+      "page": 460,
+      "verified": true
+    },
+    {
+      "id": "cur-13253",
+      "title": "berpenyakit",
+      "body": "признак/состояние, связанное с: болезнь",
+      "page": 792,
+      "verified": true
+    },
+    {
+      "id": "cur-13254",
+      "title": "berperadaban",
+      "body": "признак/состояние, связанное с: цивилизация",
+      "page": 20,
+      "verified": true
+    },
+    {
+      "id": "cur-13255",
+      "title": "berperanan",
+      "body": "признак/состояние, связанное с: роль",
+      "page": 710,
+      "verified": true
+    },
+    {
+      "id": "cur-13256",
+      "title": "berperang",
+      "body": "признак/состояние, связанное с: война",
+      "page": 710,
+      "verified": true
+    },
+    {
+      "id": "cur-13257",
+      "title": "berperasaan",
+      "body": "признак/состояние, связанное с: чувство",
+      "page": 755,
+      "verified": true
+    },
+    {
+      "id": "cur-13258",
+      "title": "berpercikan",
+      "body": "признак/состояние, связанное с: брызги",
+      "page": 712,
+      "verified": true
+    },
+    {
+      "id": "cur-13259",
+      "title": "berperkara",
+      "body": "признак/состояние, связанное с: дело",
+      "page": 715,
+      "verified": true
+    },
+    {
+      "id": "cur-13260",
+      "title": "berpermata",
+      "body": "признак/состояние, связанное с: драгоценный камень",
+      "page": 716,
+      "verified": true
+    },
+    {
+      "id": "cur-13261",
+      "title": "berperut",
+      "body": "признак/состояние, связанное с: живот",
+      "page": 717,
+      "verified": true
+    },
+    {
+      "id": "cur-13262",
+      "title": "berpeta",
+      "body": "признак/состояние, связанное с: карта (географическая)",
+      "page": 718,
+      "verified": true
+    },
+    {
+      "id": "cur-13263",
+      "title": "berpetua",
+      "body": "признак/состояние, связанное с: совет",
+      "page": 719,
+      "verified": true
+    },
+    {
+      "id": "cur-13264",
+      "title": "berpilihan",
+      "body": "признак/состояние, связанное с: вариант",
+      "page": 722,
+      "verified": true
+    },
+    {
+      "id": "cur-13265",
+      "title": "berpita",
+      "body": "признак/состояние, связанное с: лента",
+      "page": 726,
+      "verified": true
+    },
+    {
+      "id": "cur-13266",
+      "title": "berpolitik",
+      "body": "признак/состояние, связанное с: политика",
+      "page": 728,
+      "verified": true
+    },
+    {
+      "id": "cur-13267",
+      "title": "berpotensi",
+      "body": "признак/состояние, связанное с: потенциал",
+      "page": 730,
+      "verified": true
+    },
+    {
+      "id": "cur-13268",
+      "title": "berpotong",
+      "body": "признак/состояние, связанное с: резать",
+      "page": 730,
+      "verified": true
+    },
+    {
+      "id": "cur-13269",
+      "title": "berproses",
+      "body": "признак/состояние, связанное с: процесс",
+      "page": 732,
+      "verified": true
+    },
+    {
+      "id": "cur-13270",
+      "title": "berpuasa",
+      "body": "признак/состояние, связанное с: пост",
+      "page": 484,
+      "verified": true
+    },
+    {
+      "id": "cur-13271",
+      "title": "berpuisi",
+      "body": "признак/состояние, связанное с: поэзия",
+      "page": 734,
+      "verified": true
+    },
+    {
+      "id": "cur-13272",
+      "title": "bersahabat",
+      "body": "признак/состояние, связанное с: друг",
+      "page": 790,
+      "verified": true
+    },
+    {
+      "id": "cur-13273",
+      "title": "bersahaja",
+      "body": "признак/состояние, связанное с: лишь",
+      "page": 790,
+      "verified": true
+    },
+    {
+      "id": "cur-13274",
+      "title": "bersama",
+      "body": "признак/состояние, связанное с: одинаковый",
+      "page": 796,
+      "verified": true
+    },
+    {
+      "id": "cur-13275",
+      "title": "bersamaan",
+      "body": "признак/состояние, связанное с: уравнение",
+      "page": 796,
+      "verified": true
+    },
+    {
+      "id": "cur-13276",
+      "title": "bersambung",
+      "body": "признак/состояние, связанное с: соединять",
+      "page": 797,
+      "verified": true
+    },
+    {
+      "id": "cur-13277",
+      "title": "bersambungan",
+      "body": "признак/состояние, связанное с: соединение",
+      "page": 797,
+      "verified": true
+    },
+    {
+      "id": "cur-13278",
+      "title": "bersamping",
+      "body": "признак/состояние, связанное с: сторона",
+      "page": 799,
+      "verified": true
+    },
+    {
+      "id": "cur-13279",
+      "title": "bersampul",
+      "body": "признак/состояние, связанное с: конверт",
+      "page": 799,
+      "verified": true
+    },
+    {
+      "id": "cur-13280",
+      "title": "bersanding",
+      "body": "признак/состояние, связанное с: рядом",
+      "page": 800,
+      "verified": true
+    },
+    {
+      "id": "cur-13281",
+      "title": "bersangka",
+      "body": "признак/состояние, связанное с: предполагать",
+      "page": 802,
+      "verified": true
+    },
+    {
+      "id": "cur-13282",
+      "title": "bersangkut",
+      "body": "признак/состояние, связанное с: застревать",
+      "page": 802,
+      "verified": true
+    },
+    {
+      "id": "cur-13283",
+      "title": "bersapu",
+      "body": "признак/состояние, связанное с: мести",
+      "page": 804,
+      "verified": true
+    },
+    {
+      "id": "cur-13284",
+      "title": "bersarung",
+      "body": "признак/состояние, связанное с: чехол",
+      "page": 806,
+      "verified": true
+    },
+    {
+      "id": "cur-13285",
+      "title": "bersatu",
+      "body": "признак/состояние, связанное с: один",
+      "page": 676,
+      "verified": true
+    },
+    {
+      "id": "cur-13286",
+      "title": "bersaudara",
+      "body": "признак/состояние, связанное с: родственник",
+      "page": 808,
+      "verified": true
+    },
+    {
+      "id": "cur-13287",
+      "title": "bersauh",
+      "body": "признак/состояние, связанное с: якорь",
+      "page": 808,
+      "verified": true
+    },
+    {
+      "id": "cur-13288",
+      "title": "bersebab",
+      "body": "признак/состояние, связанное с: причина",
+      "page": 811,
+      "verified": true
+    },
+    {
+      "id": "cur-13289",
+      "title": "bersebak",
+      "body": "признак/состояние, связанное с: ком в горле",
+      "page": 811,
+      "verified": true
+    },
+    {
+      "id": "cur-13290",
+      "title": "bersebaran",
+      "body": "признак/состояние, связанное с: распространение",
+      "page": 811,
+      "verified": true
+    },
+    {
+      "id": "cur-13291",
+      "title": "bersedekah",
+      "body": "признак/состояние, связанное с: милостыня",
+      "page": 813,
+      "verified": true
+    },
+    {
+      "id": "cur-13292",
+      "title": "bersegera",
+      "body": "признак/состояние, связанное с: немедленно",
+      "page": 815,
+      "verified": true
+    },
+    {
+      "id": "cur-13293",
+      "title": "bersegi",
+      "body": "признак/состояние, связанное с: грань",
+      "page": 815,
+      "verified": true
+    },
+    {
+      "id": "cur-13294",
+      "title": "bersejarah",
+      "body": "признак/состояние, связанное с: история",
+      "page": 815,
+      "verified": true
+    },
+    {
+      "id": "cur-13295",
+      "title": "bersejuk",
+      "body": "признак/состояние, связанное с: холодный",
+      "page": 816,
+      "verified": true
+    },
+    {
+      "id": "cur-13296",
+      "title": "bersekolah",
+      "body": "признак/состояние, связанное с: школа",
+      "page": 817,
+      "verified": true
+    },
+    {
+      "id": "cur-13297",
+      "title": "bersekutu",
+      "body": "признак/состояние, связанное с: союзник",
+      "page": 356,
+      "verified": true
+    },
+    {
+      "id": "cur-13298",
+      "title": "berselamat",
+      "body": "признак/состояние, связанное с: безопасный",
+      "page": 819,
+      "verified": true
+    },
+    {
+      "id": "cur-13299",
+      "title": "berselang",
+      "body": "признак/состояние, связанное с: интервал",
+      "page": 820,
+      "verified": true
+    },
+    {
+      "id": "cur-13300",
+      "title": "berselempang",
+      "body": "признак/состояние, связанное с: перевязь",
+      "page": 821,
+      "verified": true
+    },
+    {
+      "id": "cur-13301",
+      "title": "berselera",
+      "body": "признак/состояние, связанное с: аппетит",
+      "page": 822,
+      "verified": true
+    },
+    {
+      "id": "cur-13302",
+      "title": "berselesai",
+      "body": "признак/состояние, связанное с: завершенный",
+      "page": 822,
+      "verified": true
+    },
+    {
+      "id": "cur-13303",
+      "title": "berselimut",
+      "body": "признак/состояние, связанное с: одеяло",
+      "page": 823,
+      "verified": true
+    },
+    {
+      "id": "cur-13304",
+      "title": "berselimutkan",
+      "body": "признак/состояние, связанное с: укрывать",
+      "page": 823,
+      "verified": true
+    },
+    {
+      "id": "cur-13305",
+      "title": "berselipar",
+      "body": "признак/состояние, связанное с: тапочки",
+      "page": 824,
+      "verified": true
+    },
+    {
+      "id": "cur-13306",
+      "title": "berselisih",
+      "body": "признак/состояние, связанное с: разница",
+      "page": 824,
+      "verified": true
+    },
+    {
+      "id": "cur-13307",
+      "title": "berseluar",
+      "body": "признак/состояние, связанное с: брюки",
+      "page": 825,
+      "verified": true
+    },
+    {
+      "id": "cur-13308",
+      "title": "bersemangat",
+      "body": "признак/состояние, связанное с: энтузиазм",
+      "page": 401,
+      "verified": true
+    },
+    {
+      "id": "cur-13309",
+      "title": "bersemarak",
+      "body": "признак/состояние, связанное с: яркий",
+      "page": 827,
+      "verified": true
+    },
+    {
+      "id": "cur-13310",
+      "title": "bersembah",
+      "body": "признак/состояние, связанное с: поклоняться",
+      "page": 828,
+      "verified": true
+    },
+    {
+      "id": "cur-13311",
+      "title": "bersembang",
+      "body": "признак/состояние, связанное с: болтать",
+      "page": 828,
+      "verified": true
+    },
+    {
+      "id": "cur-13312",
+      "title": "bersemi",
+      "body": "признак/состояние, связанное с: полу",
+      "page": 830,
+      "verified": true
+    },
+    {
+      "id": "cur-13313",
+      "title": "berseminar",
+      "body": "признак/состояние, связанное с: семинар",
+      "page": 830,
+      "verified": true
+    },
+    {
+      "id": "cur-13314",
+      "title": "bersempadan",
+      "body": "признак/состояние, связанное с: граница",
+      "page": 830,
+      "verified": true
+    },
+    {
+      "id": "cur-13315",
+      "title": "bersempena",
+      "body": "признак/состояние, связанное с: в связи с",
+      "page": 831,
+      "verified": true
+    },
+    {
+      "id": "cur-13316",
+      "title": "bersenandung",
+      "body": "признак/состояние, связанное с: напев",
+      "page": 832,
+      "verified": true
+    },
+    {
+      "id": "cur-13317",
+      "title": "bersendi",
+      "body": "признак/состояние, связанное с: сустав",
+      "page": 833,
+      "verified": true
+    },
+    {
+      "id": "cur-13318",
+      "title": "bersengat",
+      "body": "признак/состояние, связанное с: жало",
+      "page": 834,
+      "verified": true
+    },
+    {
+      "id": "cur-13319",
+      "title": "bersengketa",
+      "body": "признак/состояние, связанное с: спор",
+      "page": 836,
+      "verified": true
+    },
+    {
+      "id": "cur-13320",
+      "title": "berseni",
+      "body": "признак/состояние, связанное с: искусство",
+      "page": 836,
+      "verified": true
+    },
+    {
+      "id": "cur-13321",
+      "title": "bersenjata",
+      "body": "признак/состояние, связанное с: оружие",
+      "page": 750,
+      "verified": true
+    },
+    {
+      "id": "cur-13322",
+      "title": "bersentuh",
+      "body": "признак/состояние, связанное с: трогать",
+      "page": 838,
+      "verified": true
+    },
+    {
+      "id": "cur-13323",
+      "title": "bersentuhan",
+      "body": "признак/состояние, связанное с: касание",
+      "page": 838,
+      "verified": true
+    },
+    {
+      "id": "cur-13324",
+      "title": "bersepadu",
+      "body": "признак/состояние, связанное с: интегрированный",
+      "page": 676,
+      "verified": true
+    },
+    {
+      "id": "cur-13325",
+      "title": "bersepakat",
+      "body": "признак/состояние, связанное с: единодушный",
+      "page": 679,
+      "verified": true
+    },
+    {
+      "id": "cur-13326",
+      "title": "bersepatu",
+      "body": "признак/состояние, связанное с: обувь",
+      "page": 839,
+      "verified": true
+    },
+    {
+      "id": "cur-13327",
+      "title": "bersepuh",
+      "body": "признак/состояние, связанное с: покрывать металлом",
+      "page": 840,
+      "verified": true
+    },
+    {
+      "id": "cur-13328",
+      "title": "berserabut",
+      "body": "признак/состояние, связанное с: хаотичный",
+      "page": 841,
+      "verified": true
+    },
+    {
+      "id": "cur-13329",
+      "title": "berseragam",
+      "body": "признак/состояние, связанное с: униформа",
+      "page": 745,
+      "verified": true
+    },
+    {
+      "id": "cur-13330",
+      "title": "berseri",
+      "body": "признак/состояние, связанное с: сияние",
+      "page": 845,
+      "verified": true
+    },
+    {
+      "id": "cur-13331",
+      "title": "bersesat",
+      "body": "признак/состояние, связанное с: заблудиться",
+      "page": 848,
+      "verified": true
+    },
+    {
+      "id": "cur-13332",
+      "title": "bersetia",
+      "body": "признак/состояние, связанное с: верный",
+      "page": 850,
+      "verified": true
+    },
+    {
+      "id": "cur-13333",
+      "title": "bersiaran",
+      "body": "признак/состояние, связанное с: трансляция",
+      "page": 852,
+      "verified": true
+    },
+    {
+      "id": "cur-13334",
+      "title": "bersiasat",
+      "body": "признак/состояние, связанное с: расследовать",
+      "page": 852,
+      "verified": true
+    },
+    {
+      "id": "cur-13335",
+      "title": "bersiku",
+      "body": "признак/состояние, связанное с: локоть",
+      "page": 855,
+      "verified": true
+    },
+    {
+      "id": "cur-13336",
+      "title": "bersilaturahim",
+      "body": "признак/состояние, связанное с: добрососедские связи",
+      "page": 856,
+      "verified": true
+    },
+    {
+      "id": "cur-13337",
+      "title": "bersimpai",
+      "body": "признак/состояние, связанное с: обруч",
+      "page": 855,
+      "verified": true
+    },
+    {
+      "id": "cur-13338",
+      "title": "bersimpati",
+      "body": "признак/состояние, связанное с: сочувствие",
+      "page": 858,
+      "verified": true
+    },
+    {
+      "id": "cur-13339",
+      "title": "bersimposium",
+      "body": "признак/состояние, связанное с: симпозиум",
+      "page": 858,
+      "verified": true
+    },
+    {
+      "id": "cur-13340",
+      "title": "bersisa",
+      "body": "признак/состояние, связанное с: остаток",
+      "page": 862,
+      "verified": true
+    },
+    {
+      "id": "cur-13341",
+      "title": "bersistem",
+      "body": "признак/состояние, связанное с: система",
+      "page": 863,
+      "verified": true
+    },
+    {
+      "id": "cur-13342",
+      "title": "bersiul",
+      "body": "признак/состояние, связанное с: свистеть",
+      "page": 864,
+      "verified": true
+    },
+    {
+      "id": "cur-13343",
+      "title": "bersoal",
+      "body": "признак/состояние, связанное с: вопрос",
+      "page": 865,
+      "verified": true
+    },
+    {
+      "id": "cur-13344",
+      "title": "bersosial",
+      "body": "признак/состояние, связанное с: социальный",
+      "page": 869,
+      "verified": true
+    },
+    {
+      "id": "cur-13345",
+      "title": "berstruktur",
+      "body": "признак/состояние, связанное с: структура",
+      "page": 871,
+      "verified": true
+    },
+    {
+      "id": "cur-13346",
+      "title": "bersuhu",
+      "body": "признак/состояние, связанное с: температура",
+      "page": 875,
+      "verified": true
+    },
+    {
+      "id": "cur-13347",
+      "title": "bersuka",
+      "body": "признак/состояние, связанное с: нравиться",
+      "page": 772,
+      "verified": true
+    },
+    {
+      "id": "cur-13348",
+      "title": "bersukacita",
+      "body": "признак/состояние, связанное с: радость",
+      "page": 876,
+      "verified": true
+    },
+    {
+      "id": "cur-13349",
+      "title": "bersuku",
+      "body": "признак/состояние, связанное с: четверть",
+      "page": 877,
+      "verified": true
+    },
+    {
+      "id": "cur-13350",
+      "title": "bersumber",
+      "body": "признак/состояние, связанное с: источник",
+      "page": 879,
+      "verified": true
+    },
+    {
+      "id": "cur-13351",
+      "title": "bersumpah",
+      "body": "признак/состояние, связанное с: клятва",
+      "page": 880,
+      "verified": true
+    },
+    {
+      "id": "cur-13352",
+      "title": "bersusila",
+      "body": "признак/состояние, связанное с: нравственный",
+      "page": 885,
+      "verified": true
+    },
+    {
+      "id": "cur-13353",
+      "title": "bersyarat",
+      "body": "признак/состояние, связанное с: условие",
+      "page": 238,
+      "verified": true
+    },
+    {
+      "id": "cur-13354",
+      "title": "bersyukur",
+      "body": "признак/состояние, связанное с: благодарность",
+      "page": 889,
+      "verified": true
+    },
+    {
+      "id": "cur-13355",
+      "title": "bertakbir",
+      "body": "признак/состояние, связанное с: такбир",
+      "page": 896,
+      "verified": true
+    },
+    {
+      "id": "cur-13356",
+      "title": "bertakhta",
+      "body": "признак/состояние, связанное с: трон",
+      "page": 896,
+      "verified": true
+    },
+    {
+      "id": "cur-13357",
+      "title": "bertali",
+      "body": "признак/состояние, связанное с: веревка",
+      "page": 794,
+      "verified": true
+    },
+    {
+      "id": "cur-13358",
+      "title": "bertalian",
+      "body": "признак/состояние, связанное с: линия",
+      "page": 7,
+      "verified": true
+    },
+    {
+      "id": "cur-13359",
+      "title": "bertamadun",
+      "body": "признак/состояние, связанное с: цивилизация",
+      "page": 900,
+      "verified": true
+    },
+    {
+      "id": "cur-13360",
+      "title": "bertambah",
+      "body": "признак/состояние, связанное с: добавлять",
+      "page": 901,
+      "verified": true
+    },
+    {
+      "id": "cur-13361",
+      "title": "bertampal",
+      "body": "признак/состояние, связанное с: вставить",
+      "page": 903,
+      "verified": true
+    },
+    {
+      "id": "cur-13362",
+      "title": "bertamu",
+      "body": "признак/состояние, связанное с: гость",
+      "page": 905,
+      "verified": true
+    },
+    {
+      "id": "cur-13363",
+      "title": "bertangga",
+      "body": "признак/состояние, связанное с: лестница",
+      "page": 909,
+      "verified": true
+    },
+    {
+      "id": "cur-13364",
+      "title": "bertangkap",
+      "body": "признак/состояние, связанное с: ловить",
+      "page": 911,
+      "verified": true
+    },
+    {
+      "id": "cur-13365",
+      "title": "bertasbih",
+      "body": "признак/состояние, связанное с: тасбих",
+      "page": 917,
+      "verified": true
+    },
+    {
+      "id": "cur-13366",
+      "title": "berteater",
+      "body": "признак/состояние, связанное с: театр",
+      "page": 921,
+      "verified": true
+    },
+    {
+      "id": "cur-13367",
+      "title": "bertelefon",
+      "body": "признак/состояние, связанное с: телефон",
+      "page": 929,
+      "verified": true
+    },
+    {
+      "id": "cur-13368",
+      "title": "bertempat",
+      "body": "признак/состояние, связанное с: место",
+      "page": 934,
+      "verified": true
+    },
+    {
+      "id": "cur-13369",
+      "title": "bertempias",
+      "body": "признак/состояние, связанное с: брызги",
+      "page": 935,
+      "verified": true
+    },
+    {
+      "id": "cur-13370",
+      "title": "bertempoh",
+      "body": "признак/состояние, связанное с: срок",
+      "page": 935,
+      "verified": true
+    },
+    {
+      "id": "cur-13371",
+      "title": "bertemu",
+      "body": "признак/состояние, связанное с: встречать",
+      "page": 936,
+      "verified": true
+    },
+    {
+      "id": "cur-13372",
+      "title": "bertenaga",
+      "body": "признак/состояние, связанное с: энергия",
+      "page": 937,
+      "verified": true
+    },
+    {
+      "id": "cur-13373",
+      "title": "bertenggang",
+      "body": "признак/состояние, связанное с: терпимость",
+      "page": 109,
+      "verified": true
+    },
+    {
+      "id": "cur-13374",
+      "title": "berteori",
+      "body": "признак/состояние, связанное с: теория",
+      "page": 942,
+      "verified": true
+    },
+    {
+      "id": "cur-13375",
+      "title": "bertepi",
+      "body": "признак/состояние, связанное с: край",
+      "page": 337,
+      "verified": true
+    },
+    {
+      "id": "cur-13376",
+      "title": "berteras",
+      "body": "признак/состояние, связанное с: ядро",
+      "page": 945,
+      "verified": true
+    },
+    {
+      "id": "cur-13377",
+      "title": "berterawang",
+      "body": "признак/состояние, связанное с: просвечивать",
+      "page": 946,
+      "verified": true
+    },
+    {
+      "id": "cur-13378",
+      "title": "bertertib",
+      "body": "признак/состояние, связанное с: порядок",
+      "page": 949,
+      "verified": true
+    },
+    {
+      "id": "cur-13379",
+      "title": "berterus",
+      "body": "признак/состояние, связанное с: продолжать",
+      "page": 950,
+      "verified": true
+    },
+    {
+      "id": "cur-13380",
+      "title": "bertimbal",
+      "body": "признак/состояние, связанное с: свинец",
+      "page": 955,
+      "verified": true
+    },
+    {
+      "id": "cur-13381",
+      "title": "bertindak",
+      "body": "признак/состояние, связанное с: действовать",
+      "page": 957,
+      "verified": true
+    },
+    {
+      "id": "cur-13382",
+      "title": "bertingkah",
+      "body": "признак/состояние, связанное с: поведение",
+      "page": 959,
+      "verified": true
+    },
+    {
+      "id": "cur-13383",
+      "title": "bertingkat",
+      "body": "признак/состояние, связанное с: уровень",
+      "page": 960,
+      "verified": true
+    },
+    {
+      "id": "cur-13384",
+      "title": "bertiub",
+      "body": "признак/состояние, связанное с: трубка",
+      "page": 963,
+      "verified": true
+    },
+    {
+      "id": "cur-13385",
+      "title": "bertiup",
+      "body": "признак/состояние, связанное с: дуть",
+      "page": 963,
+      "verified": true
+    },
+    {
+      "id": "cur-13386",
+      "title": "bertopeng",
+      "body": "признак/состояние, связанное с: маска",
+      "page": 969,
+      "verified": true
+    },
+    {
+      "id": "cur-13387",
+      "title": "bertopi",
+      "body": "признак/состояние, связанное с: шапка",
+      "page": 1028,
+      "verified": true
+    },
+    {
+      "id": "cur-13388",
+      "title": "bertuala",
+      "body": "признак/состояние, связанное с: полотенце",
+      "page": 972,
+      "verified": true
+    },
+    {
+      "id": "cur-13389",
+      "title": "bertuan",
+      "body": "признак/состояние, связанное с: господин",
+      "page": 973,
+      "verified": true
+    },
+    {
+      "id": "cur-13390",
+      "title": "bertujuan",
+      "body": "признак/состояние, связанное с: цель",
+      "page": 975,
+      "verified": true
+    },
+    {
+      "id": "cur-13391",
+      "title": "bertumbuh",
+      "body": "признак/состояние, связанное с: расти",
+      "page": 979,
+      "verified": true
+    },
+    {
+      "id": "cur-13392",
+      "title": "beruang",
+      "body": "признак/состояние, связанное с: деньги",
+      "page": 110,
+      "verified": true
+    },
+    {
+      "id": "cur-13393",
+      "title": "berucap",
+      "body": "признак/состояние, связанное с: произносить",
+      "page": 991,
+      "verified": true
+    },
+    {
+      "id": "cur-13394",
+      "title": "berukir",
+      "body": "признак/состояние, связанное с: вырезать",
+      "page": 993,
+      "verified": true
+    },
+    {
+      "id": "cur-13395",
+      "title": "berulas",
+      "body": "признак/состояние, связанное с: обзор",
+      "page": 994,
+      "verified": true
+    },
+    {
+      "id": "cur-13396",
+      "title": "berulat",
+      "body": "признак/состояние, связанное с: гусеница",
+      "page": 995,
+      "verified": true
+    },
+    {
+      "id": "cur-13397",
+      "title": "berumbi",
+      "body": "признак/состояние, связанное с: клубень",
+      "page": 996,
+      "verified": true
+    },
+    {
+      "id": "cur-13398",
+      "title": "berumpama",
+      "body": "признак/состояние, связанное с: словно",
+      "page": 996,
+      "verified": true
+    },
+    {
+      "id": "cur-13399",
+      "title": "berumur",
+      "body": "признак/состояние, связанное с: возраст",
+      "page": 997,
+      "verified": true
+    },
+    {
+      "id": "cur-13400",
+      "title": "berundi",
+      "body": "признак/состояние, связанное с: голосовать",
+      "page": 998,
+      "verified": true
+    },
+    {
+      "id": "cur-13401",
+      "title": "beruntung",
+      "body": "признак/состояние, связанное с: прибыль",
+      "page": 1001,
+      "verified": true
+    },
+    {
+      "id": "cur-13402",
+      "title": "berupah",
+      "body": "признак/состояние, связанное с: оплата",
+      "page": 1001,
+      "verified": true
+    },
+    {
+      "id": "cur-13403",
+      "title": "berupaya",
+      "body": "признак/состояние, связанное с: усилие",
+      "page": 1001,
+      "verified": true
+    },
+    {
+      "id": "cur-13404",
+      "title": "berurat",
+      "body": "признак/состояние, связанное с: вена",
+      "page": 29,
+      "verified": true
+    },
+    {
+      "id": "cur-13405",
+      "title": "berurusan",
+      "body": "признак/состояние, связанное с: дела",
+      "page": 1003,
+      "verified": true
+    },
+    {
+      "id": "cur-13406",
+      "title": "berusia",
+      "body": "признак/состояние, связанное с: возраст",
+      "page": 1004,
+      "verified": true
+    },
+    {
+      "id": "cur-13407",
+      "title": "berutus",
+      "body": "признак/состояние, связанное с: отправлять",
+      "page": 1005,
+      "verified": true
+    },
+    {
+      "id": "cur-13408",
+      "title": "bervariasi",
+      "body": "признак/состояние, связанное с: вариация",
+      "page": 1006,
+      "verified": true
+    },
+    {
+      "id": "cur-13409",
+      "title": "bervisi",
+      "body": "признак/состояние, связанное с: видение",
+      "page": 1007,
+      "verified": true
+    },
+    {
+      "id": "cur-13410",
+      "title": "berwang",
+      "body": "признак/состояние, связанное с: деньги",
+      "page": 1010,
+      "verified": true
+    },
+    {
+      "id": "cur-13411",
+      "title": "berwaspada",
+      "body": "признак/состояние, связанное с: бдительный",
+      "page": 1012,
+      "verified": true
+    },
+    {
+      "id": "cur-13412",
+      "title": "berzat",
+      "body": "признак/состояние, связанное с: вещество",
+      "page": 1017,
+      "verified": true
+    },
+    {
+      "id": "cur-13413",
+      "title": "berziarah",
+      "body": "признак/состояние, связанное с: посещение",
+      "page": 1017,
+      "verified": true
+    },
+    {
+      "id": "cur-13414",
+      "title": "keakhiran",
+      "body": "абстрактное качество от: суффикс",
+      "page": 30,
+      "verified": true
+    },
+    {
+      "id": "cur-13415",
+      "title": "kebas",
+      "body": "абстрактное качество от: автобус",
+      "page": 365,
+      "verified": true
+    },
+    {
+      "id": "cur-13416",
+      "title": "kebenci",
+      "body": "абстрактное качество от: ненавидеть",
+      "page": 104,
+      "verified": true
+    },
+    {
+      "id": "cur-13417",
+      "title": "kecabaran",
+      "body": "абстрактное качество от: вызов",
+      "page": 134,
+      "verified": true
+    },
+    {
+      "id": "cur-13418",
+      "title": "kecik",
+      "body": "абстрактное качество от: г-жа",
+      "page": 368,
+      "verified": true
+    },
+    {
+      "id": "cur-13419",
+      "title": "kedana",
+      "body": "абстрактное качество от: фонд",
+      "page": 371,
+      "verified": true
+    },
+    {
+      "id": "cur-13420",
+      "title": "kedarah",
+      "body": "абстрактное качество от: кровь",
+      "page": 371,
+      "verified": true
+    },
+    {
+      "id": "cur-13421",
+      "title": "keduduk",
+      "body": "абстрактное качество от: сидеть",
+      "page": 372,
+      "verified": true
+    },
+    {
+      "id": "cur-13422",
+      "title": "keempat",
+      "body": "абстрактное качество от: четыре",
+      "page": 209,
+      "verified": true
+    },
+    {
+      "id": "cur-13423",
+      "title": "keenam",
+      "body": "абстрактное качество от: шесть",
+      "page": 210,
+      "verified": true
+    },
+    {
+      "id": "cur-13424",
+      "title": "kegiliran",
+      "body": "абстрактное качество от: очередь",
+      "page": 245,
+      "verified": true
+    },
+    {
+      "id": "cur-13425",
+      "title": "keharuan",
+      "body": "абстрактное качество от: змееголовая рыба",
+      "page": 265,
+      "verified": true
+    },
+    {
+      "id": "cur-13426",
+      "title": "kejam",
+      "body": "абстрактное качество от: часы",
+      "page": 372,
+      "verified": true
+    },
+    {
+      "id": "cur-13427",
+      "title": "kekagetan",
+      "body": "абстрактное качество от: пугливый",
+      "page": 335,
+      "verified": true
+    },
+    {
+      "id": "cur-13428",
+      "title": "kekapas",
+      "body": "абстрактное качество от: хлопок",
+      "page": 375,
+      "verified": true
+    },
+    {
+      "id": "cur-13429",
+      "title": "kekeruh",
+      "body": "абстрактное качество от: мутный",
+      "page": 375,
+      "verified": true
+    },
+    {
+      "id": "cur-13430",
+      "title": "kekulit",
+      "body": "абстрактное качество от: кожа",
+      "page": 468,
+      "verified": true
+    },
+    {
+      "id": "cur-13431",
+      "title": "kelain",
+      "body": "абстрактное качество от: другой",
+      "page": 377,
+      "verified": true
+    },
+    {
+      "id": "cur-13432",
+      "title": "kelakar",
+      "body": "абстрактное качество от: набросок",
+      "page": 377,
+      "verified": true
+    },
+    {
+      "id": "cur-13433",
+      "title": "kelaluan",
+      "body": "абстрактное качество от: путь",
+      "page": 490,
+      "verified": true
+    },
+    {
+      "id": "cur-13434",
+      "title": "kelapan",
+      "body": "абстрактное качество от: восемь",
+      "page": 504,
+      "verified": true
+    },
+    {
+      "id": "cur-13435",
+      "title": "kelari",
+      "body": "абстрактное качество от: бежать",
+      "page": 379,
+      "verified": true
+    },
+    {
+      "id": "cur-13436",
+      "title": "kelasak",
+      "body": "абстрактное качество от: активный",
+      "page": 379,
+      "verified": true
+    },
+    {
+      "id": "cur-13437",
+      "title": "kelawan",
+      "body": "абстрактное качество от: противник",
+      "page": 379,
+      "verified": true
+    },
+    {
+      "id": "cur-13438",
+      "title": "kelawat",
+      "body": "абстрактное качество от: посещать",
+      "page": 379,
+      "verified": true
+    },
+    {
+      "id": "cur-13439",
+      "title": "kelayak",
+      "body": "абстрактное качество от: достойный",
+      "page": 379,
+      "verified": true
+    },
+    {
+      "id": "cur-13440",
+      "title": "kelayar",
+      "body": "абстрактное качество от: экран",
+      "page": 379,
+      "verified": true
+    },
+    {
+      "id": "cur-13441",
+      "title": "kelelap",
+      "body": "абстрактное качество от: крепко спать",
+      "page": 380,
+      "verified": true
     }
   ]
 }
