@@ -262,7 +262,9 @@ def run_analysis(docs: List[core.Doc], out_dir: Path, top_n: int, kwic_window: i
     core.stage4_prognostic(docs, out_dir)
     core.stage5_representativeness(docs, out_dir)
     core.stage6_significance(docs, out_dir, top_n_logodds=top_n_logodds)
-    core.stage7_persuasion_indicator_model(docs, out_dir)
+    # Backward compatibility: some deployed repos may still use an older analyzer core.
+    if hasattr(core, "stage7_persuasion_indicator_model"):
+        core.stage7_persuasion_indicator_model(docs, out_dir)
 
     return dedup_stats, len(docs)
 
