@@ -23,6 +23,7 @@ ROOT_DIR = Path(__file__).resolve().parents[1]
 if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
 import corpus_analysis_strict_method as core
+APP_BUILD = "2026-04-15-14:58"
 
 
 SOURCE_ALIASES = {
@@ -426,7 +427,7 @@ def run_analysis(docs: List[core.Doc], out_dir: Path, top_n: int, kwic_window: i
 def main() -> None:
     st.set_page_config(page_title="Mediatext analyzator", layout="wide")
     st.title("Mediatext analyzator")
-    st.caption("Индикаторная модель лингвопрагматического анализа персуазивного потенциала политического медиатекста.")
+    st.caption(f"Индикаторная модель лингвопрагматического анализа персуазивного потенциала политического медиатекста. Build: {APP_BUILD}")
 
     with st.sidebar:
         st.header("Параметры")
@@ -535,6 +536,8 @@ def main() -> None:
 
             show_charts(out_dir)
             show_five_indicator_charts(analyzed_doc_objs)
+            with st.expander("DEBUG"):
+                st.write({"build": APP_BUILD, "docs_for_indicator_charts": len(analyzed_doc_objs)})
 
             out_zip = zip_dir_bytes(out_dir)
             st.download_button(
