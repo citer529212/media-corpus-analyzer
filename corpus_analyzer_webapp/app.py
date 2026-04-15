@@ -343,6 +343,29 @@ def show_five_indicator_charts(docs: List[core.Doc]) -> None:
     if df.empty:
         return
 
+    def lvl(v: float, bounds: tuple[float, float, float, float]) -> str:
+        b1, b2, b3, b4 = bounds
+        if v < b1:
+            return "очень низкий"
+        if v < b2:
+            return "низкий"
+        if v < b3:
+            return "средний"
+        if v < b4:
+            return "высокий"
+        return "очень высокий"
+
+    def pp_lvl(v: float) -> str:
+        if v <= 0.20:
+            return "очень низкий"
+        if v <= 0.40:
+            return "низкий"
+        if v <= 0.60:
+            return "средний"
+        if v <= 0.80:
+            return "высокий"
+        return "очень высокий"
+
     st.subheader("5 обязательных индикаторов")
     avg = df[["IDI", "EMI", "EVI", "MTI", "PP"]].mean()
     c1, c2, c3, c4, c5 = st.columns(5)
@@ -351,6 +374,16 @@ def show_five_indicator_charts(docs: List[core.Doc]) -> None:
     c3.metric("EVI", f"{avg['EVI']:.3f}")
     c4.metric("MTI", f"{avg['MTI']:.3f}")
     c5.metric("PP", f"{avg['PP']:.3f}")
+
+    st.markdown("### Интерпретация")
+    summary_text = (
+        f"Интегральный персуазивный потенциал `PP={avg['PP']:.3f}`: **{pp_lvl(float(avg['PP']))} уровень**.  "
+        f"Профиль индикаторов: `IDI={avg['IDI']:.3f}` ({lvl(float(avg['IDI']), (2.0, 4.0, 6.0, 8.0))}), "
+        f"`EMI={avg['EMI']:.3f}` ({lvl(float(avg['EMI']), (2.0, 4.0, 6.0, 8.0))}), "
+        f"`EVI={avg['EVI']:.3f}` ({lvl(float(avg['EVI']), (2.0, 3.0, 4.0, 5.0))}), "
+        f"`MTI={avg['MTI']:.3f}` ({lvl(float(avg['MTI']), (1.25, 2.0, 2.75, 3.5))})."
+    )
+    st.info(summary_text)
 
     radar_vals = {
         "IDI": min(avg["IDI"] / 8.0, 1.0),
