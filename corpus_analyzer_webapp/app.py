@@ -466,16 +466,23 @@ def main() -> None:
         st.header("Параметры")
         min_year = st.number_input("Минимальный год", min_value=2000, max_value=2100, value=2022)
         max_year = st.number_input("Максимальный год", min_value=2000, max_value=2100, value=2026)
-        use_lemma = st.checkbox("Лемматизация (легкая)", value=True)
+        analysis_mode = st.selectbox(
+            "Режим анализа",
+            options=["Стандартный (5 индикаторов)", "Расширенный (корпусный)"],
+            index=0,
+        )
         dedup = st.checkbox("Dedup (exact + near)", value=True)
-        near_dup_jaccard = st.slider("Near-dup Jaccard", min_value=0.80, max_value=0.99, value=0.92, step=0.01)
-        near_dup_hamming = st.slider("Near-dup SimHash Hamming", min_value=1, max_value=8, value=3)
-        top_n = st.number_input("Top-N частот/коллокаций", min_value=50, max_value=1000, value=250)
-        kwic_window = st.number_input("KWIC окно", min_value=3, max_value=20, value=7)
-        kwic_max = st.number_input("KWIC максимум строк", min_value=500, max_value=50000, value=12000)
-        colloc_window = st.number_input("Collocation окно", min_value=2, max_value=15, value=5)
-        colloc_min = st.number_input("Collocation min cooc", min_value=2, max_value=100, value=5)
-        top_n_logodds = st.number_input("Top log-odds токенов", min_value=30, max_value=500, value=120)
+        use_lemma = st.checkbox("Лемматизация (легкая)", value=True)
+
+        with st.expander("Расширенные настройки", expanded=False):
+            near_dup_jaccard = st.slider("Near-dup Jaccard", min_value=0.80, max_value=0.99, value=0.92, step=0.01)
+            near_dup_hamming = st.slider("Near-dup SimHash Hamming", min_value=1, max_value=8, value=3)
+            top_n = st.number_input("Top-N частот/коллокаций", min_value=50, max_value=1000, value=250)
+            kwic_window = st.number_input("KWIC окно", min_value=3, max_value=20, value=7)
+            kwic_max = st.number_input("KWIC максимум строк", min_value=500, max_value=50000, value=12000)
+            colloc_window = st.number_input("Collocation окно", min_value=2, max_value=15, value=5)
+            colloc_min = st.number_input("Collocation min cooc", min_value=2, max_value=100, value=5)
+            top_n_logodds = st.number_input("Top log-odds токенов", min_value=30, max_value=500, value=120)
 
     col1, col2 = st.columns(2)
     with col1:
