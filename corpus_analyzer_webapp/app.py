@@ -11,7 +11,10 @@ import zipfile
 from pathlib import Path
 from typing import List, Tuple
 
+import pandas as pd
 import streamlit as st
+from docx import Document
+from pypdf import PdfReader
 
 # Reuse your strict analyzer core
 ROOT_DIR = Path(__file__).resolve().parents[1]
@@ -50,6 +53,13 @@ def guess_source(filename: str) -> str:
     return "Unknown"
 
 
+def source_from_raw(raw: str) -> str:
+    m = re.search(r"^\s*Source:\s*(.+?)\s*$", raw, flags=re.IGNORECASE | re.MULTILINE)
+    if m and m.group(1).strip():
+        return m.group(1).strip()
+    return ""
+
+
 def guess_country(filename: str, text: str) -> str:
     s = (filename + "\n" + text[:4000]).casefold()
     scores = {}
@@ -86,25 +96,51 @@ def extract_title_and_body(raw: str) -> Tuple[str, str]:
     return title, body.strip()
 
 
-def read_zip_txt_files(zip_bytes: bytes) -> List[Tuple[str, str]]:
+def decode_text_bytes(data: bytes) -> str:
+    for enc in ("utf-8", "utf-8-sig", "cp1251", "latin-1"):
+        try:
+            return data.decode(enc)
+        except Exception:
+            continue
+    return data.decode("utf-8", errors="ignore")
+
+
+def extract_raw_by_extension(name: str, data: bytes) -> str:
+    low = name.casefold()
+    if low.endswith((".txt", ".md", ".text")):
+        return decode_text_bytes(data)
+    if low.endswith(".docx"):
+        doc = Document(io.BytesIO(data))
+        return "\n".join(p.text for p in doc.paragraphs if p.text)
+    if low.endswith(".pdf"):
+        pdf = PdfReader(io.BytesIO(data))
+        return "\n".join((p.extract_text() or "") for p in pdf.pages)
+    return ""
+
+
+def read_zip_corpus_files(zip_bytes: bytes) -> List[Tuple[str, str]]:
     out = []
     with zipfile.ZipFile(io.BytesIO(zip_bytes), "r") as zf:
         for info in zf.infolist():
             if info.is_dir():
                 continue
             name = info.filename
-            if not name.casefold().endswith((".txt", ".md", ".text")):
+            if not name.casefold().endswith((".txt", ".md", ".text", ".docx", ".pdf")):
                 continue
-            raw = zf.read(info).decode("utf-8", errors="ignore")
+            raw = extract_raw_by_extension(name, zf.read(info))
+            if not raw.strip():
+                continue
             out.append((name, raw))
     return out
 
 
-def read_uploaded_txt_files(files) -> List[Tuple[str, str]]:
+def read_uploaded_corpus_files(files) -> List[Tuple[str, str]]:
     out = []
     for f in files or []:
         name = f.name
-        raw = f.getvalue().decode("utf-8", errors="ignore")
+        raw = extract_raw_by_extension(name, f.getvalue())
+        if not raw.strip():
+            continue
         out.append((name, raw))
     return out
 
@@ -120,7 +156,7 @@ def build_docs(file_items: List[Tuple[str, str]], min_year: int, max_year: int, 
         if year < min_year or year > max_year:
             continue
 
-        source = guess_source(filename)
+        source = source_from_raw(raw) or guess_source(filename)
         country = guess_country(filename, raw)
 
         body_clean = core.strip_boilerplate(body)
@@ -166,6 +202,40 @@ def read_csv_preview(path: Path, limit: int = 20) -> List[List[str]]:
     return rows
 
 
+def show_charts(out_dir: Path) -> None:
+    st.subheader("Диаграммы")
+    p_source = out_dir / "stage1_profile_source.csv"
+    p_country = out_dir / "stage1_profile_country.csv"
+    p_year = out_dir / "stage1_profile_year.csv"
+    p_pp = out_dir / "stage7_persuasion_summary_country_year.csv"
+
+    c1, c2 = st.columns(2)
+    if p_source.exists():
+        df = pd.read_csv(p_source).sort_values("doc_count", ascending=False).set_index("source")
+        with c1:
+            st.markdown("**Распределение по источникам**")
+            st.bar_chart(df["doc_count"])
+    if p_country.exists():
+        df = pd.read_csv(p_country).sort_values("doc_count", ascending=False).set_index("country")
+        with c2:
+            st.markdown("**Распределение по странам**")
+            st.bar_chart(df["doc_count"])
+
+    if p_year.exists():
+        df = pd.read_csv(p_year).sort_values("year").set_index("year")
+        st.markdown("**Динамика по годам**")
+        st.line_chart(df["doc_count"])
+
+    if p_pp.exists():
+        df = pd.read_csv(p_pp).sort_values(["country", "year"])
+        st.markdown("**Персуазивный потенциал (PP_weighted) по годам**")
+        pivot_pp = df.pivot(index="year", columns="country", values="avg_PP_weighted").fillna(0.0)
+        st.line_chart(pivot_pp)
+        st.markdown("**Индексы IDI / EMI / EVI / MTI (средние по странам)**")
+        idx = df.groupby("country")[["avg_IDI", "avg_EMI", "avg_EVI", "avg_MTI"]].mean().reset_index().set_index("country")
+        st.bar_chart(idx)
+
+
 def run_analysis(docs: List[core.Doc], out_dir: Path, top_n: int, kwic_window: int, kwic_max: int, colloc_window: int, colloc_min: int, top_n_logodds: int, dedup: bool, near_dup_jaccard: float, near_dup_hamming: int):
     dedup_stats = {
         "total_docs_before_dedup": len(docs),
@@ -192,14 +262,15 @@ def run_analysis(docs: List[core.Doc], out_dir: Path, top_n: int, kwic_window: i
     core.stage4_prognostic(docs, out_dir)
     core.stage5_representativeness(docs, out_dir)
     core.stage6_significance(docs, out_dir, top_n_logodds=top_n_logodds)
+    core.stage7_persuasion_indicator_model(docs, out_dir)
 
     return dedup_stats, len(docs)
 
 
 def main() -> None:
-    st.set_page_config(page_title="SEA Media Corpus Analyzer", layout="wide")
-    st.title("SEA Media Corpus Analyzer")
-    st.caption("Загрузите ZIP с корпусом или отдельные тексты. На выходе получите полный пакет CSV-результатов анализа.")
+    st.set_page_config(page_title="Mediatext analyzator", layout="wide")
+    st.title("Mediatext analyzator")
+    st.caption("Индикаторная модель лингвопрагматического анализа персуазивного потенциала политического медиатекста.")
 
     with st.sidebar:
         st.header("Параметры")
@@ -220,15 +291,32 @@ def main() -> None:
     with col1:
         zip_upload = st.file_uploader("ZIP с корпусом (.zip)", type=["zip"], accept_multiple_files=False)
     with col2:
-        txt_uploads = st.file_uploader("Или отдельные тексты (.txt/.md)", type=["txt", "md", "text"], accept_multiple_files=True)
+        txt_uploads = st.file_uploader(
+            "Или отдельные файлы (.txt/.md/.docx/.pdf)",
+            type=["txt", "md", "text", "docx", "pdf"],
+            accept_multiple_files=True,
+        )
+
+    st.markdown("### Или вставьте текст вручную")
+    manual_text = st.text_area("Текст для анализа", height=180, placeholder="Вставьте сюда любой медиатекст...")
+    m1, m2, m3 = st.columns(3)
+    with m1:
+        manual_title = st.text_input("Заголовок (опционально)", value="Manual input")
+    with m2:
+        manual_source = st.text_input("Источник (опционально)", value="Manual")
+    with m3:
+        manual_year = st.number_input("Год ручного текста", min_value=2000, max_value=2100, value=2026)
 
     run_btn = st.button("Запустить анализ", type="primary")
 
     if run_btn:
         file_items = []
         if zip_upload is not None:
-            file_items.extend(read_zip_txt_files(zip_upload.getvalue()))
-        file_items.extend(read_uploaded_txt_files(txt_uploads))
+            file_items.extend(read_zip_corpus_files(zip_upload.getvalue()))
+        file_items.extend(read_uploaded_corpus_files(txt_uploads))
+        if manual_text.strip():
+            manual_blob = f"Title: {manual_title}\nDate: {int(manual_year)}\nSource: {manual_source}\n\n{manual_text.strip()}"
+            file_items.append((f"manual_{int(manual_year)}.txt", manual_blob))
 
         # deduplicate same filename+content across inputs
         uniq = {}
@@ -239,7 +327,7 @@ def main() -> None:
         file_items = list(uniq.values())
 
         if not file_items:
-            st.error("Не найдено входных текстов. Загрузите ZIP или отдельные .txt/.md файлы.")
+            st.error("Не найдено входных текстов. Загрузите ZIP/файлы или вставьте текст вручную.")
             return
 
         docs = build_docs(file_items, int(min_year), int(max_year), use_lemma=use_lemma)
@@ -280,6 +368,8 @@ def main() -> None:
                 "stage1_profile_language.csv",
                 "stage5_representativeness_country_total.csv",
                 "stage6_significance_pairwise.csv",
+                "stage7_persuasion_summary_country_year.csv",
+                "stage7_persuasion_summary_source.csv",
             ]:
                 p = out_dir / preview_name
                 if p.exists():
@@ -287,11 +377,13 @@ def main() -> None:
                     rows = read_csv_preview(p, limit=15)
                     st.dataframe(rows)
 
+            show_charts(out_dir)
+
             out_zip = zip_dir_bytes(out_dir)
             st.download_button(
                 label="Скачать результаты анализа (ZIP)",
                 data=out_zip,
-                file_name="sea_media_analysis_output.zip",
+                file_name="mediatext_analyzator_output.zip",
                 mime="application/zip",
             )
 
