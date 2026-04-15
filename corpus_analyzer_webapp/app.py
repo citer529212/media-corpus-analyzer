@@ -12,6 +12,8 @@ from pathlib import Path
 from typing import List, Tuple
 
 import pandas as pd
+import plotly.express as px
+import plotly.graph_objects as go
 import streamlit as st
 from docx import Document
 from pypdf import PdfReader
@@ -236,6 +238,158 @@ def show_charts(out_dir: Path) -> None:
         st.bar_chart(idx)
 
 
+def _get_lexicon(name: str, fallback: dict) -> dict:
+    return getattr(core, name, fallback)
+
+
+def build_five_indicator_df(docs: List[core.Doc]) -> pd.DataFrame:
+    ideology_fallback = {
+        "ideol": {"sovereignty", "kedaulatan", "pancasila", "unity", "stability", "national"},
+        "prec": {"washington", "beijing", "moscow", "putin", "biden", "trump", "xi"},
+        "slog": {"national", "interest", "stability", "security", "unity"},
+        "dich": {"we", "they", "our", "their", "us", "them", "kita", "mereka"},
+    }
+    emotion_fallback = {
+        "weak": {"concern", "worry", "uncertain", "khawatir", "cemas"},
+        "medium": {"fear", "anger", "pride", "hope", "trust", "marah", "bangga"},
+        "strong": {"panic", "threat", "catastrophe", "shock", "outrage", "ancaman", "krisis"},
+    }
+    eval_fallback = {
+        "rational": {"strategic", "important", "legal", "effective", "necessary", "penting"},
+        "emotional": {"outrageous", "heroic", "shameful", "brutal", "berbahaya"},
+        "explicit": {"must", "should", "need", "harus", "wajib", "perlu"},
+        "implicit": {"allegedly", "claimed", "reportedly", "so-called", "seolah"},
+    }
+    metaphor_fallback = {
+        "weak": {"wave", "path", "bridge", "shield", "gelombang", "jembatan"},
+        "medium": {"battle", "arena", "storm", "engine", "medan", "badai"},
+        "strong": {"chess", "wounded", "organism", "frontline", "perang"},
+    }
+
+    ideology = _get_lexicon("IDEOLOGY_MARKERS", ideology_fallback)
+    emotion = _get_lexicon("EMOTION_MARKERS", emotion_fallback)
+    evaluation = _get_lexicon("EVALUATION_MARKERS", eval_fallback)
+    metaphor = _get_lexicon("METAPHOR_MARKERS", metaphor_fallback)
+
+    rows = []
+    for d in docs:
+        toks = d.tokens
+        if not toks:
+            continue
+        c = {}
+        for t in toks:
+            c[t] = c.get(t, 0) + 1
+        W = len(toks)
+
+        ideol = sum(c.get(t, 0) for t in ideology["ideol"])
+        prec = sum(c.get(t, 0) for t in ideology["prec"])
+        slog = sum(c.get(t, 0) for t in ideology["slog"])
+        dich = sum(c.get(t, 0) for t in ideology["dich"])
+        n_ideol = ideol + prec + slog + dich
+        IDI = (n_ideol * 100.0) / W
+
+        e_w = sum(c.get(t, 0) for t in emotion["weak"])
+        e_m = sum(c.get(t, 0) for t in emotion["medium"])
+        e_s = sum(c.get(t, 0) for t in emotion["strong"])
+        EMI = ((1 * e_w + 2 * e_m + 3 * e_s) * 100.0) / W
+
+        R = sum(c.get(t, 0) for t in evaluation["rational"])
+        E = sum(c.get(t, 0) for t in evaluation["emotional"])
+        Imp = sum(c.get(t, 0) for t in evaluation["implicit"])
+        Exp = sum(c.get(t, 0) for t in evaluation["explicit"])
+        n_eval = R + E + Imp + Exp
+        EDI = (n_eval * 100.0) / W if n_eval else 0.0
+        EII = ((1 * R + 3 * E) / n_eval) if n_eval else 0.0
+        ELFI = ((1 * Imp + 3 * Exp) / n_eval) if n_eval else 0.0
+        EVI = 0.5 * EDI + 0.25 * EII + 0.25 * ELFI
+
+        M_w = sum(c.get(t, 0) for t in metaphor["weak"])
+        M_m = sum(c.get(t, 0) for t in metaphor["medium"])
+        M_s = sum(c.get(t, 0) for t in metaphor["strong"])
+        n_met = M_w + M_m + M_s
+        text_low = d.text.casefold()
+        dir_hits = len(re.findall(r"\b(as|like|seperti|bagai|ibarat|laksana|как)\b", text_low))
+        Dir = min(dir_hits, n_met)
+        Ind = max(n_met - Dir, 0)
+        MDI = (n_met * 100.0) / W if n_met else 0.0
+        MII = ((1 * M_w + 2 * M_m + 3 * M_s) / n_met) if n_met else 0.0
+        MLFI = ((1 * Ind + 3 * Dir) / n_met) if n_met else 0.0
+        MTI = 0.5 * MDI + 0.25 * MII + 0.25 * MLFI
+
+        IInorm = min(IDI / 8.0, 1.0)
+        EInorm = min(EMI / 8.0, 1.0)
+        EVInorm = min(EVI / 8.0, 1.0)
+        MInorm = min(MTI / 4.0, 1.0)
+        PP = 0.30 * IInorm + 0.25 * EInorm + 0.25 * EVInorm + 0.20 * MInorm
+
+        rows.append(
+            {
+                "source": d.source,
+                "country": d.primary_country,
+                "year": d.year,
+                "IDI": IDI,
+                "EMI": EMI,
+                "EVI": EVI,
+                "MTI": MTI,
+                "PP": PP,
+            }
+        )
+    return pd.DataFrame(rows)
+
+
+def show_five_indicator_charts(docs: List[core.Doc]) -> None:
+    df = build_five_indicator_df(docs)
+    if df.empty:
+        return
+
+    st.subheader("5 обязательных индикаторов")
+    avg = df[["IDI", "EMI", "EVI", "MTI", "PP"]].mean()
+    c1, c2, c3, c4, c5 = st.columns(5)
+    c1.metric("IDI", f"{avg['IDI']:.3f}")
+    c2.metric("EMI", f"{avg['EMI']:.3f}")
+    c3.metric("EVI", f"{avg['EVI']:.3f}")
+    c4.metric("MTI", f"{avg['MTI']:.3f}")
+    c5.metric("PP", f"{avg['PP']:.3f}")
+
+    radar_vals = {
+        "IDI": min(avg["IDI"] / 8.0, 1.0),
+        "EMI": min(avg["EMI"] / 8.0, 1.0),
+        "EVI": min(avg["EVI"] / 8.0, 1.0),
+        "MTI": min(avg["MTI"] / 4.0, 1.0),
+        "PP": min(avg["PP"], 1.0),
+    }
+    cats = list(radar_vals.keys())
+    vals = list(radar_vals.values())
+    fig_radar = go.Figure()
+    fig_radar.add_trace(go.Scatterpolar(r=vals + [vals[0]], theta=cats + [cats[0]], fill="toself", name="Normalized profile"))
+    fig_radar.update_layout(template="plotly_dark", polar=dict(radialaxis=dict(visible=True, range=[0, 1])), margin=dict(l=30, r=30, t=30, b=30), height=430)
+    st.plotly_chart(fig_radar, use_container_width=True)
+
+    st.markdown("**Распределение индикаторов по документам**")
+    long_df = df.melt(id_vars=["source", "country", "year"], value_vars=["IDI", "EMI", "EVI", "MTI", "PP"], var_name="indicator", value_name="value")
+    fig_box = px.box(long_df, x="indicator", y="value", color="indicator", template="plotly_dark", points=False)
+    fig_box.update_layout(showlegend=False, height=420, margin=dict(l=30, r=30, t=30, b=30))
+    st.plotly_chart(fig_box, use_container_width=True)
+
+    st.markdown("**Тепловая карта индикаторов по странам**")
+    heat = df.groupby("country")[["IDI", "EMI", "EVI", "MTI", "PP"]].mean().reset_index()
+    fig_heat = px.imshow(
+        heat.set_index("country")[["IDI", "EMI", "EVI", "MTI", "PP"]],
+        text_auto=".2f",
+        aspect="auto",
+        color_continuous_scale="Blues",
+        template="plotly_dark",
+    )
+    fig_heat.update_layout(height=360, margin=dict(l=30, r=30, t=30, b=30))
+    st.plotly_chart(fig_heat, use_container_width=True)
+
+    st.markdown("**Динамика PP по годам**")
+    pp_year = df.groupby(["year", "country"], as_index=False)["PP"].mean()
+    fig_line = px.line(pp_year, x="year", y="PP", color="country", markers=True, template="plotly_dark")
+    fig_line.update_layout(height=360, margin=dict(l=30, r=30, t=30, b=30))
+    st.plotly_chart(fig_line, use_container_width=True)
+
+
 def run_analysis(docs: List[core.Doc], out_dir: Path, top_n: int, kwic_window: int, kwic_max: int, colloc_window: int, colloc_min: int, top_n_logodds: int, dedup: bool, near_dup_jaccard: float, near_dup_hamming: int):
     dedup_stats = {
         "total_docs_before_dedup": len(docs),
@@ -266,7 +420,7 @@ def run_analysis(docs: List[core.Doc], out_dir: Path, top_n: int, kwic_window: i
     if hasattr(core, "stage7_persuasion_indicator_model"):
         core.stage7_persuasion_indicator_model(docs, out_dir)
 
-    return dedup_stats, len(docs)
+    return dedup_stats, len(docs), docs
 
 
 def main() -> None:
@@ -342,7 +496,7 @@ def main() -> None:
             out_dir.mkdir(parents=True, exist_ok=True)
 
             try:
-                dedup_stats, analyzed_docs = run_analysis(
+                dedup_stats, analyzed_docs, analyzed_doc_objs = run_analysis(
                     docs=docs,
                     out_dir=out_dir,
                     top_n=int(top_n),
@@ -380,6 +534,7 @@ def main() -> None:
                     st.dataframe(rows)
 
             show_charts(out_dir)
+            show_five_indicator_charts(analyzed_doc_objs)
 
             out_zip = zip_dir_bytes(out_dir)
             st.download_button(
