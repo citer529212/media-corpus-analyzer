@@ -23,7 +23,7 @@ ROOT_DIR = Path(__file__).resolve().parents[1]
 if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
 import corpus_analysis_strict_method as core
-APP_BUILD = "2026-04-15-14:58"
+APP_BUILD = "2026-04-18-12:20"
 
 
 SOURCE_ALIASES = {
@@ -384,6 +384,19 @@ def show_five_indicator_charts(docs: List[core.Doc]) -> None:
         f"`MTI={avg['MTI']:.3f}` ({lvl(float(avg['MTI']), (1.25, 2.0, 2.75, 3.5))})."
     )
     st.info(summary_text)
+    st.caption(
+        "Кратко по критериям: чем выше значение, тем сильнее выражен признак. "
+        "IDI — идеологическая окраска; EMI — эмоциональное давление; "
+        "EVI — оценочность (похвала/критика); MTI — образность/метафоры; "
+        "PP — общий уровень воздействия текста."
+    )
+    with st.expander("Как читать уровни (очень кратко)"):
+        st.markdown(
+            "- `PP`: 0–0.20 очень низкий, 0.21–0.40 низкий, 0.41–0.60 средний, 0.61–0.80 высокий, 0.81–1.00 очень высокий.\n"
+            "- `IDI`/`EMI`: <2 очень низко, 2–4 низко, 4–6 средне, 6–8 высоко, >8 очень высоко.\n"
+            "- `EVI`: <2 очень низко, 2–3 низко, 3–4 средне, 4–5 высоко, >5 очень высоко.\n"
+            "- `MTI`: <1.25 очень низко, 1.25–2 низко, 2–2.75 средне, 2.75–3.5 высоко, >3.5 очень высоко."
+        )
 
     radar_vals = {
         "IDI": min(avg["IDI"] / 8.0, 1.0),
@@ -399,13 +412,13 @@ def show_five_indicator_charts(docs: List[core.Doc]) -> None:
     fig_radar.update_layout(template="plotly_dark", polar=dict(radialaxis=dict(visible=True, range=[0, 1])), margin=dict(l=30, r=30, t=30, b=30), height=430)
     st.plotly_chart(fig_radar, use_container_width=True)
 
-    st.markdown("**Распределение индикаторов по документам**")
+    st.markdown("**Распределение 5 индикаторов по документам**")
     long_df = df.melt(id_vars=["source", "country", "year"], value_vars=["IDI", "EMI", "EVI", "MTI", "PP"], var_name="indicator", value_name="value")
     fig_box = px.box(long_df, x="indicator", y="value", color="indicator", template="plotly_dark", points=False)
     fig_box.update_layout(showlegend=False, height=420, margin=dict(l=30, r=30, t=30, b=30))
     st.plotly_chart(fig_box, use_container_width=True)
 
-    st.markdown("**Тепловая карта индикаторов по странам**")
+    st.markdown("**Тепловая карта 5 индикаторов по странам**")
     heat = df.groupby("country")[["IDI", "EMI", "EVI", "MTI", "PP"]].mean().reset_index()
     fig_heat = px.imshow(
         heat.set_index("country")[["IDI", "EMI", "EVI", "MTI", "PP"]],
@@ -557,25 +570,27 @@ def main() -> None:
             st.success(f"Готово. Проанализировано документов: {analyzed_docs}")
             st.json(dedup_stats)
 
-            # Quick preview tables
-            for preview_name in [
-                "stage1_profile_source.csv",
-                "stage1_profile_country.csv",
-                "stage1_profile_year.csv",
-                "stage1_profile_language.csv",
-                "stage5_representativeness_country_total.csv",
-                "stage6_significance_pairwise.csv",
-                "stage7_persuasion_summary_country_year.csv",
-                "stage7_persuasion_summary_source.csv",
-            ]:
-                p = out_dir / preview_name
-                if p.exists():
-                    st.subheader(preview_name)
-                    rows = read_csv_preview(p, limit=15)
-                    st.dataframe(rows)
-
-            show_charts(out_dir)
             show_five_indicator_charts(analyzed_doc_objs)
+
+            if analysis_mode == "Расширенный (корпусный)":
+                st.subheader("Дополнительные исследовательские таблицы")
+                for preview_name in [
+                    "stage1_profile_source.csv",
+                    "stage1_profile_country.csv",
+                    "stage1_profile_year.csv",
+                    "stage1_profile_language.csv",
+                    "stage5_representativeness_country_total.csv",
+                    "stage6_significance_pairwise.csv",
+                    "stage7_persuasion_summary_country_year.csv",
+                    "stage7_persuasion_summary_source.csv",
+                ]:
+                    p = out_dir / preview_name
+                    if p.exists():
+                        st.markdown(f"**{preview_name}**")
+                        rows = read_csv_preview(p, limit=15)
+                        st.dataframe(rows)
+                show_charts(out_dir)
+
             with st.expander("DEBUG"):
                 st.write({"build": APP_BUILD, "docs_for_indicator_charts": len(analyzed_doc_objs)})
 
