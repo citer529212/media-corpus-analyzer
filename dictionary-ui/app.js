@@ -34,23 +34,6 @@ const BUNDLED_DICTIONARY_URL = "./data/dictionary.json";
 const TARGET_AUTONOMOUS_ENTRIES = 10_000;
 const MAX_RESULTS = 300;
 const MAX_HISTORY_ITEMS = 8;
-const MALAY_DERIVATIONAL_PREFIXES = [
-  "meng",
-  "meny",
-  "men",
-  "mem",
-  "me",
-  "ber",
-  "bel",
-  "be",
-  "ter",
-  "te",
-  "per",
-  "pel",
-  "pe",
-  "ke",
-  "se",
-];
 
 const state = {
   pdfDoc: null,
@@ -91,12 +74,6 @@ let inputDebounceId = null;
 ui.searchInput.addEventListener("input", () => {
   clearTimeout(inputDebounceId);
   inputDebounceId = setTimeout(runSearch, 120);
-});
-ui.searchInput.addEventListener("search", runSearch);
-ui.searchInput.addEventListener("change", runSearch);
-ui.searchInput.addEventListener("paste", () => {
-  clearTimeout(inputDebounceId);
-  inputDebounceId = setTimeout(runSearch, 30);
 });
 
 ui.searchModeSwitch.addEventListener("click", (event) => {
@@ -225,51 +202,6 @@ function normalizeHeadwordLoose(text) {
     .replace(/[^a-z0-9\s-]/g, " ")
     .replace(/\s+/g, " ")
     .trim();
-}
-
-function toTranslationArray(body) {
-  const value = cleanupLine(String(body || ""));
-  if (!value) {
-    return [];
-  }
-  return value
-    .split(";")
-    .map((item) => cleanupLine(item))
-    .filter(Boolean)
-    .slice(0, 8);
-}
-
-function parseSourceQuality(entry, options = {}) {
-  const raw = String(entry?.source_quality || entry?.sourceQuality || "").toUpperCase();
-  if (raw === "A" || raw === "B" || raw === "C") {
-    return raw;
-  }
-  if (options.verified || entry?.verified) {
-    return "A";
-  }
-  return "B";
-}
-
-function buildMalayRoots(text) {
-  const loose = normalizeHeadwordLoose(text);
-  if (!loose) {
-    return new Set();
-  }
-
-  const roots = new Set([loose]);
-  const tokens = loose.split(/\s+/).filter(Boolean);
-  if (tokens.length !== 1) {
-    return roots;
-  }
-
-  const word = tokens[0];
-  MALAY_DERIVATIONAL_PREFIXES.forEach((prefix) => {
-    if (word.startsWith(prefix) && word.length > prefix.length + 2) {
-      roots.add(word.slice(prefix.length));
-    }
-  });
-
-  return roots;
 }
 
 function cleanupLine(text) {
@@ -669,29 +601,11 @@ async function loadDictionaryFromUrl(url, options = {}) {
 }
 
 function normalizeIncomingEntry(entry, fallbackId, options = {}) {
-  const title = cleanupLine(String(entry.title || ""));
-  const lemma = cleanupLine(String(entry.lemma || title));
-  const translations = Array.isArray(entry.translations)
-    ? entry.translations.map((item) => cleanupLine(String(item))).filter(Boolean).slice(0, 8)
-    : toTranslationArray(entry.body);
-  const body = cleanupLine(String(entry.body || translations.join("; ")));
-  const variants = Array.isArray(entry.variants)
-    ? entry.variants.map((item) => normalizeHeadwordLoose(String(item))).filter(Boolean).slice(0, 12)
-    : [];
-
   return {
     id: entry.id || `${options.idPrefix || "json"}-${fallbackId}`,
     type: "entry",
-    title,
-    lemma,
-    partOfSpeech: cleanupLine(String(entry.part_of_speech || entry.partOfSpeech || "")),
-    translations,
-    examples: Array.isArray(entry.examples)
-      ? entry.examples.map((item) => cleanupLine(String(item))).filter(Boolean).slice(0, 6)
-      : [],
-    variants,
-    sourceQuality: parseSourceQuality(entry, options),
-    body,
+    title: cleanupLine(String(entry.title || "")),
+    body: cleanupLine(String(entry.body || "")),
     page: Number(entry.page) || 1,
     verified: Boolean(options.verified || entry.verified),
   };
@@ -823,37 +737,9 @@ async function loadBundledDictionary() {
 
 function hydrateEntries(entries) {
   entries.forEach((entry) => {
-    const lemma = cleanupLine(String(entry.lemma || entry.title || ""));
-    const title = cleanupLine(String(entry.title || lemma));
-    const translations = Array.isArray(entry.translations)
-      ? entry.translations.map((item) => cleanupLine(String(item))).filter(Boolean).slice(0, 8)
-      : toTranslationArray(entry.body);
-    const body = cleanupLine(String(entry.body || translations.join("; ")));
-    const variants = Array.isArray(entry.variants)
-      ? entry.variants
-          .map((item) => normalizeHeadwordLoose(String(item)))
-          .filter(Boolean)
-          .slice(0, 12)
-      : [];
-    const sourceQuality = parseSourceQuality(entry, { verified: entry.verified });
-
-    entry.title = title;
-    entry.lemma = lemma || title;
-    entry.translations = translations;
-    entry.examples = Array.isArray(entry.examples) ? entry.examples : [];
-    entry.variants = [...new Set([normalizeHeadwordLoose(entry.lemma), ...variants].filter(Boolean))];
-    entry.sourceQuality = sourceQuality;
-    entry.body = body;
     entry._normTitle = normalizeText(entry.title);
-    entry._normLemma = normalizeText(entry.lemma);
     entry._normBody = normalizeText(entry.body);
-    entry._normVariants = entry.variants.map((item) => normalizeText(item)).filter(Boolean);
-    entry._roots = new Set([
-      ...buildMalayRoots(entry.lemma),
-      ...buildMalayRoots(entry.title),
-      ...entry._normVariants.flatMap((item) => [...buildMalayRoots(item)]),
-    ]);
-    entry._grams = buildBigrams(`${entry._normLemma} ${entry._normTitle}`.trim());
+    entry._grams = buildBigrams(entry._normTitle);
   });
 }
 
@@ -1017,39 +903,21 @@ function searchEntries(query) {
   return state.entries
     .map((entry) => {
       const title = entry._normTitle;
-      const lemma = entry._normLemma || title;
       const body = entry._normBody;
-      const variants = entry._normVariants || [];
       const titleWords = (title || "").split(/\s+/).filter(Boolean);
       const titleWordCount = titleWords.length || 1;
-      const lenDelta = Math.abs((lemma || title || "").length - q.length);
+      const lenDelta = Math.abs((title || "").length - q.length);
       let score = 99;
 
-      if (lemma === q || title === q) {
+      if (title === q) {
         score = 0;
-      } else if (queryPattern.test(lemma) || queryPattern.test(title)) {
+      } else if (queryPattern.test(title)) {
         score = 0.2 + lenDelta / 50;
-      } else if (lemma.startsWith(q) || title.startsWith(q)) {
+      } else if (title.startsWith(q)) {
         // Prefix matches are useful, but shorter/closer words should rank above derivatives.
         score = 0.9 + lenDelta / 20;
-      } else if (lemma.includes(q) || title.includes(q)) {
+      } else if (title.includes(q)) {
         score = 1.8 + lenDelta / 18;
-      } else if (variants.some((item) => item === q)) {
-        score = 2.05;
-      } else if (variants.some((item) => item.startsWith(q))) {
-        score = 2.4;
-      } else if ([...qWords].some((word) => entry._roots?.has(word))) {
-        score = 2.7 + lenDelta / 30;
-      } else if ([...qWords].some((word) => {
-        const roots = buildMalayRoots(word);
-        for (const root of roots) {
-          if (entry._roots?.has(root)) {
-            return true;
-          }
-        }
-        return false;
-      })) {
-        score = 3.1 + lenDelta / 30;
       } else if (body.includes(q)) {
         score = 3.9;
       }
@@ -1065,11 +933,6 @@ function searchEntries(query) {
 
       if (score < 99 && entry.verified) {
         score = Math.max(0, score - 0.18);
-      }
-
-      if (score < 99) {
-        const qualityBonus = entry.sourceQuality === "A" ? -0.2 : entry.sourceQuality === "B" ? -0.05 : 0.25;
-        score += qualityBonus;
       }
 
       if (score < 99) {
@@ -1099,7 +962,6 @@ function searchEntries(query) {
       _lenDelta: row.lenDelta,
       _wordCount: row.titleWordCount,
       _exactTitle: normalizeText(row.entry.title) === q,
-      _exactLemma: normalizeText(row.entry.lemma || row.entry.title) === q,
     }));
 }
 
@@ -1108,23 +970,20 @@ function groupEntryResults(rows, query = "") {
   const qNorm = normalizeText(query);
 
   rows.forEach((row) => {
-    const key = row._normLemma || row._normTitle || normalizeText(row.lemma || row.title);
+    const key = row._normTitle || normalizeText(row.title);
     const rowDelta = Math.abs((key || "").length - qNorm.length);
 
     if (!groups.has(key)) {
       groups.set(key, {
         id: `group-${key}`,
         type: "entry",
-        title: row.lemma || row.title,
+        title: row.title,
         body: row.body,
         page: row.page,
         _rank: row._rank || 10,
         _lenDelta: Number.isFinite(row._lenDelta) ? row._lenDelta : rowDelta,
         _wordCount: Number.isFinite(row._wordCount) ? row._wordCount : key.split(/\s+/).length,
         _exactTitle: Boolean(row._exactTitle),
-        _exactLemma: Boolean(row._exactLemma),
-        sourceQuality: row.sourceQuality || "B",
-        partOfSpeech: row.partOfSpeech || "",
       });
       return;
     }
@@ -1144,13 +1003,11 @@ function groupEntryResults(rows, query = "") {
       Number.isFinite(row._wordCount) ? row._wordCount : key.split(/\s+/).length
     );
     current._exactTitle = current._exactTitle || Boolean(row._exactTitle);
-    current._exactLemma = current._exactLemma || Boolean(row._exactLemma);
   });
 
   return [...groups.values()]
     .sort(
       (a, b) =>
-        Number(b._exactLemma) - Number(a._exactLemma) ||
         Number(b._exactTitle) - Number(a._exactTitle) ||
         a._rank - b._rank ||
         a._wordCount - b._wordCount ||
@@ -1213,7 +1070,7 @@ function computeBestAnswer(query) {
         if (row._wordCount !== 1) {
           return false;
         }
-        return normalizeHeadwordLoose(row.lemma || row.title) === qNorm;
+        return normalizeHeadwordLoose(row.title) === qNorm;
       });
       if (exactSingle) {
         return exactSingle;
@@ -1223,7 +1080,7 @@ function computeBestAnswer(query) {
         if (row._wordCount !== 1) {
           return false;
         }
-        const head = normalizeHeadwordLoose(row.lemma || row.title);
+        const head = normalizeHeadwordLoose(row.title);
         return head.startsWith(qNorm) && Math.abs(head.length - qNorm.length) <= 2;
       });
       if (nearSingle) {
@@ -1261,7 +1118,7 @@ function renderBestAnswer() {
     return;
   }
 
-  ui.answerTitle.innerHTML = highlightText(hit.lemma || hit.title, query);
+  ui.answerTitle.innerHTML = highlightText(hit.title, query);
   ui.answerBody.innerHTML = highlightText(hit.body, query);
   ui.answerMeta.innerHTML = "";
 
@@ -1273,18 +1130,6 @@ function renderBestAnswer() {
       ? "словарная статья (приоритет)"
       : "найдено в полном тексте";
   ui.answerMeta.append(typeChip);
-
-  if (hit.partOfSpeech) {
-    const posMeta = document.createElement("span");
-    posMeta.textContent = hit.partOfSpeech;
-    ui.answerMeta.append(posMeta);
-  }
-
-  if (hit.sourceQuality) {
-    const qualityMeta = document.createElement("span");
-    qualityMeta.textContent = `качество ${hit.sourceQuality}`;
-    ui.answerMeta.append(qualityMeta);
-  }
 
   if (hit.type === "entry" && !hit._exactTitle) {
     const nearMeta = document.createElement("span");
@@ -1321,7 +1166,7 @@ function renderResults() {
 
     const title = document.createElement("p");
     title.className = "result-headword";
-    title.innerHTML = highlightText(result.lemma || result.title, query);
+    title.innerHTML = highlightText(result.title, query);
 
     const desc = document.createElement("p");
     desc.className = "result-translation";
@@ -1355,7 +1200,7 @@ function renderResults() {
 }
 
 function runSearch() {
-  const query = cleanupLine(ui.searchInput.value || "");
+  const query = ui.searchInput.value.trim();
   state.activeQuery = query;
   state.bestAnswer = computeBestAnswer(query);
 
