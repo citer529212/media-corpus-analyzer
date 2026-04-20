@@ -369,15 +369,15 @@ def show_five_indicator_charts(docs: List[core.Doc]) -> None:
     st.subheader("5 обязательных индикаторов")
     avg = df[["IDI", "EMI", "EVI", "MTI", "PP"]].mean()
     c1, c2, c3, c4, c5 = st.columns(5)
-    c1.metric("IDI", f"{avg['IDI']:.3f}")
-    c2.metric("EMI", f"{avg['EMI']:.3f}")
-    c3.metric("EVI", f"{avg['EVI']:.3f}")
-    c4.metric("MTI", f"{avg['MTI']:.3f}")
-    c5.metric("PP", f"{avg['PP']:.3f}")
+    c1.metric("IDI (идеологичность)", f"{avg['IDI']:.3f}")
+    c2.metric("EMI (эмоциональность)", f"{avg['EMI']:.3f}")
+    c3.metric("EVI (оценка объекта)", f"{avg['EVI']:.3f}")
+    c4.metric("MTI (метафоричность)", f"{avg['MTI']:.3f}")
+    c5.metric("IP (воздействие)", f"{avg['PP']:.3f}")
 
     st.markdown("### Интерпретация")
     summary_text = (
-        f"Интегральный персуазивный потенциал `PP={avg['PP']:.3f}`: **{pp_lvl(float(avg['PP']))} уровень**.  "
+        f"Интегральный воздействующий потенциал `IP={avg['PP']:.3f}`: **{pp_lvl(float(avg['PP']))} уровень**.  "
         f"Профиль индикаторов: `IDI={avg['IDI']:.3f}` ({lvl(float(avg['IDI']), (2.0, 4.0, 6.0, 8.0))}), "
         f"`EMI={avg['EMI']:.3f}` ({lvl(float(avg['EMI']), (2.0, 4.0, 6.0, 8.0))}), "
         f"`EVI={avg['EVI']:.3f}` ({lvl(float(avg['EVI']), (2.0, 3.0, 4.0, 5.0))}), "
@@ -568,7 +568,8 @@ def main() -> None:
                 return
 
             st.success(f"Готово. Проанализировано документов: {analyzed_docs}")
-            st.json(dedup_stats)
+            if analysis_mode == "Расширенный (корпусный)":
+                st.json(dedup_stats)
 
             show_five_indicator_charts(analyzed_doc_objs)
 
@@ -591,8 +592,9 @@ def main() -> None:
                         st.dataframe(rows)
                 show_charts(out_dir)
 
-            with st.expander("DEBUG"):
-                st.write({"build": APP_BUILD, "docs_for_indicator_charts": len(analyzed_doc_objs)})
+            if analysis_mode == "Расширенный (корпусный)":
+                with st.expander("DEBUG"):
+                    st.write({"build": APP_BUILD, "docs_for_indicator_charts": len(analyzed_doc_objs)})
 
             out_zip = zip_dir_bytes(out_dir)
             st.download_button(
