@@ -64,6 +64,7 @@ LANG_HINTS = {
     "en": {"the", "and", "of", "to", "in", "for", "with", "on", "is", "are", "was", "were", "said", "government"},
     "id": {"dan", "yang", "di", "ke", "dari", "untuk", "dengan", "adalah", "tidak", "akan", "menurut", "pemerintah"},
     "ms": {"dan", "yang", "di", "ke", "dari", "untuk", "dengan", "adalah", "tidak", "akan", "kerajaan", "menteri", "syarikat"},
+    "ru": {"и", "в", "на", "с", "по", "для", "что", "это", "как", "был", "были", "заявил", "правительство", "президент"},
 }
 
 FRAME_LEXICONS = {
@@ -87,12 +88,14 @@ SENT_POS_BY_LANG = {
     "en": {"cooperation", "partnership", "stability", "growth", "peace", "agreement", "support", "progress", "benefit"},
     "id": {"kerja", "sama", "stabil", "pertumbuhan", "damai", "kesepakatan", "dukungan", "kemajuan", "manfaat"},
     "ms": {"kerja", "sama", "stabil", "pertumbuhan", "damai", "persetujuan", "sokongan", "kemajuan", "manfaat"},
+    "ru": {"сотрудничество", "партнерство", "стабильность", "рост", "мир", "соглашение", "поддержка", "прогресс", "выгода"},
 }
 
 SENT_NEG_BY_LANG = {
     "en": {"threat", "crisis", "conflict", "war", "attack", "sanction", "decline", "risk", "tension", "failure", "violence"},
     "id": {"ancaman", "krisis", "konflik", "perang", "serangan", "sanksi", "penurunan", "risiko", "ketegangan", "gagal", "kekerasan"},
     "ms": {"ancaman", "krisis", "konflik", "perang", "serangan", "sekatan", "penurunan", "risiko", "ketegangan", "gagal", "keganasan"},
+    "ru": {"угроза", "кризис", "конфликт", "война", "атака", "санкции", "спад", "риск", "напряженность", "провал", "насилие"},
 }
 
 FRAME_LEXICONS_BY_LANG = {
@@ -113,6 +116,12 @@ FRAME_LEXICONS_BY_LANG = {
         "economy_trade": {"dagangan", "tarif", "pasaran", "pelaburan", "ekonomi"},
         "diplomacy_partnership": {"kerjasama", "kemitraan", "dialog", "persetujuan", "kerja", "sama"},
         "governance_values": {"demokrasi", "kedaulatan", "kestabilan", "undang"},
+    },
+    "ru": {
+        "security_threat": {"угроза", "риск", "атака", "война", "конфликт"},
+        "economy_trade": {"торговля", "тариф", "рынок", "инвестиции", "экономика"},
+        "diplomacy_partnership": {"сотрудничество", "партнерство", "диалог", "соглашение"},
+        "governance_values": {"демократия", "суверенитет", "стабильность", "закон"},
     },
 }
 
@@ -146,7 +155,82 @@ PERSUASION_MARKERS_BY_LANG = {
         "evaluation_positive": ["strategik", "penting", "kuat"],
         "evaluation_negative": ["berbahaya", "haram", "agresif"],
     },
+    "ru": {
+        "modality_obligation": ["должен", "должны", "нужно", "необходимо", "обязан"],
+        "modality_possibility": ["может", "могут", "возможно", "способен"],
+        "authority_reference": ["официальный", "министр", "президент", "правительство", "власти"],
+        "evaluation_positive": ["стратегический", "важный", "сильный", "конструктивный"],
+        "evaluation_negative": ["опасный", "незаконный", "агрессивный", "деструктивный"],
+    },
 }
+
+# Indicator model (based on provided methodology docs)
+IDEOLOGY_MARKERS = {
+    "ideol": {
+        "sovereignty", "kedaulatan", "суверенитет", "national", "nasional", "bangsa",
+        "identity", "identitas", "pancasila", "bhinneka", "unity", "persatuan",
+        "stability", "stabilitas", "islamic", "islam", "development", "pembangunan",
+    },
+    "prec": {
+        "pancasila", "bhinneka", "nato", "asean", "kremlin", "white", "house",
+        "washington", "beijing", "moscow", "putin", "biden", "trump", "xi", "jinping",
+    },
+    "slog": {
+        "for", "nation", "national", "interest", "demi", "bangsa", "negara", "unity",
+        "persatuan", "stability", "keamanan", "security", "kestabilan",
+    },
+    "dich": {
+        "we", "they", "our", "their", "us", "them", "kita", "kami", "mereka", "мы", "они",
+        "ourselves", "themselves", "sendiri",
+    },
+}
+
+EMOTION_MARKERS = {
+    "weak": {
+        "concern", "worry", "uncertain", "harap", "khawatir", "cemas", "risau", "тревога", "сомнение",
+    },
+    "medium": {
+        "fear", "anger", "pride", "hope", "trust", "marah", "bangga", "percaya", "надежда", "гнев",
+    },
+    "strong": {
+        "panic", "threat", "catastrophe", "shock", "outrage", "terror", "ancaman", "krisis", "ужас", "катастрофа",
+    },
+}
+
+EVALUATION_MARKERS = {
+    "rational": {
+        "strategic", "important", "legal", "effective", "necessary", "stabil", "penting", "sah",
+        "эффективный", "рациональный", "стратегический",
+    },
+    "emotional": {
+        "outrageous", "heroic", "shameful", "brutal", "berbahaya", "agresif", "kejam", "ужасный", "героический",
+    },
+    "explicit": {
+        "must", "should", "need", "harus", "wajib", "perlu", "clearly", "obviously", "очевидно", "должен",
+    },
+    "implicit": {
+        "allegedly", "claimed", "reportedly", "so-called", "seolah", "katanya", "будто", "якобы",
+    },
+}
+
+METAPHOR_MARKERS = {
+    "weak": {"wave", "path", "bridge", "shield", "gelombang", "jembatan", "мост", "волна"},
+    "medium": {"battle", "arena", "storm", "engine", "medan", "badai", "арена", "буря"},
+    "strong": {"chess", "wounded", "organism", "frontline", "perang", "раненый", "шахмат"},
+}
+
+
+def level_5(v: float, cutoffs: Tuple[float, float, float, float]) -> Tuple[int, str]:
+    c1, c2, c3, c4 = cutoffs
+    if v < c1:
+        return 1, "very_low"
+    if v < c2:
+        return 2, "low"
+    if v < c3:
+        return 3, "medium"
+    if v < c4:
+        return 4, "high"
+    return 5, "very_high"
 
 
 @dataclass
@@ -899,8 +983,118 @@ def stage6_significance(docs: List[Doc], out: Path, top_n_logodds: int) -> None:
     )
 
 
+def stage7_persuasion_indicator_model(docs: List[Doc], out: Path) -> None:
+    rows_doc = []
+    agg_country_year = defaultdict(lambda: {"n": 0, "IDI": 0.0, "EMI": 0.0, "EVI": 0.0, "MTI": 0.0, "PP_equal": 0.0, "PP_weighted": 0.0})
+    agg_source = defaultdict(lambda: {"n": 0, "IDI": 0.0, "EMI": 0.0, "EVI": 0.0, "MTI": 0.0, "PP_equal": 0.0, "PP_weighted": 0.0})
+
+    for d in docs:
+        toks = d.tokens
+        W = max(len(toks), 1)
+        tset = Counter(toks)
+
+        ideol = sum(tset[t] for t in IDEOLOGY_MARKERS["ideol"] if t in tset)
+        prec = sum(tset[t] for t in IDEOLOGY_MARKERS["prec"] if t in tset)
+        slog = sum(tset[t] for t in IDEOLOGY_MARKERS["slog"] if t in tset)
+        dich = sum(tset[t] for t in IDEOLOGY_MARKERS["dich"] if t in tset)
+        n_ideol = ideol + prec + slog + dich
+        IDI = (n_ideol * 100.0) / W
+
+        e_w = sum(tset[t] for t in EMOTION_MARKERS["weak"] if t in tset)
+        e_m = sum(tset[t] for t in EMOTION_MARKERS["medium"] if t in tset)
+        e_s = sum(tset[t] for t in EMOTION_MARKERS["strong"] if t in tset)
+        EMI = ((1 * e_w + 2 * e_m + 3 * e_s) * 100.0) / W
+
+        R = sum(tset[t] for t in EVALUATION_MARKERS["rational"] if t in tset)
+        E = sum(tset[t] for t in EVALUATION_MARKERS["emotional"] if t in tset)
+        Imp = sum(tset[t] for t in EVALUATION_MARKERS["implicit"] if t in tset)
+        Exp = sum(tset[t] for t in EVALUATION_MARKERS["explicit"] if t in tset)
+        n_eval = R + E + Imp + Exp
+        EDI = (n_eval * 100.0) / W if n_eval > 0 else 0.0
+        EII = ((1 * R + 3 * E) / n_eval) if n_eval > 0 else 0.0
+        ELFI = ((1 * Imp + 3 * Exp) / n_eval) if n_eval > 0 else 0.0
+        EVI = 0.5 * EDI + 0.25 * EII + 0.25 * ELFI
+
+        M_w = sum(tset[t] for t in METAPHOR_MARKERS["weak"] if t in tset)
+        M_m = sum(tset[t] for t in METAPHOR_MARKERS["medium"] if t in tset)
+        M_s = sum(tset[t] for t in METAPHOR_MARKERS["strong"] if t in tset)
+        n_met = M_w + M_m + M_s
+        text_low = d.text.casefold()
+        dir_hits = len(re.findall(r"\b(as|like|seperti|bagai|ibarat|laksana|как)\b", text_low))
+        Dir = min(dir_hits, n_met)
+        Ind = max(n_met - Dir, 0)
+        MDI = (n_met * 100.0) / W if n_met > 0 else 0.0
+        MII = ((1 * M_w + 2 * M_m + 3 * M_s) / n_met) if n_met > 0 else 0.0
+        MLFI = ((1 * Ind + 3 * Dir) / n_met) if n_met > 0 else 0.0
+        MTI = 0.5 * MDI + 0.25 * MII + 0.25 * MLFI
+
+        b_idi, lvl_idi = level_5(IDI, (2.0, 4.0, 6.0, 8.0))
+        b_emi, lvl_emi = level_5(EMI, (2.0, 4.0, 6.0, 8.0))
+        b_evi, lvl_evi = level_5(EVI, (2.0, 3.0, 4.0, 5.0))
+        b_mti, lvl_mti = level_5(MTI, (1.25, 2.0, 2.75, 3.5))
+
+        # Equal-weight PP from methodology PDF (0..1)
+        PP_equal = ((b_idi - 1) + (b_emi - 1) + (b_evi - 1) + (b_mti - 1)) / 16.0
+
+        # Weighted normalized PP from v2 methodology
+        IInorm = min(IDI / 8.0, 1.0)
+        EInorm = min(EMI / 8.0, 1.0)
+        EVInorm = min(EVI / 8.0, 1.0)
+        MInorm = min(MTI / 4.0, 1.0)
+        PP_weighted = 0.30 * IInorm + 0.25 * EInorm + 0.25 * EVInorm + 0.20 * MInorm
+
+        rows_doc.append([
+            d.source, d.year, d.primary_country, d.language, W,
+            ideol, prec, slog, dich, round(IDI, 6), b_idi, lvl_idi,
+            e_w, e_m, e_s, round(EMI, 6), b_emi, lvl_emi,
+            n_eval, R, E, Imp, Exp, round(EDI, 6), round(EII, 6), round(ELFI, 6), round(EVI, 6), b_evi, lvl_evi,
+            n_met, M_w, M_m, M_s, Ind, Dir, round(MDI, 6), round(MII, 6), round(MLFI, 6), round(MTI, 6), b_mti, lvl_mti,
+            round(PP_equal, 6), round(PP_weighted, 6),
+        ])
+
+        cy = (d.primary_country, d.year)
+        agg_country_year[cy]["n"] += 1
+        agg_source[d.source]["n"] += 1
+        for key, val in [("IDI", IDI), ("EMI", EMI), ("EVI", EVI), ("MTI", MTI), ("PP_equal", PP_equal), ("PP_weighted", PP_weighted)]:
+            agg_country_year[cy][key] += val
+            agg_source[d.source][key] += val
+
+    write_rows(
+        out / "stage7_persuasion_doc_indices.csv",
+        [
+            "source", "year", "country", "language", "token_count",
+            "ideol", "prec", "slog", "dich", "IDI", "IDI_level_num", "IDI_level",
+            "e_w", "e_m", "e_s", "EMI", "EMI_level_num", "EMI_level",
+            "n_eval", "R", "E", "Imp", "Exp", "EDI", "EII", "ELFI", "EVI", "EVI_level_num", "EVI_level",
+            "n_met", "M_w", "M_m", "M_s", "Ind", "Dir", "MDI", "MII", "MLFI", "MTI", "MTI_level_num", "MTI_level",
+            "PP_equal", "PP_weighted",
+        ],
+        rows_doc,
+    )
+
+    rows_cy = []
+    for (country, year), a in sorted(agg_country_year.items()):
+        n = a["n"]
+        rows_cy.append([country, year, n, round(a["IDI"] / n, 6), round(a["EMI"] / n, 6), round(a["EVI"] / n, 6), round(a["MTI"] / n, 6), round(a["PP_equal"] / n, 6), round(a["PP_weighted"] / n, 6)])
+    write_rows(
+        out / "stage7_persuasion_summary_country_year.csv",
+        ["country", "year", "doc_count", "avg_IDI", "avg_EMI", "avg_EVI", "avg_MTI", "avg_PP_equal", "avg_PP_weighted"],
+        rows_cy,
+    )
+
+    rows_source = []
+    for source, a in sorted(agg_source.items()):
+        n = a["n"]
+        rows_source.append([source, n, round(a["IDI"] / n, 6), round(a["EMI"] / n, 6), round(a["EVI"] / n, 6), round(a["MTI"] / n, 6), round(a["PP_equal"] / n, 6), round(a["PP_weighted"] / n, 6)])
+    write_rows(
+        out / "stage7_persuasion_summary_source.csv",
+        ["source", "doc_count", "avg_IDI", "avg_EMI", "avg_EVI", "avg_MTI", "avg_PP_equal", "avg_PP_weighted"],
+        rows_source,
+    )
+
+
 def parse_args() -> argparse.Namespace:
-    p = argparse.ArgumentParser(description="Strict stage-based linguopragmatic corpus analyzer")
+    p = argparse.ArgumentParser(description="Mediatext analyzator: strict stage-based linguopragmatic corpus analyzer")
     p.add_argument("--input-metadata", default="output_country_discourse_raw/metadata.csv")
     p.add_argument("--output-dir", default="output_country_discourse_raw_analysis_strict")
     p.add_argument("--min-year", type=int, default=2022)
@@ -964,6 +1158,7 @@ def main() -> None:
     stage4_prognostic(docs, out)
     stage5_representativeness(docs, out)
     stage6_significance(docs, out, top_n_logodds=args.top_n_logodds)
+    stage7_persuasion_indicator_model(docs, out)
 
     print("=" * 80)
     print("STRICT ANALYSIS COMPLETE")
@@ -976,6 +1171,7 @@ def main() -> None:
     print("Stage 4: stage4_prognostic_trends.csv")
     print("Stage 5: stage5_representativeness_country_year.csv, stage5_representativeness_country_total.csv, stage5_source_country_balance.csv")
     print("Stage 6: stage6_significance_pairwise.csv, stage6_logodds_tokens.csv")
+    print("Stage 7: stage7_persuasion_doc_indices.csv, stage7_persuasion_summary_country_year.csv, stage7_persuasion_summary_source.csv")
 
 
 if __name__ == "__main__":

@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import csv
+import html
 import hashlib
 import io
 import re
@@ -23,7 +24,7 @@ ROOT_DIR = Path(__file__).resolve().parents[1]
 if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
 import corpus_analysis_strict_method as core
-APP_BUILD = "2026-04-18-12:20"
+APP_BUILD = "2026-04-20-10:35"
 
 
 SOURCE_ALIASES = {
@@ -245,26 +246,26 @@ def _get_lexicon(name: str, fallback: dict) -> dict:
 
 def build_five_indicator_df(docs: List[core.Doc]) -> pd.DataFrame:
     ideology_fallback = {
-        "ideol": {"sovereignty", "kedaulatan", "pancasila", "unity", "stability", "national"},
-        "prec": {"washington", "beijing", "moscow", "putin", "biden", "trump", "xi"},
-        "slog": {"national", "interest", "stability", "security", "unity"},
-        "dich": {"we", "they", "our", "their", "us", "them", "kita", "mereka"},
+        "ideol": {"sovereignty", "kedaulatan", "pancasila", "unity", "stability", "national", "суверенитет", "единство", "стабильность"},
+        "prec": {"washington", "beijing", "moscow", "putin", "biden", "trump", "xi", "сша", "россия", "китай", "кпк"},
+        "slog": {"national", "interest", "stability", "security", "unity", "национальный", "интерес", "безопасность"},
+        "dich": {"we", "they", "our", "their", "us", "them", "kita", "mereka", "мы", "они", "наш", "их"},
     }
     emotion_fallback = {
-        "weak": {"concern", "worry", "uncertain", "khawatir", "cemas"},
-        "medium": {"fear", "anger", "pride", "hope", "trust", "marah", "bangga"},
-        "strong": {"panic", "threat", "catastrophe", "shock", "outrage", "ancaman", "krisis"},
+        "weak": {"concern", "worry", "uncertain", "khawatir", "cemas", "тревога", "сомнение"},
+        "medium": {"fear", "anger", "pride", "hope", "trust", "marah", "bangga", "страх", "гнев", "гордость", "надежда"},
+        "strong": {"panic", "threat", "catastrophe", "shock", "outrage", "ancaman", "krisis", "паника", "угроза", "катастрофа"},
     }
     eval_fallback = {
-        "rational": {"strategic", "important", "legal", "effective", "necessary", "penting"},
-        "emotional": {"outrageous", "heroic", "shameful", "brutal", "berbahaya"},
-        "explicit": {"must", "should", "need", "harus", "wajib", "perlu"},
-        "implicit": {"allegedly", "claimed", "reportedly", "so-called", "seolah"},
+        "rational": {"strategic", "important", "legal", "effective", "necessary", "penting", "стратегический", "важный", "законный"},
+        "emotional": {"outrageous", "heroic", "shameful", "brutal", "berbahaya", "ужасный", "героический", "агрессивный"},
+        "explicit": {"must", "should", "need", "harus", "wajib", "perlu", "должен", "должны", "нужно"},
+        "implicit": {"allegedly", "claimed", "reportedly", "so-called", "seolah", "якобы", "будто"},
     }
     metaphor_fallback = {
-        "weak": {"wave", "path", "bridge", "shield", "gelombang", "jembatan"},
-        "medium": {"battle", "arena", "storm", "engine", "medan", "badai"},
-        "strong": {"chess", "wounded", "organism", "frontline", "perang"},
+        "weak": {"wave", "path", "bridge", "shield", "gelombang", "jembatan", "волна", "путь", "мост"},
+        "medium": {"battle", "arena", "storm", "engine", "medan", "badai", "битва", "арена", "шторм"},
+        "strong": {"chess", "wounded", "organism", "frontline", "perang", "шахмат", "ранен", "фронт"},
     }
 
     ideology = _get_lexicon("IDEOLOGY_MARKERS", ideology_fallback)
@@ -338,7 +339,78 @@ def build_five_indicator_df(docs: List[core.Doc]) -> pd.DataFrame:
     return pd.DataFrame(rows)
 
 
-def show_five_indicator_charts(docs: List[core.Doc]) -> None:
+def _collect_marker_hits_for_doc(d: core.Doc) -> dict:
+    ideology_fallback = {
+        "ideol": {"sovereignty", "kedaulatan", "pancasila", "unity", "stability", "national", "суверенитет", "единство", "стабильность"},
+        "prec": {"washington", "beijing", "moscow", "putin", "biden", "trump", "xi", "сша", "россия", "китай", "кпк"},
+        "slog": {"national", "interest", "stability", "security", "unity", "национальный", "интерес", "безопасность"},
+        "dich": {"we", "they", "our", "their", "us", "them", "kita", "mereka", "мы", "они", "наш", "их"},
+    }
+    emotion_fallback = {
+        "weak": {"concern", "worry", "uncertain", "khawatir", "cemas", "тревога", "сомнение"},
+        "medium": {"fear", "anger", "pride", "hope", "trust", "marah", "bangga", "страх", "гнев", "гордость", "надежда"},
+        "strong": {"panic", "threat", "catastrophe", "shock", "outrage", "ancaman", "krisis", "паника", "угроза", "катастрофа"},
+    }
+    eval_fallback = {
+        "rational": {"strategic", "important", "legal", "effective", "necessary", "penting", "стратегический", "важный", "законный"},
+        "emotional": {"outrageous", "heroic", "shameful", "brutal", "berbahaya", "ужасный", "героический", "агрессивный"},
+        "explicit": {"must", "should", "need", "harus", "wajib", "perlu", "должен", "должны", "нужно"},
+        "implicit": {"allegedly", "claimed", "reportedly", "so-called", "seolah", "якобы", "будто"},
+    }
+    metaphor_fallback = {
+        "weak": {"wave", "path", "bridge", "shield", "gelombang", "jembatan", "волна", "путь", "мост"},
+        "medium": {"battle", "arena", "storm", "engine", "medan", "badai", "битва", "арена", "шторм"},
+        "strong": {"chess", "wounded", "organism", "frontline", "perang", "шахмат", "ранен", "фронт"},
+    }
+    ideology = _get_lexicon("IDEOLOGY_MARKERS", ideology_fallback)
+    emotion = _get_lexicon("EMOTION_MARKERS", emotion_fallback)
+    evaluation = _get_lexicon("EVALUATION_MARKERS", eval_fallback)
+    metaphor = _get_lexicon("METAPHOR_MARKERS", metaphor_fallback)
+
+    cnt = {}
+    for t in d.tokens:
+        cnt[t] = cnt.get(t, 0) + 1
+
+    def hits(words: set[str]) -> dict:
+        return {w: cnt[w] for w in words if w in cnt}
+
+    return {
+        "IDI": {
+            "ideol": hits(set(ideology["ideol"])),
+            "prec": hits(set(ideology["prec"])),
+            "slog": hits(set(ideology["slog"])),
+            "dich": hits(set(ideology["dich"])),
+        },
+        "EMI": {
+            "weak": hits(set(emotion["weak"])),
+            "medium": hits(set(emotion["medium"])),
+            "strong": hits(set(emotion["strong"])),
+        },
+        "EVI": {
+            "rational": hits(set(evaluation["rational"])),
+            "emotional": hits(set(evaluation["emotional"])),
+            "explicit": hits(set(evaluation["explicit"])),
+            "implicit": hits(set(evaluation["implicit"])),
+        },
+        "MTI": {
+            "weak": hits(set(metaphor["weak"])),
+            "medium": hits(set(metaphor["medium"])),
+            "strong": hits(set(metaphor["strong"])),
+        },
+    }
+
+
+def _highlight_terms_html(text: str, terms: List[str]) -> str:
+    safe = html.escape(text)
+    for t in sorted(set(terms), key=len, reverse=True):
+        if len(t.strip()) < 2:
+            continue
+        p = re.compile(rf"(?i)\b({re.escape(t)})\b")
+        safe = p.sub(r"<mark style='background:#ffd166;color:#111;padding:1px 3px;border-radius:3px;'>\1</mark>", safe)
+    return safe.replace("\n", "<br>")
+
+
+def show_five_indicator_charts(docs: List[core.Doc], selected_indicator: str) -> None:
     df = build_five_indicator_df(docs)
     if df.empty:
         return
@@ -368,35 +440,105 @@ def show_five_indicator_charts(docs: List[core.Doc]) -> None:
 
     st.subheader("5 обязательных индикаторов")
     avg = df[["IDI", "EMI", "EVI", "MTI", "PP"]].mean()
-    c1, c2, c3, c4, c5 = st.columns(5)
-    c1.metric("IDI (идеологичность)", f"{avg['IDI']:.3f}")
-    c2.metric("EMI (эмоциональность)", f"{avg['EMI']:.3f}")
-    c3.metric("EVI (оценка объекта)", f"{avg['EVI']:.3f}")
-    c4.metric("MTI (метафоричность)", f"{avg['MTI']:.3f}")
-    c5.metric("IP (воздействие)", f"{avg['PP']:.3f}")
 
-    st.markdown("### Интерпретация")
-    summary_text = (
-        f"Интегральный воздействующий потенциал `IP={avg['PP']:.3f}`: **{pp_lvl(float(avg['PP']))} уровень**.  "
-        f"Профиль индикаторов: `IDI={avg['IDI']:.3f}` ({lvl(float(avg['IDI']), (2.0, 4.0, 6.0, 8.0))}), "
-        f"`EMI={avg['EMI']:.3f}` ({lvl(float(avg['EMI']), (2.0, 4.0, 6.0, 8.0))}), "
-        f"`EVI={avg['EVI']:.3f}` ({lvl(float(avg['EVI']), (2.0, 3.0, 4.0, 5.0))}), "
-        f"`MTI={avg['MTI']:.3f}` ({lvl(float(avg['MTI']), (1.25, 2.0, 2.75, 3.5))})."
-    )
-    st.info(summary_text)
-    st.caption(
-        "Кратко по критериям: чем выше значение, тем сильнее выражен признак. "
-        "IDI — идеологическая окраска; EMI — эмоциональное давление; "
-        "EVI — оценочность (похвала/критика); MTI — образность/метафоры; "
-        "PP — общий уровень воздействия текста."
-    )
-    with st.expander("Как читать уровни (очень кратко)"):
+    indicator_specs = [
+        {
+            "code": "IDI",
+            "label": "Идеологичность (IDI)",
+            "value": float(avg["IDI"]),
+            "bounds": (2.0, 4.0, 6.0, 8.0),
+            "max_scale": 10.0,
+            "about": "Показывает, насколько текст насыщен идеологическими рамками: «свои/чужие», суверенитет, ценностные формулы.",
+            "meaning_low": "Низкий IDI: текст больше информирует, чем идеологически направляет.",
+            "meaning_high": "Высокий IDI: текст заметно формирует «правильную» интерпретацию через ценностные маркеры.",
+            "scale": "Шкала: <2 очень низкий, 2–4 низкий, 4–6 средний, 6–8 высокий, >8 очень высокий.",
+        },
+        {
+            "code": "EMI",
+            "label": "Эмоциональность (EMI)",
+            "value": float(avg["EMI"]),
+            "bounds": (2.0, 4.0, 6.0, 8.0),
+            "max_scale": 10.0,
+            "about": "Показывает силу эмоционального давления (страх, тревога, гордость, возмущение и т.п.).",
+            "meaning_low": "Низкий EMI: текст подан более нейтрально и рационально.",
+            "meaning_high": "Высокий EMI: текст активно воздействует на эмоции аудитории.",
+            "scale": "Шкала: <2 очень низкий, 2–4 низкий, 4–6 средний, 6–8 высокий, >8 очень высокий.",
+        },
+        {
+            "code": "EVI",
+            "label": "Оценка объекта (EVI)",
+            "value": float(avg["EVI"]),
+            "bounds": (2.0, 3.0, 4.0, 5.0),
+            "max_scale": 6.0,
+            "about": "Показывает, насколько явно и интенсивно объект описывается как «хороший/плохой».",
+            "meaning_low": "Низкий EVI: мало явных оценок, тон ближе к констатации.",
+            "meaning_high": "Высокий EVI: оценки систематичны и задают нужное отношение к объекту.",
+            "scale": "Шкала: <2 очень низкий, 2–3 низкий, 3–4 средний, 4–5 высокий, >5 очень высокий.",
+        },
+        {
+            "code": "MTI",
+            "label": "Метафоричность (MTI)",
+            "value": float(avg["MTI"]),
+            "bounds": (1.25, 2.0, 2.75, 3.5),
+            "max_scale": 4.5,
+            "about": "Показывает, насколько активно используются образные модели (метафоры) для объяснения политики.",
+            "meaning_low": "Низкий MTI: текст говорит преимущественно буквально, без сильной образности.",
+            "meaning_high": "Высокий MTI: метафоры заметно направляют восприятие и упрощают сложные темы.",
+            "scale": "Шкала: <1.25 очень низкий, 1.25–2 низкий, 2–2.75 средний, 2.75–3.5 высокий, >3.5 очень высокий.",
+        },
+        {
+            "code": "IP",
+            "label": "Воздействующий потенциал (IP)",
+            "value": float(avg["PP"]),
+            "bounds": (0.20, 0.40, 0.60, 0.80),
+            "max_scale": 1.0,
+            "about": "Итоговый индекс воздействия текста: объединяет идеологичность, эмоции, оценочность и метафоричность.",
+            "meaning_low": "Низкий IP: текст слабо влияет на установки читателя.",
+            "meaning_high": "Высокий IP: текст вероятно формирует устойчивое отношение к теме/стране.",
+            "scale": "Шкала: 0–0.20 очень низкий, 0.21–0.40 низкий, 0.41–0.60 средний, 0.61–0.80 высокий, 0.81–1.00 очень высокий.",
+        },
+    ]
+
+    selected_spec = next((x for x in indicator_specs if x["code"] == selected_indicator), indicator_specs[0])
+    value = selected_spec["value"]
+    bounds = selected_spec["bounds"]
+    level = pp_lvl(value) if selected_spec["code"] == "IP" else lvl(value, bounds)
+    normalized = max(0.0, min(value / selected_spec["max_scale"], 1.0))
+    st.markdown(f"### {selected_spec['label']}")
+    st.metric(selected_spec["code"], f"{value:.3f}")
+    st.progress(normalized)
+    st.caption(selected_spec["about"])
+    st.markdown(f"- {selected_spec['scale']}\n- {selected_spec['meaning_low']}\n- {selected_spec['meaning_high']}")
+    st.info(f"Частный случай (по корпусу): текущее значение `{value:.3f}` — это **{level} уровень** по данному индикатору.")
+
+    st.markdown("### Маркеры в анализируемом тексте")
+    doc_labels = [f"{i+1}. {d.source} | {d.year} | {d.primary_country} | {d.title[:55]}" for i, d in enumerate(docs)]
+    chosen = st.selectbox("Выберите текст для детального разбора", options=doc_labels, index=0)
+    idx = doc_labels.index(chosen)
+    dsel = docs[idx]
+    df_doc = build_five_indicator_df([dsel])
+    if not df_doc.empty:
+        v = float(df_doc.iloc[0]["PP" if selected_spec["code"] == "IP" else selected_spec["code"]])
+        l = pp_lvl(v) if selected_spec["code"] == "IP" else lvl(v, selected_spec["bounds"])
+        st.success(f"Текущий случай: `{selected_spec['code']}={v:.3f}` ({l} уровень).")
+
+    marker_hits = _collect_marker_hits_for_doc(dsel)
+    marker_terms = []
+    marker_rows = []
+    if selected_spec["code"] in marker_hits:
+        for cat, m in marker_hits[selected_spec["code"]].items():
+            for term, n in sorted(m.items(), key=lambda x: x[1], reverse=True):
+                marker_terms.append(term)
+                marker_rows.append({"category": cat, "marker": term, "count": n})
+    if marker_rows:
+        st.dataframe(pd.DataFrame(marker_rows), use_container_width=True)
+        st.markdown("**Подсветка маркеров в тексте**")
         st.markdown(
-            "- `PP`: 0–0.20 очень низкий, 0.21–0.40 низкий, 0.41–0.60 средний, 0.61–0.80 высокий, 0.81–1.00 очень высокий.\n"
-            "- `IDI`/`EMI`: <2 очень низко, 2–4 низко, 4–6 средне, 6–8 высоко, >8 очень высоко.\n"
-            "- `EVI`: <2 очень низко, 2–3 низко, 3–4 средне, 4–5 высоко, >5 очень высоко.\n"
-            "- `MTI`: <1.25 очень низко, 1.25–2 низко, 2–2.75 средне, 2.75–3.5 высоко, >3.5 очень высоко."
+            f"<div style='padding:12px;border:1px solid #3a3a3a;border-radius:8px;max-height:320px;overflow:auto;line-height:1.6'>{_highlight_terms_html(dsel.text, marker_terms)}</div>",
+            unsafe_allow_html=True,
         )
+    else:
+        st.warning("Для этого индикатора в выбранном тексте маркеры не найдены.")
 
     radar_vals = {
         "IDI": min(avg["IDI"] / 8.0, 1.0),
@@ -483,6 +625,12 @@ def main() -> None:
             "Режим анализа",
             options=["Стандартный (5 индикаторов)", "Расширенный (корпусный)"],
             index=0,
+        )
+        indicator_tab = st.selectbox(
+            "Вкладка индикатора",
+            options=["IDI", "EMI", "EVI", "MTI", "IP"],
+            index=0,
+            help="Выберите индикатор для подробного разбора и подсветки маркеров в тексте.",
         )
         dedup = st.checkbox("Dedup (exact + near)", value=True)
         use_lemma = st.checkbox("Лемматизация (легкая)", value=True)
@@ -571,7 +719,7 @@ def main() -> None:
             if analysis_mode == "Расширенный (корпусный)":
                 st.json(dedup_stats)
 
-            show_five_indicator_charts(analyzed_doc_objs)
+            show_five_indicator_charts(analyzed_doc_objs, selected_indicator=indicator_tab)
 
             if analysis_mode == "Расширенный (корпусный)":
                 st.subheader("Дополнительные исследовательские таблицы")
