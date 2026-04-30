@@ -985,77 +985,99 @@ def stage6_significance(docs: List[Doc], out: Path, top_n_logodds: int) -> None:
 
 def stage7_persuasion_indicator_model(docs: List[Doc], out: Path) -> None:
     rows_doc = []
-    agg_country_year = defaultdict(lambda: {"n": 0, "IDI": 0.0, "EMI": 0.0, "EVI": 0.0, "MTI": 0.0, "PP_equal": 0.0, "PP_weighted": 0.0})
-    agg_source = defaultdict(lambda: {"n": 0, "IDI": 0.0, "EMI": 0.0, "EVI": 0.0, "MTI": 0.0, "PP_equal": 0.0, "PP_weighted": 0.0})
+    agg_country_year = defaultdict(lambda: {"n": 0, "IDI": 0.0, "EMI": 0.0, "EVI": 0.0, "MTI": 0.0, "IP": 0.0})
+    agg_source = defaultdict(lambda: {"n": 0, "IDI": 0.0, "EMI": 0.0, "EVI": 0.0, "MTI": 0.0, "IP": 0.0})
+
+    referent_aliases = {
+        "usa": {"usa", "us", "u.s", "america", "american", "washington", "white house", "pentagon"},
+        "russia": {"russia", "russian", "rusia", "moscow", "kremlin", "putin"},
+        "china": {"china", "chinese", "cina", "tiongkok", "beijing", "xi", "jinping", "ccp", "prc"},
+    }
+
+    sentence_splitter = re.compile(r"(?<=[\.\!\?])\s+")
+
+    def content_len(tokens: List[str]) -> int:
+        return sum(1 for t in tokens if is_content(t))
+
+    def sentence_tokens(text: str) -> List[List[str]]:
+        sents = [s.strip() for s in sentence_splitter.split(text) if s.strip()]
+        out_s = []
+        for s in sents:
+            stoks = preprocess_tokens(tokenize(s), use_lemma=True)
+            if stoks:
+                out_s.append(stoks)
+        return out_s
 
     for d in docs:
         toks = d.tokens
-        W = max(len(toks), 1)
+        W = max(content_len(toks), 1)
         tset = Counter(toks)
-
         ideol = sum(tset[t] for t in IDEOLOGY_MARKERS["ideol"] if t in tset)
         prec = sum(tset[t] for t in IDEOLOGY_MARKERS["prec"] if t in tset)
         slog = sum(tset[t] for t in IDEOLOGY_MARKERS["slog"] if t in tset)
         dich = sum(tset[t] for t in IDEOLOGY_MARKERS["dich"] if t in tset)
         n_ideol = ideol + prec + slog + dich
-        IDI = (n_ideol * 100.0) / W
+        IDI = min(max(n_ideol / W, 0.0), 1.0)
 
         e_w = sum(tset[t] for t in EMOTION_MARKERS["weak"] if t in tset)
         e_m = sum(tset[t] for t in EMOTION_MARKERS["medium"] if t in tset)
         e_s = sum(tset[t] for t in EMOTION_MARKERS["strong"] if t in tset)
-        EMI = ((1 * e_w + 2 * e_m + 3 * e_s) * 100.0) / W
-
-        R = sum(tset[t] for t in EVALUATION_MARKERS["rational"] if t in tset)
-        E = sum(tset[t] for t in EVALUATION_MARKERS["emotional"] if t in tset)
-        Imp = sum(tset[t] for t in EVALUATION_MARKERS["implicit"] if t in tset)
-        Exp = sum(tset[t] for t in EVALUATION_MARKERS["explicit"] if t in tset)
-        n_eval = R + E + Imp + Exp
-        EDI = (n_eval * 100.0) / W if n_eval > 0 else 0.0
-        EII = ((1 * R + 3 * E) / n_eval) if n_eval > 0 else 0.0
-        ELFI = ((1 * Imp + 3 * Exp) / n_eval) if n_eval > 0 else 0.0
-        EVI = 0.5 * EDI + 0.25 * EII + 0.25 * ELFI
+        EMI = min(max((1 * e_w + 2 * e_m + 3 * e_s) / W, 0.0), 1.0)
 
         M_w = sum(tset[t] for t in METAPHOR_MARKERS["weak"] if t in tset)
         M_m = sum(tset[t] for t in METAPHOR_MARKERS["medium"] if t in tset)
         M_s = sum(tset[t] for t in METAPHOR_MARKERS["strong"] if t in tset)
         n_met = M_w + M_m + M_s
-        text_low = d.text.casefold()
-        dir_hits = len(re.findall(r"\b(as|like|seperti|bagai|ibarat|laksana|как)\b", text_low))
-        Dir = min(dir_hits, n_met)
-        Ind = max(n_met - Dir, 0)
-        MDI = (n_met * 100.0) / W if n_met > 0 else 0.0
-        MII = ((1 * M_w + 2 * M_m + 3 * M_s) / n_met) if n_met > 0 else 0.0
-        MLFI = ((1 * Ind + 3 * Dir) / n_met) if n_met > 0 else 0.0
-        MTI = 0.5 * MDI + 0.25 * MII + 0.25 * MLFI
+        MTI = min(max(n_met / W, 0.0), 1.0)
 
-        b_idi, lvl_idi = level_5(IDI, (2.0, 4.0, 6.0, 8.0))
-        b_emi, lvl_emi = level_5(EMI, (2.0, 4.0, 6.0, 8.0))
-        b_evi, lvl_evi = level_5(EVI, (2.0, 3.0, 4.0, 5.0))
-        b_mti, lvl_mti = level_5(MTI, (1.25, 2.0, 2.75, 3.5))
+        # Referent-oriented discrete EVI: -2..2 based on expanded contexts (sent-1/sent/sent+1)
+        aliases = referent_aliases.get(d.primary_country, set())
+        sent_toks = sentence_tokens(d.text)
+        selected = []
+        for i, st in enumerate(sent_toks):
+            if any(tok in aliases for tok in st):
+                lo = max(0, i - 1)
+                hi = min(len(sent_toks), i + 2)
+                for j in range(lo, hi):
+                    selected.extend(sent_toks[j])
+        context_toks = selected if selected else toks
+        pos_lex = SENT_POS_BY_LANG.get(d.language, SENT_POS)
+        neg_lex = SENT_NEG_BY_LANG.get(d.language, SENT_NEG)
+        pos = sum(1 for t in context_toks if t in pos_lex)
+        neg = sum(1 for t in context_toks if t in neg_lex)
+        ref_w = max(content_len(context_toks), 1)
+        score = (pos - neg) / ref_w
+        if score <= -0.02:
+            EVI = -2
+        elif score < -0.005:
+            EVI = -1
+        elif score < 0.005:
+            EVI = 0
+        elif score < 0.02:
+            EVI = 1
+        else:
+            EVI = 2
 
-        # Equal-weight PP from methodology PDF (0..1)
-        PP_equal = ((b_idi - 1) + (b_emi - 1) + (b_evi - 1) + (b_mti - 1)) / 16.0
+        IP = (IDI + EMI + MTI) * EVI
+        IP = max(min(IP, 6.0), -6.0)
 
-        # Weighted normalized PP from v2 methodology
-        IInorm = min(IDI / 8.0, 1.0)
-        EInorm = min(EMI / 8.0, 1.0)
-        EVInorm = min(EVI / 8.0, 1.0)
-        MInorm = min(MTI / 4.0, 1.0)
-        PP_weighted = 0.30 * IInorm + 0.25 * EInorm + 0.25 * EVInorm + 0.20 * MInorm
+        # Backward-compat aliases
+        PP_equal = IP
+        PP_weighted = IP
 
         rows_doc.append([
             d.source, d.year, d.primary_country, d.language, W,
-            ideol, prec, slog, dich, round(IDI, 6), b_idi, lvl_idi,
-            e_w, e_m, e_s, round(EMI, 6), b_emi, lvl_emi,
-            n_eval, R, E, Imp, Exp, round(EDI, 6), round(EII, 6), round(ELFI, 6), round(EVI, 6), b_evi, lvl_evi,
-            n_met, M_w, M_m, M_s, Ind, Dir, round(MDI, 6), round(MII, 6), round(MLFI, 6), round(MTI, 6), b_mti, lvl_mti,
+            ideol, prec, slog, dich, round(IDI, 6), "", "",
+            e_w, e_m, e_s, round(EMI, 6), "", "",
+            len(context_toks), pos, neg, 0, 0, 0, 0, 0, EVI, "", "",
+            n_met, M_w, M_m, M_s, 0, 0, 0, 0, 0, round(MTI, 6), "", "",
             round(PP_equal, 6), round(PP_weighted, 6),
         ])
 
         cy = (d.primary_country, d.year)
         agg_country_year[cy]["n"] += 1
         agg_source[d.source]["n"] += 1
-        for key, val in [("IDI", IDI), ("EMI", EMI), ("EVI", EVI), ("MTI", MTI), ("PP_equal", PP_equal), ("PP_weighted", PP_weighted)]:
+        for key, val in [("IDI", IDI), ("EMI", EMI), ("EVI", EVI), ("MTI", MTI), ("IP", IP)]:
             agg_country_year[cy][key] += val
             agg_source[d.source][key] += val
 
@@ -1075,7 +1097,7 @@ def stage7_persuasion_indicator_model(docs: List[Doc], out: Path) -> None:
     rows_cy = []
     for (country, year), a in sorted(agg_country_year.items()):
         n = a["n"]
-        rows_cy.append([country, year, n, round(a["IDI"] / n, 6), round(a["EMI"] / n, 6), round(a["EVI"] / n, 6), round(a["MTI"] / n, 6), round(a["PP_equal"] / n, 6), round(a["PP_weighted"] / n, 6)])
+        rows_cy.append([country, year, n, round(a["IDI"] / n, 6), round(a["EMI"] / n, 6), round(a["EVI"] / n, 6), round(a["MTI"] / n, 6), round(a["IP"] / n, 6), round(a["IP"] / n, 6)])
     write_rows(
         out / "stage7_persuasion_summary_country_year.csv",
         ["country", "year", "doc_count", "avg_IDI", "avg_EMI", "avg_EVI", "avg_MTI", "avg_PP_equal", "avg_PP_weighted"],
@@ -1085,7 +1107,7 @@ def stage7_persuasion_indicator_model(docs: List[Doc], out: Path) -> None:
     rows_source = []
     for source, a in sorted(agg_source.items()):
         n = a["n"]
-        rows_source.append([source, n, round(a["IDI"] / n, 6), round(a["EMI"] / n, 6), round(a["EVI"] / n, 6), round(a["MTI"] / n, 6), round(a["PP_equal"] / n, 6), round(a["PP_weighted"] / n, 6)])
+        rows_source.append([source, n, round(a["IDI"] / n, 6), round(a["EMI"] / n, 6), round(a["EVI"] / n, 6), round(a["MTI"] / n, 6), round(a["IP"] / n, 6), round(a["IP"] / n, 6)])
     write_rows(
         out / "stage7_persuasion_summary_source.csv",
         ["source", "doc_count", "avg_IDI", "avg_EMI", "avg_EVI", "avg_MTI", "avg_PP_equal", "avg_PP_weighted"],
