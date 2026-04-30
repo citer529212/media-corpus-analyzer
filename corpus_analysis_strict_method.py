@@ -1022,7 +1022,7 @@ def stage7_persuasion_indicator_model(docs: List[Doc], out: Path) -> None:
         e_w = sum(tset[t] for t in EMOTION_MARKERS["weak"] if t in tset)
         e_m = sum(tset[t] for t in EMOTION_MARKERS["medium"] if t in tset)
         e_s = sum(tset[t] for t in EMOTION_MARKERS["strong"] if t in tset)
-        EMI = min(max((1 * e_w + 2 * e_m + 3 * e_s) / W, 0.0), 1.0)
+        EMI = min(max((e_w + e_m + e_s) / W, 0.0), 1.0)
 
         M_w = sum(tset[t] for t in METAPHOR_MARKERS["weak"] if t in tset)
         M_m = sum(tset[t] for t in METAPHOR_MARKERS["medium"] if t in tset)

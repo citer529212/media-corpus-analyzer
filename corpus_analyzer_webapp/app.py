@@ -273,6 +273,16 @@ def build_five_indicator_df(docs: List[core.Doc]) -> pd.DataFrame:
     evaluation = _get_lexicon("EVALUATION_MARKERS", eval_fallback)
     metaphor = _get_lexicon("METAPHOR_MARKERS", metaphor_fallback)
 
+    referent_aliases = {
+        "usa": {"usa", "us", "u.s", "america", "american", "washington", "white", "house", "pentagon", "сша"},
+        "russia": {"russia", "russian", "rusia", "moscow", "kremlin", "putin", "россия", "российский"},
+        "china": {"china", "chinese", "cina", "tiongkok", "beijing", "xi", "jinping", "ccp", "prc", "китай", "кпк", "пекин"},
+    }
+    sentence_splitter = re.compile(r"(?<=[\.\!\?])\s+")
+
+    def content_len(tokens: List[str]) -> int:
+        return sum(1 for t in tokens if core.is_content(t))
+
     rows = []
     for d in docs:
         toks = d.tokens
@@ -281,48 +291,51 @@ def build_five_indicator_df(docs: List[core.Doc]) -> pd.DataFrame:
         c = {}
         for t in toks:
             c[t] = c.get(t, 0) + 1
-        W = len(toks)
+        W = max(content_len(toks), 1)
 
-        ideol = sum(c.get(t, 0) for t in ideology["ideol"])
-        prec = sum(c.get(t, 0) for t in ideology["prec"])
-        slog = sum(c.get(t, 0) for t in ideology["slog"])
-        dich = sum(c.get(t, 0) for t in ideology["dich"])
-        n_ideol = ideol + prec + slog + dich
-        IDI = (n_ideol * 100.0) / W
+        # IDI (share in [0,1])
+        n_ideol = sum(c.get(t, 0) for t in ideology["ideol"]) + sum(c.get(t, 0) for t in ideology["prec"]) + sum(c.get(t, 0) for t in ideology["slog"]) + sum(c.get(t, 0) for t in ideology["dich"])
+        IDI = min(max(n_ideol / W, 0.0), 1.0)
 
+        # EMI (same type: share in [0,1], weighted hits / content words)
         e_w = sum(c.get(t, 0) for t in emotion["weak"])
         e_m = sum(c.get(t, 0) for t in emotion["medium"])
         e_s = sum(c.get(t, 0) for t in emotion["strong"])
-        EMI = ((1 * e_w + 2 * e_m + 3 * e_s) * 100.0) / W
+        EMI = min(max((e_w + e_m + e_s) / W, 0.0), 1.0)
 
-        R = sum(c.get(t, 0) for t in evaluation["rational"])
-        E = sum(c.get(t, 0) for t in evaluation["emotional"])
-        Imp = sum(c.get(t, 0) for t in evaluation["implicit"])
-        Exp = sum(c.get(t, 0) for t in evaluation["explicit"])
-        n_eval = R + E + Imp + Exp
-        EDI = (n_eval * 100.0) / W if n_eval else 0.0
-        EII = ((1 * R + 3 * E) / n_eval) if n_eval else 0.0
-        ELFI = ((1 * Imp + 3 * Exp) / n_eval) if n_eval else 0.0
-        EVI = 0.5 * EDI + 0.25 * EII + 0.25 * ELFI
+        # MTI (share in [0,1])
+        n_met = sum(c.get(t, 0) for t in metaphor["weak"]) + sum(c.get(t, 0) for t in metaphor["medium"]) + sum(c.get(t, 0) for t in metaphor["strong"])
+        MTI = min(max(n_met / W, 0.0), 1.0)
 
-        M_w = sum(c.get(t, 0) for t in metaphor["weak"])
-        M_m = sum(c.get(t, 0) for t in metaphor["medium"])
-        M_s = sum(c.get(t, 0) for t in metaphor["strong"])
-        n_met = M_w + M_m + M_s
-        text_low = d.text.casefold()
-        dir_hits = len(re.findall(r"\b(as|like|seperti|bagai|ibarat|laksana|как)\b", text_low))
-        Dir = min(dir_hits, n_met)
-        Ind = max(n_met - Dir, 0)
-        MDI = (n_met * 100.0) / W if n_met else 0.0
-        MII = ((1 * M_w + 2 * M_m + 3 * M_s) / n_met) if n_met else 0.0
-        MLFI = ((1 * Ind + 3 * Dir) / n_met) if n_met else 0.0
-        MTI = 0.5 * MDI + 0.25 * MII + 0.25 * MLFI
+        # EVI (-2..2) on referent-focused expanded context
+        aliases = referent_aliases.get(d.primary_country, set())
+        sents = [s.strip() for s in sentence_splitter.split(d.text) if s.strip()]
+        selected_tokens = []
+        for i, s in enumerate(sents):
+            stoks = core.preprocess_tokens(core.tokenize(s), use_lemma=True)
+            if any(tok in aliases for tok in stoks):
+                lo = max(0, i - 1)
+                hi = min(len(sents), i + 2)
+                for j in range(lo, hi):
+                    selected_tokens.extend(core.preprocess_tokens(core.tokenize(sents[j]), use_lemma=True))
+        context_toks = selected_tokens if selected_tokens else toks
+        pos_lex = getattr(core, "SENT_POS_BY_LANG", {}).get(d.language, getattr(core, "SENT_POS", set()))
+        neg_lex = getattr(core, "SENT_NEG_BY_LANG", {}).get(d.language, getattr(core, "SENT_NEG", set()))
+        ref_w = max(content_len(context_toks), 1)
+        score = (sum(1 for t in context_toks if t in pos_lex) - sum(1 for t in context_toks if t in neg_lex)) / ref_w
+        if score <= -0.02:
+            EVI = -2
+        elif score < -0.005:
+            EVI = -1
+        elif score < 0.005:
+            EVI = 0
+        elif score < 0.02:
+            EVI = 1
+        else:
+            EVI = 2
 
-        IInorm = min(IDI / 8.0, 1.0)
-        EInorm = min(EMI / 8.0, 1.0)
-        EVInorm = min(EVI / 8.0, 1.0)
-        MInorm = min(MTI / 4.0, 1.0)
-        PP = 0.30 * IInorm + 0.25 * EInorm + 0.25 * EVInorm + 0.20 * MInorm
+        # IP in [-6, +6]
+        PP = (IDI + EMI + MTI) * EVI
 
         rows.append(
             {
@@ -428,13 +441,14 @@ def show_five_indicator_charts(docs: List[core.Doc], selected_indicator: str) ->
         return "очень высокий"
 
     def pp_lvl(v: float) -> str:
-        if v <= 0.20:
+        a = abs(v)
+        if a < 0.5:
             return "очень низкий"
-        if v <= 0.40:
+        if a < 1.5:
             return "низкий"
-        if v <= 0.60:
+        if a < 3.0:
             return "средний"
-        if v <= 0.80:
+        if a < 4.5:
             return "высокий"
         return "очень высокий"
 
@@ -446,56 +460,56 @@ def show_five_indicator_charts(docs: List[core.Doc], selected_indicator: str) ->
             "code": "IDI",
             "label": "Идеологичность (IDI)",
             "value": float(avg["IDI"]),
-            "bounds": (2.0, 4.0, 6.0, 8.0),
-            "max_scale": 10.0,
+            "bounds": (0.05, 0.15, 0.30, 0.50),
+            "max_scale": 1.0,
             "about": "Показывает, насколько текст насыщен идеологическими рамками: «свои/чужие», суверенитет, ценностные формулы.",
             "meaning_low": "Низкий IDI: текст больше информирует, чем идеологически направляет.",
             "meaning_high": "Высокий IDI: текст заметно формирует «правильную» интерпретацию через ценностные маркеры.",
-            "scale": "Шкала: <2 очень низкий, 2–4 низкий, 4–6 средний, 6–8 высокий, >8 очень высокий.",
+            "scale": "Шкала (доля 0..1): <0.05 очень низкий, 0.05–0.15 низкий, 0.15–0.30 средний, 0.30–0.50 высокий, >0.50 очень высокий.",
         },
         {
             "code": "EMI",
             "label": "Эмоциональность (EMI)",
             "value": float(avg["EMI"]),
-            "bounds": (2.0, 4.0, 6.0, 8.0),
-            "max_scale": 10.0,
+            "bounds": (0.05, 0.15, 0.30, 0.50),
+            "max_scale": 1.0,
             "about": "Показывает силу эмоционального давления (страх, тревога, гордость, возмущение и т.п.).",
             "meaning_low": "Низкий EMI: текст подан более нейтрально и рационально.",
             "meaning_high": "Высокий EMI: текст активно воздействует на эмоции аудитории.",
-            "scale": "Шкала: <2 очень низкий, 2–4 низкий, 4–6 средний, 6–8 высокий, >8 очень высокий.",
+            "scale": "Шкала (доля 0..1): <0.05 очень низкий, 0.05–0.15 низкий, 0.15–0.30 средний, 0.30–0.50 высокий, >0.50 очень высокий.",
         },
         {
             "code": "EVI",
             "label": "Оценка объекта (EVI)",
             "value": float(avg["EVI"]),
-            "bounds": (2.0, 3.0, 4.0, 5.0),
-            "max_scale": 6.0,
+            "bounds": (-1.5, -0.5, 0.5, 1.5),
+            "max_scale": 2.0,
             "about": "Показывает, насколько явно и интенсивно объект описывается как «хороший/плохой».",
             "meaning_low": "Низкий EVI: мало явных оценок, тон ближе к констатации.",
             "meaning_high": "Высокий EVI: оценки систематичны и задают нужное отношение к объекту.",
-            "scale": "Шкала: <2 очень низкий, 2–3 низкий, 3–4 средний, 4–5 высокий, >5 очень высокий.",
+            "scale": "Шкала дискретная: -2 (резко негативно), -1 (негативно), 0 (нейтрально), +1 (позитивно), +2 (резко позитивно).",
         },
         {
             "code": "MTI",
             "label": "Метафоричность (MTI)",
             "value": float(avg["MTI"]),
-            "bounds": (1.25, 2.0, 2.75, 3.5),
-            "max_scale": 4.5,
+            "bounds": (0.02, 0.08, 0.20, 0.35),
+            "max_scale": 1.0,
             "about": "Показывает, насколько активно используются образные модели (метафоры) для объяснения политики.",
             "meaning_low": "Низкий MTI: текст говорит преимущественно буквально, без сильной образности.",
             "meaning_high": "Высокий MTI: метафоры заметно направляют восприятие и упрощают сложные темы.",
-            "scale": "Шкала: <1.25 очень низкий, 1.25–2 низкий, 2–2.75 средний, 2.75–3.5 высокий, >3.5 очень высокий.",
+            "scale": "Шкала (доля 0..1): <0.02 очень низкий, 0.02–0.08 низкий, 0.08–0.20 средний, 0.20–0.35 высокий, >0.35 очень высокий.",
         },
         {
             "code": "IP",
             "label": "Воздействующий потенциал (IP)",
             "value": float(avg["PP"]),
-            "bounds": (0.20, 0.40, 0.60, 0.80),
-            "max_scale": 1.0,
-            "about": "Итоговый индекс воздействия текста: объединяет идеологичность, эмоции, оценочность и метафоричность.",
+            "bounds": (-3.0, -0.5, 0.5, 3.0),
+            "max_scale": 6.0,
+            "about": "Итоговый индекс воздействия: IP = (IDI + EMI + MTI) × EVI.",
             "meaning_low": "Низкий IP: текст слабо влияет на установки читателя.",
             "meaning_high": "Высокий IP: текст вероятно формирует устойчивое отношение к теме/стране.",
-            "scale": "Шкала: 0–0.20 очень низкий, 0.21–0.40 низкий, 0.41–0.60 средний, 0.61–0.80 высокий, 0.81–1.00 очень высокий.",
+            "scale": "Диапазон: от -6 до +6. Знак показывает направление (минус/плюс), модуль — силу воздействия.",
         },
     ]
 
@@ -503,7 +517,13 @@ def show_five_indicator_charts(docs: List[core.Doc], selected_indicator: str) ->
     value = selected_spec["value"]
     bounds = selected_spec["bounds"]
     level = pp_lvl(value) if selected_spec["code"] == "IP" else lvl(value, bounds)
-    normalized = max(0.0, min(value / selected_spec["max_scale"], 1.0))
+    if selected_spec["code"] == "EVI":
+        normalized = abs(value) / selected_spec["max_scale"]
+    elif selected_spec["code"] == "IP":
+        normalized = abs(value) / selected_spec["max_scale"]
+    else:
+        normalized = value / selected_spec["max_scale"]
+    normalized = max(0.0, min(normalized, 1.0))
     st.markdown(f"### {selected_spec['label']}")
     st.metric(selected_spec["code"], f"{value:.3f}")
     st.progress(normalized)
