@@ -540,43 +540,68 @@ def show_five_indicator_charts(docs: List[core.Doc], selected_indicator: str) ->
     else:
         st.warning("Для этого индикатора в выбранном тексте маркеры не найдены.")
 
-    radar_vals = {
-        "IDI": min(avg["IDI"] / 8.0, 1.0),
-        "EMI": min(avg["EMI"] / 8.0, 1.0),
-        "EVI": min(avg["EVI"] / 8.0, 1.0),
-        "MTI": min(avg["MTI"] / 4.0, 1.0),
-        "PP": min(avg["PP"], 1.0),
-    }
-    cats = list(radar_vals.keys())
-    vals = list(radar_vals.values())
-    fig_radar = go.Figure()
-    fig_radar.add_trace(go.Scatterpolar(r=vals + [vals[0]], theta=cats + [cats[0]], fill="toself", name="Normalized profile"))
-    fig_radar.update_layout(template="plotly_dark", polar=dict(radialaxis=dict(visible=True, range=[0, 1])), margin=dict(l=30, r=30, t=30, b=30), height=430)
-    st.plotly_chart(fig_radar, use_container_width=True)
+    col_name = "PP" if selected_indicator == "IP" else selected_indicator
+    title_name = "IP" if selected_indicator == "IP" else selected_indicator
 
-    st.markdown("**Распределение 5 индикаторов по документам**")
-    long_df = df.melt(id_vars=["source", "country", "year"], value_vars=["IDI", "EMI", "EVI", "MTI", "PP"], var_name="indicator", value_name="value")
-    fig_box = px.box(long_df, x="indicator", y="value", color="indicator", template="plotly_dark", points=False)
-    fig_box.update_layout(showlegend=False, height=420, margin=dict(l=30, r=30, t=30, b=30))
-    st.plotly_chart(fig_box, use_container_width=True)
+    st.markdown(f"### Графики индикатора {title_name}")
+    c1, c2 = st.columns(2)
 
-    st.markdown("**Тепловая карта 5 индикаторов по странам**")
-    heat = df.groupby("country")[["IDI", "EMI", "EVI", "MTI", "PP"]].mean().reset_index()
-    fig_heat = px.imshow(
-        heat.set_index("country")[["IDI", "EMI", "EVI", "MTI", "PP"]],
-        text_auto=".2f",
-        aspect="auto",
-        color_continuous_scale="Blues",
+    # 1) Распределение выбранного индикатора по документам
+    with c1:
+        fig_hist = px.histogram(
+            df,
+            x=col_name,
+            nbins=20,
+            template="plotly_dark",
+            title=f"Распределение {title_name} по документам",
+        )
+        fig_hist.update_layout(height=360, margin=dict(l=20, r=20, t=40, b=20))
+        st.plotly_chart(fig_hist, use_container_width=True)
+
+    # 2) Среднее по странам
+    with c2:
+        by_country = df.groupby("country", as_index=False)[col_name].mean().sort_values(col_name, ascending=False)
+        fig_country = px.bar(
+            by_country,
+            x="country",
+            y=col_name,
+            template="plotly_dark",
+            title=f"Средний {title_name} по странам",
+        )
+        fig_country.update_layout(height=360, margin=dict(l=20, r=20, t=40, b=20))
+        st.plotly_chart(fig_country, use_container_width=True)
+
+    # 3) Динамика по годам
+    by_year = df.groupby(["year", "country"], as_index=False)[col_name].mean()
+    fig_line = px.line(
+        by_year,
+        x="year",
+        y=col_name,
+        color="country",
+        markers=True,
         template="plotly_dark",
+        title=f"Динамика {title_name} по годам",
     )
-    fig_heat.update_layout(height=360, margin=dict(l=30, r=30, t=30, b=30))
-    st.plotly_chart(fig_heat, use_container_width=True)
-
-    st.markdown("**Динамика PP по годам**")
-    pp_year = df.groupby(["year", "country"], as_index=False)["PP"].mean()
-    fig_line = px.line(pp_year, x="year", y="PP", color="country", markers=True, template="plotly_dark")
-    fig_line.update_layout(height=360, margin=dict(l=30, r=30, t=30, b=30))
+    fig_line.update_layout(height=360, margin=dict(l=20, r=20, t=40, b=20))
     st.plotly_chart(fig_line, use_container_width=True)
+
+    # 4) Специальный график для дискретной шкалы EVI
+    if selected_indicator == "EVI":
+        evi_dist = (
+            df.groupby("EVI", as_index=False)
+            .size()
+            .rename(columns={"size": "doc_count"})
+            .sort_values("EVI")
+        )
+        fig_evi = px.bar(
+            evi_dist,
+            x="EVI",
+            y="doc_count",
+            template="plotly_dark",
+            title="Распределение оценок EVI (-2..2)",
+        )
+        fig_evi.update_layout(height=320, margin=dict(l=20, r=20, t=40, b=20))
+        st.plotly_chart(fig_evi, use_container_width=True)
 
 
 def run_analysis(docs: List[core.Doc], out_dir: Path, top_n: int, kwic_window: int, kwic_max: int, colloc_window: int, colloc_min: int, top_n_logodds: int, dedup: bool, near_dup_jaccard: float, near_dup_hamming: int):
