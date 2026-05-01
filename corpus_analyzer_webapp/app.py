@@ -24,7 +24,7 @@ ROOT_DIR = Path(__file__).resolve().parents[1]
 if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
 import corpus_analysis_strict_method as core
-APP_BUILD = "2026-04-20-10:35"
+APP_BUILD = "2026-05-01-16:05"
 
 
 SOURCE_ALIASES = {
@@ -232,8 +232,9 @@ def show_charts(out_dir: Path) -> None:
 
     if p_pp.exists():
         df = pd.read_csv(p_pp).sort_values(["country", "year"])
-        st.markdown("**Персуазивный потенциал (PP_weighted) по годам**")
-        pivot_pp = df.pivot(index="year", columns="country", values="avg_PP_weighted").fillna(0.0)
+        st.markdown("**Воздействующий потенциал (IP) по годам**")
+        value_col = "avg_IP" if "avg_IP" in df.columns else "avg_PP_weighted"
+        pivot_pp = df.pivot(index="year", columns="country", values=value_col).fillna(0.0)
         st.line_chart(pivot_pp)
         st.markdown("**Индексы IDI / EMI / EVI / MTI (средние по странам)**")
         idx = df.groupby("country")[["avg_IDI", "avg_EMI", "avg_EVI", "avg_MTI"]].mean().reset_index().set_index("country")
@@ -274,9 +275,21 @@ def build_five_indicator_df(docs: List[core.Doc]) -> pd.DataFrame:
     metaphor = _get_lexicon("METAPHOR_MARKERS", metaphor_fallback)
 
     referent_aliases = {
-        "usa": {"usa", "us", "u.s", "america", "american", "washington", "white", "house", "pentagon", "сша"},
-        "russia": {"russia", "russian", "rusia", "moscow", "kremlin", "putin", "россия", "российский"},
-        "china": {"china", "chinese", "cina", "tiongkok", "beijing", "xi", "jinping", "ccp", "prc", "китай", "кпк", "пекин"},
+        "usa": {
+            "usa", "us", "u.s", "u.s.", "united", "states", "america", "american", "washington",
+            "white", "house", "pentagon", "state", "department", "congress", "senate", "biden", "trump",
+            "сша", "соединенный", "штат", "америка", "американский", "вашингтон", "белый", "дом", "пентагон",
+        },
+        "russia": {
+            "russia", "russian", "rusia", "moscow", "kremlin", "putin", "lavrov",
+            "россия", "российский", "москва", "кремль", "путин", "лавров",
+        },
+        "china": {
+            "china", "chinese", "cina", "tiongkok", "beijing", "xi", "jinping", "ccp", "prc",
+            "belt", "road", "yuan", "pla", "xinjiang", "taiwan", "hong", "kong",
+            "китай", "китайский", "пекин", "кпк", "юань", "ся", "цзиньпин", "пояс", "путь",
+            "тайвань", "гонконг", "синьцзян",
+        },
     }
     sentence_splitter = re.compile(r"(?<=[\.\!\?])\s+")
 
@@ -297,11 +310,11 @@ def build_five_indicator_df(docs: List[core.Doc]) -> pd.DataFrame:
         n_ideol = sum(c.get(t, 0) for t in ideology["ideol"]) + sum(c.get(t, 0) for t in ideology["prec"]) + sum(c.get(t, 0) for t in ideology["slog"]) + sum(c.get(t, 0) for t in ideology["dich"])
         IDI = min(max(n_ideol / W, 0.0), 1.0)
 
-        # EMI (same type: share in [0,1], weighted hits / content words)
+        # EMI = (1/3*weak + 2/3*medium + 1*strong) / N_content
         e_w = sum(c.get(t, 0) for t in emotion["weak"])
         e_m = sum(c.get(t, 0) for t in emotion["medium"])
         e_s = sum(c.get(t, 0) for t in emotion["strong"])
-        EMI = min(max((e_w + e_m + e_s) / W, 0.0), 1.0)
+        EMI = min(max(((e_w / 3.0) + (2.0 * e_m / 3.0) + e_s) / W, 0.0), 1.0)
 
         # MTI (share in [0,1])
         n_met = sum(c.get(t, 0) for t in metaphor["weak"]) + sum(c.get(t, 0) for t in metaphor["medium"]) + sum(c.get(t, 0) for t in metaphor["strong"])
@@ -335,7 +348,7 @@ def build_five_indicator_df(docs: List[core.Doc]) -> pd.DataFrame:
             EVI = 2
 
         # IP in [-6, +6]
-        PP = (IDI + EMI + MTI) * EVI
+        IP = (IDI + EMI + MTI) * EVI
 
         rows.append(
             {
@@ -346,7 +359,8 @@ def build_five_indicator_df(docs: List[core.Doc]) -> pd.DataFrame:
                 "EMI": EMI,
                 "EVI": EVI,
                 "MTI": MTI,
-                "PP": PP,
+                "IP": IP,
+                "PP": IP,  # backward-compat alias for older UI blocks
             }
         )
     return pd.DataFrame(rows)
@@ -453,30 +467,30 @@ def show_five_indicator_charts(docs: List[core.Doc], selected_indicator: str) ->
         return "очень высокий"
 
     st.subheader("5 обязательных индикаторов")
-    avg = df[["IDI", "EMI", "EVI", "MTI", "PP"]].mean()
+    avg = df[["IDI", "EMI", "EVI", "MTI", "IP"]].mean()
 
     indicator_specs = [
         {
             "code": "IDI",
             "label": "Идеологичность (IDI)",
             "value": float(avg["IDI"]),
-            "bounds": (0.05, 0.15, 0.30, 0.50),
+            "bounds": (0.03, 0.06, 0.11, 0.16),
             "max_scale": 1.0,
             "about": "Показывает, насколько текст насыщен идеологическими рамками: «свои/чужие», суверенитет, ценностные формулы.",
             "meaning_low": "Низкий IDI: текст больше информирует, чем идеологически направляет.",
             "meaning_high": "Высокий IDI: текст заметно формирует «правильную» интерпретацию через ценностные маркеры.",
-            "scale": "Шкала (доля 0..1): <0.05 очень низкий, 0.05–0.15 низкий, 0.15–0.30 средний, 0.30–0.50 высокий, >0.50 очень высокий.",
+            "scale": "Шкала (доля 0..1): 0.00–0.02 низкий, 0.03–0.05 сниженный, 0.06–0.10 средний, 0.11–0.15 высокий, >0.15 очень высокий.",
         },
         {
             "code": "EMI",
             "label": "Эмоциональность (EMI)",
             "value": float(avg["EMI"]),
-            "bounds": (0.05, 0.15, 0.30, 0.50),
+            "bounds": (0.03, 0.06, 0.11, 0.16),
             "max_scale": 1.0,
-            "about": "Показывает силу эмоционального давления (страх, тревога, гордость, возмущение и т.п.).",
+            "about": "Показывает силу эмоционального давления (взвешенно: слабые=1/3, средние=2/3, сильные=1.0).",
             "meaning_low": "Низкий EMI: текст подан более нейтрально и рационально.",
             "meaning_high": "Высокий EMI: текст активно воздействует на эмоции аудитории.",
-            "scale": "Шкала (доля 0..1): <0.05 очень низкий, 0.05–0.15 низкий, 0.15–0.30 средний, 0.30–0.50 высокий, >0.50 очень высокий.",
+            "scale": "Шкала (доля 0..1): 0.00–0.02 низкий, 0.03–0.05 сниженный, 0.06–0.10 средний, 0.11–0.15 высокий, >0.15 очень высокий.",
         },
         {
             "code": "EVI",
@@ -493,17 +507,17 @@ def show_five_indicator_charts(docs: List[core.Doc], selected_indicator: str) ->
             "code": "MTI",
             "label": "Метафоричность (MTI)",
             "value": float(avg["MTI"]),
-            "bounds": (0.02, 0.08, 0.20, 0.35),
+            "bounds": (0.03, 0.06, 0.11, 0.16),
             "max_scale": 1.0,
             "about": "Показывает, насколько активно используются образные модели (метафоры) для объяснения политики.",
             "meaning_low": "Низкий MTI: текст говорит преимущественно буквально, без сильной образности.",
             "meaning_high": "Высокий MTI: метафоры заметно направляют восприятие и упрощают сложные темы.",
-            "scale": "Шкала (доля 0..1): <0.02 очень низкий, 0.02–0.08 низкий, 0.08–0.20 средний, 0.20–0.35 высокий, >0.35 очень высокий.",
+            "scale": "Шкала (доля 0..1): 0.00–0.02 низкий, 0.03–0.05 сниженный, 0.06–0.10 средний, 0.11–0.15 высокий, >0.15 очень высокий.",
         },
         {
             "code": "IP",
             "label": "Воздействующий потенциал (IP)",
-            "value": float(avg["PP"]),
+            "value": float(avg["IP"]),
             "bounds": (-3.0, -0.5, 0.5, 3.0),
             "max_scale": 6.0,
             "about": "Итоговый индекс воздействия: IP = (IDI + EMI + MTI) × EVI.",
@@ -538,7 +552,7 @@ def show_five_indicator_charts(docs: List[core.Doc], selected_indicator: str) ->
     dsel = docs[idx]
     df_doc = build_five_indicator_df([dsel])
     if not df_doc.empty:
-        v = float(df_doc.iloc[0]["PP" if selected_spec["code"] == "IP" else selected_spec["code"]])
+        v = float(df_doc.iloc[0]["IP" if selected_spec["code"] == "IP" else selected_spec["code"]])
         l = pp_lvl(v) if selected_spec["code"] == "IP" else lvl(v, selected_spec["bounds"])
         st.success(f"Текущий случай: `{selected_spec['code']}={v:.3f}` ({l} уровень).")
 
@@ -560,7 +574,7 @@ def show_five_indicator_charts(docs: List[core.Doc], selected_indicator: str) ->
     else:
         st.warning("Для этого индикатора в выбранном тексте маркеры не найдены.")
 
-    col_name = "PP" if selected_indicator == "IP" else selected_indicator
+    col_name = "IP" if selected_indicator == "IP" else selected_indicator
     title_name = "IP" if selected_indicator == "IP" else selected_indicator
 
     st.markdown(f"### Графики индикатора {title_name}")
@@ -660,7 +674,7 @@ def run_analysis(docs: List[core.Doc], out_dir: Path, top_n: int, kwic_window: i
 def main() -> None:
     st.set_page_config(page_title="Mediatext analyzator", layout="wide")
     st.title("Mediatext analyzator")
-    st.caption(f"Индикаторная модель лингвопрагматического анализа персуазивного потенциала политического медиатекста. Build: {APP_BUILD}")
+    st.caption(f"Индикаторная модель лингвопрагматического анализа воздействующего потенциала политического медиатекста. Build: {APP_BUILD}")
 
     with st.sidebar:
         st.header("Параметры")

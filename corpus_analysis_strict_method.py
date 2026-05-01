@@ -989,9 +989,21 @@ def stage7_persuasion_indicator_model(docs: List[Doc], out: Path) -> None:
     agg_source = defaultdict(lambda: {"n": 0, "IDI": 0.0, "EMI": 0.0, "EVI": 0.0, "MTI": 0.0, "IP": 0.0})
 
     referent_aliases = {
-        "usa": {"usa", "us", "u.s", "america", "american", "washington", "white house", "pentagon"},
-        "russia": {"russia", "russian", "rusia", "moscow", "kremlin", "putin"},
-        "china": {"china", "chinese", "cina", "tiongkok", "beijing", "xi", "jinping", "ccp", "prc"},
+        "usa": {
+            "usa", "us", "u.s", "u.s.", "united", "states", "america", "american", "washington",
+            "white", "house", "pentagon", "state", "department", "congress", "senate", "biden", "trump",
+            "сша", "соединенный", "штат", "америка", "американский", "вашингтон", "белый", "дом", "пентагон",
+        },
+        "russia": {
+            "russia", "russian", "rusia", "moscow", "kremlin", "putin", "lavrov",
+            "россия", "российский", "москва", "кремль", "путин", "лавров",
+        },
+        "china": {
+            "china", "chinese", "cina", "tiongkok", "beijing", "xi", "jinping", "ccp", "prc",
+            "belt", "road", "yuan", "pla", "xinjiang", "taiwan", "hong", "kong",
+            "китай", "китайский", "пекин", "кпк", "юань", "ся", "цзиньпин", "пояс", "путь",
+            "тайвань", "гонконг", "синьцзян",
+        },
     }
 
     sentence_splitter = re.compile(r"(?<=[\.\!\?])\s+")
@@ -1022,7 +1034,8 @@ def stage7_persuasion_indicator_model(docs: List[Doc], out: Path) -> None:
         e_w = sum(tset[t] for t in EMOTION_MARKERS["weak"] if t in tset)
         e_m = sum(tset[t] for t in EMOTION_MARKERS["medium"] if t in tset)
         e_s = sum(tset[t] for t in EMOTION_MARKERS["strong"] if t in tset)
-        EMI = min(max((e_w + e_m + e_s) / W, 0.0), 1.0)
+        # EMI = (1/3*weak + 2/3*medium + 1*strong) / N_content
+        EMI = min(max(((e_w / 3.0) + (2.0 * e_m / 3.0) + e_s) / W, 0.0), 1.0)
 
         M_w = sum(tset[t] for t in METAPHOR_MARKERS["weak"] if t in tset)
         M_m = sum(tset[t] for t in METAPHOR_MARKERS["medium"] if t in tset)
@@ -1071,7 +1084,7 @@ def stage7_persuasion_indicator_model(docs: List[Doc], out: Path) -> None:
             e_w, e_m, e_s, round(EMI, 6), "", "",
             len(context_toks), pos, neg, 0, 0, 0, 0, 0, EVI, "", "",
             n_met, M_w, M_m, M_s, 0, 0, 0, 0, 0, round(MTI, 6), "", "",
-            round(PP_equal, 6), round(PP_weighted, 6),
+            round(IP, 6), round(PP_equal, 6), round(PP_weighted, 6),
         ])
 
         cy = (d.primary_country, d.year)
@@ -1089,7 +1102,7 @@ def stage7_persuasion_indicator_model(docs: List[Doc], out: Path) -> None:
             "e_w", "e_m", "e_s", "EMI", "EMI_level_num", "EMI_level",
             "n_eval", "R", "E", "Imp", "Exp", "EDI", "EII", "ELFI", "EVI", "EVI_level_num", "EVI_level",
             "n_met", "M_w", "M_m", "M_s", "Ind", "Dir", "MDI", "MII", "MLFI", "MTI", "MTI_level_num", "MTI_level",
-            "PP_equal", "PP_weighted",
+            "IP", "PP_equal", "PP_weighted",
         ],
         rows_doc,
     )
@@ -1097,20 +1110,28 @@ def stage7_persuasion_indicator_model(docs: List[Doc], out: Path) -> None:
     rows_cy = []
     for (country, year), a in sorted(agg_country_year.items()):
         n = a["n"]
-        rows_cy.append([country, year, n, round(a["IDI"] / n, 6), round(a["EMI"] / n, 6), round(a["EVI"] / n, 6), round(a["MTI"] / n, 6), round(a["IP"] / n, 6), round(a["IP"] / n, 6)])
+        rows_cy.append([
+            country, year, n,
+            round(a["IDI"] / n, 6), round(a["EMI"] / n, 6), round(a["EVI"] / n, 6), round(a["MTI"] / n, 6),
+            round(a["IP"] / n, 6), round(a["IP"] / n, 6), round(a["IP"] / n, 6),
+        ])
     write_rows(
         out / "stage7_persuasion_summary_country_year.csv",
-        ["country", "year", "doc_count", "avg_IDI", "avg_EMI", "avg_EVI", "avg_MTI", "avg_PP_equal", "avg_PP_weighted"],
+        ["country", "year", "doc_count", "avg_IDI", "avg_EMI", "avg_EVI", "avg_MTI", "avg_IP", "avg_PP_equal", "avg_PP_weighted"],
         rows_cy,
     )
 
     rows_source = []
     for source, a in sorted(agg_source.items()):
         n = a["n"]
-        rows_source.append([source, n, round(a["IDI"] / n, 6), round(a["EMI"] / n, 6), round(a["EVI"] / n, 6), round(a["MTI"] / n, 6), round(a["IP"] / n, 6), round(a["IP"] / n, 6)])
+        rows_source.append([
+            source, n,
+            round(a["IDI"] / n, 6), round(a["EMI"] / n, 6), round(a["EVI"] / n, 6), round(a["MTI"] / n, 6),
+            round(a["IP"] / n, 6), round(a["IP"] / n, 6), round(a["IP"] / n, 6),
+        ])
     write_rows(
         out / "stage7_persuasion_summary_source.csv",
-        ["source", "doc_count", "avg_IDI", "avg_EMI", "avg_EVI", "avg_MTI", "avg_PP_equal", "avg_PP_weighted"],
+        ["source", "doc_count", "avg_IDI", "avg_EMI", "avg_EVI", "avg_MTI", "avg_IP", "avg_PP_equal", "avg_PP_weighted"],
         rows_source,
     )
 
