@@ -44,9 +44,17 @@ STOPWORDS = {
 }
 
 COUNTRY_TERMS = {
-    "usa": ["usa", "us", "u.s", "united", "states", "america", "american", "washington", "amerika", "serikat", "syarikat"],
-    "russia": ["russia", "russian", "rusia", "moscow", "kremlin", "putin"],
-    "china": ["china", "chinese", "cina", "tiongkok", "beijing", "xi", "jinping"],
+    "usa": [
+        "usa", "us", "u.s", "united", "states", "america", "american", "washington", "amerika", "serikat", "syarikat",
+        "white", "house", "pentagon", "biden", "trump", "congress", "senate", "сша", "америка", "вашингтон",
+    ],
+    "russia": [
+        "russia", "russian", "rusia", "moscow", "kremlin", "putin", "lavrov", "россия", "москва", "кремль", "путин",
+    ],
+    "china": [
+        "china", "chinese", "cina", "tiongkok", "beijing", "xi", "jinping", "ccp", "cpc", "prc",
+        "yuan", "taiwan", "xinjiang", "китай", "кпк", "пекин", "юань",
+    ],
 }
 
 SOURCE_LANG_DEFAULT = {
@@ -515,6 +523,46 @@ def stage2_quantitative(docs: List[Doc], out: Path, top_n: int, kwic_window: int
         if len(kwic_rows) >= kwic_max:
             break
     write_rows(out / "stage2_kwic.csv", ["source", "year", "primary_country", "query_term", "left_context", "keyword", "right_context"], kwic_rows)
+
+    # Expanded sentence-level referent contexts: previous + hit sentence + next
+    sent_splitter = re.compile(r"(?<=[\.\!\?])\s+")
+    sent_rows = []
+    max_sent_rows = max(kwic_max, 5000)
+    for d in docs:
+        sents = [s.strip() for s in sent_splitter.split(d.text) if s.strip()]
+        if not sents:
+            continue
+        for i, s in enumerate(sents):
+            stoks = preprocess_tokens(tokenize(s), use_lemma=True)
+            if not stoks:
+                continue
+            hit_country = ""
+            hit_term = ""
+            for country, anchors in COUNTRY_TERMS.items():
+                aset = set(anchors)
+                found = next((t for t in stoks if t in aset), "")
+                if found:
+                    hit_country = country
+                    hit_term = found
+                    break
+            if not hit_term:
+                continue
+            prev_sent = sents[i - 1] if i - 1 >= 0 else ""
+            next_sent = sents[i + 1] if i + 1 < len(sents) else ""
+            expanded = " ".join([x for x in [prev_sent, s, next_sent] if x]).strip()
+            sent_rows.append([
+                d.source, d.year, d.primary_country, hit_country, hit_term,
+                prev_sent, s, next_sent, expanded,
+            ])
+            if len(sent_rows) >= max_sent_rows:
+                break
+        if len(sent_rows) >= max_sent_rows:
+            break
+    write_rows(
+        out / "stage2_referent_context_sentences.csv",
+        ["source", "year", "primary_country", "anchor_country", "anchor_term", "prev_sent", "hit_sent", "next_sent", "expanded_context"],
+        sent_rows,
+    )
 
     # Collocations with MI/t-score/LLR for country anchors
     total_n = sum(all_freq.values())
@@ -1029,19 +1077,22 @@ def stage7_persuasion_indicator_model(docs: List[Doc], out: Path) -> None:
         slog = sum(tset[t] for t in IDEOLOGY_MARKERS["slog"] if t in tset)
         dich = sum(tset[t] for t in IDEOLOGY_MARKERS["dich"] if t in tset)
         n_ideol = ideol + prec + slog + dich
-        IDI = min(max(n_ideol / W, 0.0), 1.0)
+        IDI_share = min(max(n_ideol / W, 0.0), 1.0)
+        IDI = IDI_share * 100.0
 
         e_w = sum(tset[t] for t in EMOTION_MARKERS["weak"] if t in tset)
         e_m = sum(tset[t] for t in EMOTION_MARKERS["medium"] if t in tset)
         e_s = sum(tset[t] for t in EMOTION_MARKERS["strong"] if t in tset)
         # EMI = (1/3*weak + 2/3*medium + 1*strong) / N_content
-        EMI = min(max(((e_w / 3.0) + (2.0 * e_m / 3.0) + e_s) / W, 0.0), 1.0)
+        EMI_share = min(max(((e_w / 3.0) + (2.0 * e_m / 3.0) + e_s) / W, 0.0), 1.0)
+        EMI = EMI_share * 100.0
 
         M_w = sum(tset[t] for t in METAPHOR_MARKERS["weak"] if t in tset)
         M_m = sum(tset[t] for t in METAPHOR_MARKERS["medium"] if t in tset)
         M_s = sum(tset[t] for t in METAPHOR_MARKERS["strong"] if t in tset)
         n_met = M_w + M_m + M_s
-        MTI = min(max(n_met / W, 0.0), 1.0)
+        MTI_share = min(max(n_met / W, 0.0), 1.0)
+        MTI = MTI_share * 100.0
 
         # Referent-oriented discrete EVI: -2..2 based on expanded contexts (sent-1/sent/sent+1)
         aliases = referent_aliases.get(d.primary_country, set())
@@ -1072,7 +1123,7 @@ def stage7_persuasion_indicator_model(docs: List[Doc], out: Path) -> None:
             EVI = 2
 
         IP = (IDI + EMI + MTI) * EVI
-        IP = max(min(IP, 6.0), -6.0)
+        IP = max(min(IP, 600.0), -600.0)
 
         # Backward-compat aliases
         PP_equal = IP
@@ -1084,6 +1135,7 @@ def stage7_persuasion_indicator_model(docs: List[Doc], out: Path) -> None:
             e_w, e_m, e_s, round(EMI, 6), "", "",
             len(context_toks), pos, neg, 0, 0, 0, 0, 0, EVI, "", "",
             n_met, M_w, M_m, M_s, 0, 0, 0, 0, 0, round(MTI, 6), "", "",
+            round(IDI_share, 6), round(EMI_share, 6), round(MTI_share, 6),
             round(IP, 6), round(PP_equal, 6), round(PP_weighted, 6),
         ])
 
@@ -1102,6 +1154,7 @@ def stage7_persuasion_indicator_model(docs: List[Doc], out: Path) -> None:
             "e_w", "e_m", "e_s", "EMI", "EMI_level_num", "EMI_level",
             "n_eval", "R", "E", "Imp", "Exp", "EDI", "EII", "ELFI", "EVI", "EVI_level_num", "EVI_level",
             "n_met", "M_w", "M_m", "M_s", "Ind", "Dir", "MDI", "MII", "MLFI", "MTI", "MTI_level_num", "MTI_level",
+            "IDI_share", "EMI_share", "MTI_share",
             "IP", "PP_equal", "PP_weighted",
         ],
         rows_doc,
@@ -1113,11 +1166,17 @@ def stage7_persuasion_indicator_model(docs: List[Doc], out: Path) -> None:
         rows_cy.append([
             country, year, n,
             round(a["IDI"] / n, 6), round(a["EMI"] / n, 6), round(a["EVI"] / n, 6), round(a["MTI"] / n, 6),
+            round((a["IDI"] / n) / 100.0, 6), round((a["EMI"] / n) / 100.0, 6), round((a["MTI"] / n) / 100.0, 6),
             round(a["IP"] / n, 6), round(a["IP"] / n, 6), round(a["IP"] / n, 6),
         ])
     write_rows(
         out / "stage7_persuasion_summary_country_year.csv",
-        ["country", "year", "doc_count", "avg_IDI", "avg_EMI", "avg_EVI", "avg_MTI", "avg_IP", "avg_PP_equal", "avg_PP_weighted"],
+        [
+            "country", "year", "doc_count",
+            "avg_IDI", "avg_EMI", "avg_EVI", "avg_MTI",
+            "avg_IDI_share", "avg_EMI_share", "avg_MTI_share",
+            "avg_IP", "avg_PP_equal", "avg_PP_weighted",
+        ],
         rows_cy,
     )
 
@@ -1127,11 +1186,17 @@ def stage7_persuasion_indicator_model(docs: List[Doc], out: Path) -> None:
         rows_source.append([
             source, n,
             round(a["IDI"] / n, 6), round(a["EMI"] / n, 6), round(a["EVI"] / n, 6), round(a["MTI"] / n, 6),
+            round((a["IDI"] / n) / 100.0, 6), round((a["EMI"] / n) / 100.0, 6), round((a["MTI"] / n) / 100.0, 6),
             round(a["IP"] / n, 6), round(a["IP"] / n, 6), round(a["IP"] / n, 6),
         ])
     write_rows(
         out / "stage7_persuasion_summary_source.csv",
-        ["source", "doc_count", "avg_IDI", "avg_EMI", "avg_EVI", "avg_MTI", "avg_IP", "avg_PP_equal", "avg_PP_weighted"],
+        [
+            "source", "doc_count",
+            "avg_IDI", "avg_EMI", "avg_EVI", "avg_MTI",
+            "avg_IDI_share", "avg_EMI_share", "avg_MTI_share",
+            "avg_IP", "avg_PP_equal", "avg_PP_weighted",
+        ],
         rows_source,
     )
 

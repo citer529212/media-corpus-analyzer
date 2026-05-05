@@ -24,7 +24,7 @@ ROOT_DIR = Path(__file__).resolve().parents[1]
 if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
 import corpus_analysis_strict_method as core
-APP_BUILD = "2026-05-01-16:05"
+APP_BUILD = "2026-05-05-12:40"
 
 
 SOURCE_ALIASES = {
@@ -306,19 +306,22 @@ def build_five_indicator_df(docs: List[core.Doc]) -> pd.DataFrame:
             c[t] = c.get(t, 0) + 1
         W = max(content_len(toks), 1)
 
-        # IDI (share in [0,1])
+        # IDI density per 100 content words
         n_ideol = sum(c.get(t, 0) for t in ideology["ideol"]) + sum(c.get(t, 0) for t in ideology["prec"]) + sum(c.get(t, 0) for t in ideology["slog"]) + sum(c.get(t, 0) for t in ideology["dich"])
-        IDI = min(max(n_ideol / W, 0.0), 1.0)
+        IDI_share = min(max(n_ideol / W, 0.0), 1.0)
+        IDI = IDI_share * 100.0
 
-        # EMI = (1/3*weak + 2/3*medium + 1*strong) / N_content
+        # EMI density per 100 content words
         e_w = sum(c.get(t, 0) for t in emotion["weak"])
         e_m = sum(c.get(t, 0) for t in emotion["medium"])
         e_s = sum(c.get(t, 0) for t in emotion["strong"])
-        EMI = min(max(((e_w / 3.0) + (2.0 * e_m / 3.0) + e_s) / W, 0.0), 1.0)
+        EMI_share = min(max(((e_w / 3.0) + (2.0 * e_m / 3.0) + e_s) / W, 0.0), 1.0)
+        EMI = EMI_share * 100.0
 
-        # MTI (share in [0,1])
+        # MTI density per 100 content words
         n_met = sum(c.get(t, 0) for t in metaphor["weak"]) + sum(c.get(t, 0) for t in metaphor["medium"]) + sum(c.get(t, 0) for t in metaphor["strong"])
-        MTI = min(max(n_met / W, 0.0), 1.0)
+        MTI_share = min(max(n_met / W, 0.0), 1.0)
+        MTI = MTI_share * 100.0
 
         # EVI (-2..2) on referent-focused expanded context
         aliases = referent_aliases.get(d.primary_country, set())
@@ -347,8 +350,9 @@ def build_five_indicator_df(docs: List[core.Doc]) -> pd.DataFrame:
         else:
             EVI = 2
 
-        # IP in [-6, +6]
+        # IP in [-600, +600] for per-100-word indices
         IP = (IDI + EMI + MTI) * EVI
+        IP = max(min(IP, 600.0), -600.0)
 
         rows.append(
             {
@@ -359,6 +363,9 @@ def build_five_indicator_df(docs: List[core.Doc]) -> pd.DataFrame:
                 "EMI": EMI,
                 "EVI": EVI,
                 "MTI": MTI,
+                "IDI_share": IDI_share,
+                "EMI_share": EMI_share,
+                "MTI_share": MTI_share,
                 "IP": IP,
                 "PP": IP,  # backward-compat alias for older UI blocks
             }
@@ -456,13 +463,13 @@ def show_five_indicator_charts(docs: List[core.Doc], selected_indicator: str) ->
 
     def pp_lvl(v: float) -> str:
         a = abs(v)
-        if a < 0.5:
+        if a < 5.0:
             return "очень низкий"
-        if a < 1.5:
+        if a < 15.0:
             return "низкий"
-        if a < 3.0:
+        if a < 30.0:
             return "средний"
-        if a < 4.5:
+        if a < 60.0:
             return "высокий"
         return "очень высокий"
 
@@ -474,23 +481,23 @@ def show_five_indicator_charts(docs: List[core.Doc], selected_indicator: str) ->
             "code": "IDI",
             "label": "Идеологичность (IDI)",
             "value": float(avg["IDI"]),
-            "bounds": (0.03, 0.06, 0.11, 0.16),
-            "max_scale": 1.0,
+            "bounds": (3.0, 6.0, 11.0, 16.0),
+            "max_scale": 100.0,
             "about": "Показывает, насколько текст насыщен идеологическими рамками: «свои/чужие», суверенитет, ценностные формулы.",
             "meaning_low": "Низкий IDI: текст больше информирует, чем идеологически направляет.",
             "meaning_high": "Высокий IDI: текст заметно формирует «правильную» интерпретацию через ценностные маркеры.",
-            "scale": "Шкала (доля 0..1): 0.00–0.02 низкий, 0.03–0.05 сниженный, 0.06–0.10 средний, 0.11–0.15 высокий, >0.15 очень высокий.",
+            "scale": "Шкала (плотность на 100 слов): 0.00–2.00 низкий, 3.00–5.00 сниженный, 6.00–10.00 средний, 11.00–15.00 высокий, >15.00 очень высокий.",
         },
         {
             "code": "EMI",
             "label": "Эмоциональность (EMI)",
             "value": float(avg["EMI"]),
-            "bounds": (0.03, 0.06, 0.11, 0.16),
-            "max_scale": 1.0,
+            "bounds": (3.0, 6.0, 11.0, 16.0),
+            "max_scale": 100.0,
             "about": "Показывает силу эмоционального давления (взвешенно: слабые=1/3, средние=2/3, сильные=1.0).",
             "meaning_low": "Низкий EMI: текст подан более нейтрально и рационально.",
             "meaning_high": "Высокий EMI: текст активно воздействует на эмоции аудитории.",
-            "scale": "Шкала (доля 0..1): 0.00–0.02 низкий, 0.03–0.05 сниженный, 0.06–0.10 средний, 0.11–0.15 высокий, >0.15 очень высокий.",
+            "scale": "Шкала (плотность на 100 слов): 0.00–2.00 низкий, 3.00–5.00 сниженный, 6.00–10.00 средний, 11.00–15.00 высокий, >15.00 очень высокий.",
         },
         {
             "code": "EVI",
@@ -507,23 +514,23 @@ def show_five_indicator_charts(docs: List[core.Doc], selected_indicator: str) ->
             "code": "MTI",
             "label": "Метафоричность (MTI)",
             "value": float(avg["MTI"]),
-            "bounds": (0.03, 0.06, 0.11, 0.16),
-            "max_scale": 1.0,
+            "bounds": (3.0, 6.0, 11.0, 16.0),
+            "max_scale": 100.0,
             "about": "Показывает, насколько активно используются образные модели (метафоры) для объяснения политики.",
             "meaning_low": "Низкий MTI: текст говорит преимущественно буквально, без сильной образности.",
             "meaning_high": "Высокий MTI: метафоры заметно направляют восприятие и упрощают сложные темы.",
-            "scale": "Шкала (доля 0..1): 0.00–0.02 низкий, 0.03–0.05 сниженный, 0.06–0.10 средний, 0.11–0.15 высокий, >0.15 очень высокий.",
+            "scale": "Шкала (плотность на 100 слов): 0.00–2.00 низкий, 3.00–5.00 сниженный, 6.00–10.00 средний, 11.00–15.00 высокий, >15.00 очень высокий.",
         },
         {
             "code": "IP",
             "label": "Воздействующий потенциал (IP)",
             "value": float(avg["IP"]),
-            "bounds": (-3.0, -0.5, 0.5, 3.0),
-            "max_scale": 6.0,
+            "bounds": (-60.0, -15.0, 15.0, 60.0),
+            "max_scale": 600.0,
             "about": "Итоговый индекс воздействия: IP = (IDI + EMI + MTI) × EVI.",
             "meaning_low": "Низкий IP: текст слабо влияет на установки читателя.",
             "meaning_high": "Высокий IP: текст вероятно формирует устойчивое отношение к теме/стране.",
-            "scale": "Диапазон: от -6 до +6. Знак показывает направление (минус/плюс), модуль — силу воздействия.",
+            "scale": "Диапазон: от -600 до +600. Знак показывает направление (минус/плюс), модуль — силу воздействия.",
         },
     ]
 
