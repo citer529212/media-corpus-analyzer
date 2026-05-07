@@ -1078,21 +1078,21 @@ def stage7_persuasion_indicator_model(docs: List[Doc], out: Path) -> None:
         dich = sum(tset[t] for t in IDEOLOGY_MARKERS["dich"] if t in tset)
         n_ideol = ideol + prec + slog + dich
         IDI_share = min(max(n_ideol / W, 0.0), 1.0)
-        IDI = IDI_share * 100.0
+        IDI = IDI_share
 
         e_w = sum(tset[t] for t in EMOTION_MARKERS["weak"] if t in tset)
         e_m = sum(tset[t] for t in EMOTION_MARKERS["medium"] if t in tset)
         e_s = sum(tset[t] for t in EMOTION_MARKERS["strong"] if t in tset)
         # EMI = (1/3*weak + 2/3*medium + 1*strong) / N_content
         EMI_share = min(max(((e_w / 3.0) + (2.0 * e_m / 3.0) + e_s) / W, 0.0), 1.0)
-        EMI = EMI_share * 100.0
+        EMI = EMI_share
 
         M_w = sum(tset[t] for t in METAPHOR_MARKERS["weak"] if t in tset)
         M_m = sum(tset[t] for t in METAPHOR_MARKERS["medium"] if t in tset)
         M_s = sum(tset[t] for t in METAPHOR_MARKERS["strong"] if t in tset)
         n_met = M_w + M_m + M_s
         MTI_share = min(max(n_met / W, 0.0), 1.0)
-        MTI = MTI_share * 100.0
+        MTI = MTI_share
 
         # Referent-oriented discrete EVI: -2..2 based on expanded contexts (sent-1/sent/sent+1)
         aliases = referent_aliases.get(d.primary_country, set())
@@ -1123,7 +1123,7 @@ def stage7_persuasion_indicator_model(docs: List[Doc], out: Path) -> None:
             EVI = 2
 
         IP = (IDI + EMI + MTI) * EVI
-        IP = max(min(IP, 600.0), -600.0)
+        IP = max(min(IP, 6.0), -6.0)
 
         # Backward-compat aliases
         PP_equal = IP
@@ -1166,7 +1166,7 @@ def stage7_persuasion_indicator_model(docs: List[Doc], out: Path) -> None:
         rows_cy.append([
             country, year, n,
             round(a["IDI"] / n, 6), round(a["EMI"] / n, 6), round(a["EVI"] / n, 6), round(a["MTI"] / n, 6),
-            round((a["IDI"] / n) / 100.0, 6), round((a["EMI"] / n) / 100.0, 6), round((a["MTI"] / n) / 100.0, 6),
+            round(a["IDI"] / n, 6), round(a["EMI"] / n, 6), round(a["MTI"] / n, 6),
             round(a["IP"] / n, 6), round(a["IP"] / n, 6), round(a["IP"] / n, 6),
         ])
     write_rows(
@@ -1186,7 +1186,7 @@ def stage7_persuasion_indicator_model(docs: List[Doc], out: Path) -> None:
         rows_source.append([
             source, n,
             round(a["IDI"] / n, 6), round(a["EMI"] / n, 6), round(a["EVI"] / n, 6), round(a["MTI"] / n, 6),
-            round((a["IDI"] / n) / 100.0, 6), round((a["EMI"] / n) / 100.0, 6), round((a["MTI"] / n) / 100.0, 6),
+            round(a["IDI"] / n, 6), round(a["EMI"] / n, 6), round(a["MTI"] / n, 6),
             round(a["IP"] / n, 6), round(a["IP"] / n, 6), round(a["IP"] / n, 6),
         ])
     write_rows(

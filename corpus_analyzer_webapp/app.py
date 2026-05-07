@@ -24,7 +24,7 @@ ROOT_DIR = Path(__file__).resolve().parents[1]
 if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
 import corpus_analysis_strict_method as core
-APP_BUILD = "2026-05-05-12:40"
+APP_BUILD = "2026-05-08-11:20"
 
 
 SOURCE_ALIASES = {
@@ -306,22 +306,22 @@ def build_five_indicator_df(docs: List[core.Doc]) -> pd.DataFrame:
             c[t] = c.get(t, 0) + 1
         W = max(content_len(toks), 1)
 
-        # IDI density per 100 content words
+        # IDI share in [0,1]
         n_ideol = sum(c.get(t, 0) for t in ideology["ideol"]) + sum(c.get(t, 0) for t in ideology["prec"]) + sum(c.get(t, 0) for t in ideology["slog"]) + sum(c.get(t, 0) for t in ideology["dich"])
         IDI_share = min(max(n_ideol / W, 0.0), 1.0)
-        IDI = IDI_share * 100.0
+        IDI = IDI_share
 
-        # EMI density per 100 content words
+        # EMI share in [0,1]
         e_w = sum(c.get(t, 0) for t in emotion["weak"])
         e_m = sum(c.get(t, 0) for t in emotion["medium"])
         e_s = sum(c.get(t, 0) for t in emotion["strong"])
         EMI_share = min(max(((e_w / 3.0) + (2.0 * e_m / 3.0) + e_s) / W, 0.0), 1.0)
-        EMI = EMI_share * 100.0
+        EMI = EMI_share
 
-        # MTI density per 100 content words
+        # MTI share in [0,1]
         n_met = sum(c.get(t, 0) for t in metaphor["weak"]) + sum(c.get(t, 0) for t in metaphor["medium"]) + sum(c.get(t, 0) for t in metaphor["strong"])
         MTI_share = min(max(n_met / W, 0.0), 1.0)
-        MTI = MTI_share * 100.0
+        MTI = MTI_share
 
         # EVI (-2..2) on referent-focused expanded context
         aliases = referent_aliases.get(d.primary_country, set())
@@ -350,9 +350,9 @@ def build_five_indicator_df(docs: List[core.Doc]) -> pd.DataFrame:
         else:
             EVI = 2
 
-        # IP in [-600, +600] for per-100-word indices
+        # IP in [-6, +6]
         IP = (IDI + EMI + MTI) * EVI
-        IP = max(min(IP, 600.0), -600.0)
+        IP = max(min(IP, 6.0), -6.0)
 
         rows.append(
             {
@@ -444,6 +444,33 @@ def _highlight_terms_html(text: str, terms: List[str]) -> str:
     return safe.replace("\n", "<br>")
 
 
+def _extract_context_blocks(text: str, terms: List[str], max_blocks: int = 15) -> List[dict]:
+    if not text.strip() or not terms:
+        return []
+    sentence_splitter = re.compile(r"(?<=[\.\!\?])\s+")
+    sents = [s.strip() for s in sentence_splitter.split(text) if s.strip()]
+    if not sents:
+        return []
+    pats = [re.compile(rf"(?i)\b{re.escape(t)}\b") for t in sorted(set(terms), key=len, reverse=True) if t.strip()]
+    blocks = []
+    seen = set()
+    for i, s in enumerate(sents):
+        matched = [t for t, p in zip(sorted(set(terms), key=len, reverse=True), pats) if p.search(s)]
+        if not matched:
+            continue
+        key = (i, tuple(sorted(matched)))
+        if key in seen:
+            continue
+        seen.add(key)
+        prev_sent = sents[i - 1] if i - 1 >= 0 else ""
+        next_sent = sents[i + 1] if i + 1 < len(sents) else ""
+        expanded = " ".join([x for x in [prev_sent, s, next_sent] if x]).strip()
+        blocks.append({"hit_sentence": s, "expanded_context": expanded, "markers": ", ".join(sorted(set(matched)))})
+        if len(blocks) >= max_blocks:
+            break
+    return blocks
+
+
 def show_five_indicator_charts(docs: List[core.Doc], selected_indicator: str) -> None:
     df = build_five_indicator_df(docs)
     if df.empty:
@@ -463,13 +490,13 @@ def show_five_indicator_charts(docs: List[core.Doc], selected_indicator: str) ->
 
     def pp_lvl(v: float) -> str:
         a = abs(v)
-        if a < 5.0:
+        if a < 0.5:
             return "очень низкий"
-        if a < 15.0:
+        if a < 1.5:
             return "низкий"
-        if a < 30.0:
+        if a < 3.0:
             return "средний"
-        if a < 60.0:
+        if a < 4.5:
             return "высокий"
         return "очень высокий"
 
@@ -481,23 +508,23 @@ def show_five_indicator_charts(docs: List[core.Doc], selected_indicator: str) ->
             "code": "IDI",
             "label": "Идеологичность (IDI)",
             "value": float(avg["IDI"]),
-            "bounds": (3.0, 6.0, 11.0, 16.0),
-            "max_scale": 100.0,
+            "bounds": (0.03, 0.06, 0.11, 0.16),
+            "max_scale": 1.0,
             "about": "Показывает, насколько текст насыщен идеологическими рамками: «свои/чужие», суверенитет, ценностные формулы.",
             "meaning_low": "Низкий IDI: текст больше информирует, чем идеологически направляет.",
             "meaning_high": "Высокий IDI: текст заметно формирует «правильную» интерпретацию через ценностные маркеры.",
-            "scale": "Шкала (плотность на 100 слов): 0.00–2.00 низкий, 3.00–5.00 сниженный, 6.00–10.00 средний, 11.00–15.00 высокий, >15.00 очень высокий.",
+            "scale": "Шкала (доля 0..1): 0.00–0.02 низкий, 0.03–0.05 сниженный, 0.06–0.10 средний, 0.11–0.15 высокий, >0.15 очень высокий.",
         },
         {
             "code": "EMI",
             "label": "Эмоциональность (EMI)",
             "value": float(avg["EMI"]),
-            "bounds": (3.0, 6.0, 11.0, 16.0),
-            "max_scale": 100.0,
+            "bounds": (0.03, 0.06, 0.11, 0.16),
+            "max_scale": 1.0,
             "about": "Показывает силу эмоционального давления (взвешенно: слабые=1/3, средние=2/3, сильные=1.0).",
             "meaning_low": "Низкий EMI: текст подан более нейтрально и рационально.",
             "meaning_high": "Высокий EMI: текст активно воздействует на эмоции аудитории.",
-            "scale": "Шкала (плотность на 100 слов): 0.00–2.00 низкий, 3.00–5.00 сниженный, 6.00–10.00 средний, 11.00–15.00 высокий, >15.00 очень высокий.",
+            "scale": "Шкала (доля 0..1): 0.00–0.02 низкий, 0.03–0.05 сниженный, 0.06–0.10 средний, 0.11–0.15 высокий, >0.15 очень высокий.",
         },
         {
             "code": "EVI",
@@ -514,23 +541,23 @@ def show_five_indicator_charts(docs: List[core.Doc], selected_indicator: str) ->
             "code": "MTI",
             "label": "Метафоричность (MTI)",
             "value": float(avg["MTI"]),
-            "bounds": (3.0, 6.0, 11.0, 16.0),
-            "max_scale": 100.0,
+            "bounds": (0.03, 0.06, 0.11, 0.16),
+            "max_scale": 1.0,
             "about": "Показывает, насколько активно используются образные модели (метафоры) для объяснения политики.",
             "meaning_low": "Низкий MTI: текст говорит преимущественно буквально, без сильной образности.",
             "meaning_high": "Высокий MTI: метафоры заметно направляют восприятие и упрощают сложные темы.",
-            "scale": "Шкала (плотность на 100 слов): 0.00–2.00 низкий, 3.00–5.00 сниженный, 6.00–10.00 средний, 11.00–15.00 высокий, >15.00 очень высокий.",
+            "scale": "Шкала (доля 0..1): 0.00–0.02 низкий, 0.03–0.05 сниженный, 0.06–0.10 средний, 0.11–0.15 высокий, >0.15 очень высокий.",
         },
         {
             "code": "IP",
             "label": "Воздействующий потенциал (IP)",
             "value": float(avg["IP"]),
-            "bounds": (-60.0, -15.0, 15.0, 60.0),
-            "max_scale": 600.0,
+            "bounds": (-3.0, -0.5, 0.5, 3.0),
+            "max_scale": 6.0,
             "about": "Итоговый индекс воздействия: IP = (IDI + EMI + MTI) × EVI.",
             "meaning_low": "Низкий IP: текст слабо влияет на установки читателя.",
             "meaning_high": "Высокий IP: текст вероятно формирует устойчивое отношение к теме/стране.",
-            "scale": "Диапазон: от -600 до +600. Знак показывает направление (минус/плюс), модуль — силу воздействия.",
+            "scale": "Диапазон: от -6 до +6. Знак показывает направление (минус/плюс), модуль — силу воздействия.",
         },
     ]
 
@@ -546,7 +573,10 @@ def show_five_indicator_charts(docs: List[core.Doc], selected_indicator: str) ->
         normalized = value / selected_spec["max_scale"]
     normalized = max(0.0, min(normalized, 1.0))
     st.markdown(f"### {selected_spec['label']}")
-    st.metric(selected_spec["code"], f"{value:.3f}")
+    if selected_spec["code"] == "EVI":
+        st.metric(selected_spec["code"], f"{int(round(value))}")
+    else:
+        st.metric(selected_spec["code"], f"{value:.3f}")
     st.progress(normalized)
     st.caption(selected_spec["about"])
     st.markdown(f"- {selected_spec['scale']}\n- {selected_spec['meaning_low']}\n- {selected_spec['meaning_high']}")
@@ -561,7 +591,18 @@ def show_five_indicator_charts(docs: List[core.Doc], selected_indicator: str) ->
     if not df_doc.empty:
         v = float(df_doc.iloc[0]["IP" if selected_spec["code"] == "IP" else selected_spec["code"]])
         l = pp_lvl(v) if selected_spec["code"] == "IP" else lvl(v, selected_spec["bounds"])
-        st.success(f"Текущий случай: `{selected_spec['code']}={v:.3f}` ({l} уровень).")
+        shown_v = str(int(round(v))) if selected_spec["code"] == "EVI" else f"{v:.3f}"
+        st.success(f"Текущий случай: `{selected_spec['code']}={shown_v}` ({l} уровень).")
+
+    if selected_spec["code"] == "IP":
+        st.markdown("**Прозрачная формула интегративного индикатора**")
+        st.code("IP = (IDI + EMI + MTI) × EVI", language="text")
+        if not df_doc.empty:
+            row0 = df_doc.iloc[0]
+            st.code(
+                f"IP = ({row0['IDI']:.3f} + {row0['EMI']:.3f} + {row0['MTI']:.3f}) × {int(round(row0['EVI']))} = {row0['IP']:.3f}",
+                language="text",
+            )
 
     marker_hits = _collect_marker_hits_for_doc(dsel)
     marker_terms = []
@@ -578,6 +619,17 @@ def show_five_indicator_charts(docs: List[core.Doc], selected_indicator: str) ->
             f"<div style='padding:12px;border:1px solid #3a3a3a;border-radius:8px;max-height:320px;overflow:auto;line-height:1.6'>{_highlight_terms_html(dsel.text, marker_terms)}</div>",
             unsafe_allow_html=True,
         )
+        st.markdown("**Контекстные блоки (предложение с маркером ±1 предложение)**")
+        blocks = _extract_context_blocks(dsel.text, marker_terms, max_blocks=12)
+        if blocks:
+            for i, b in enumerate(blocks, start=1):
+                st.markdown(f"{i}. Маркеры: `{b['markers']}`")
+                st.markdown(
+                    f"<div style='padding:10px;border:1px solid #334155;border-radius:8px;line-height:1.6'>{_highlight_terms_html(b['expanded_context'], marker_terms)}</div>",
+                    unsafe_allow_html=True,
+                )
+        else:
+            st.caption("Для выбранного индикатора контекстные блоки в этом тексте не найдены.")
     else:
         st.warning("Для этого индикатора в выбранном тексте маркеры не найдены.")
 
