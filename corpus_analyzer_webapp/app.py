@@ -24,7 +24,12 @@ ROOT_DIR = Path(__file__).resolve().parents[1]
 if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
 import corpus_analysis_strict_method as core
-APP_BUILD = "2026-05-08-11:20"
+try:
+    import media_analyzer_referent as referent_core
+except Exception:
+    referent_core = None
+
+APP_BUILD = "2026-05-08-14:15"
 
 
 SOURCE_ALIASES = {
@@ -183,6 +188,83 @@ def build_docs(file_items: List[Tuple[str, str]], min_year: int, max_year: int, 
             )
         )
     return docs
+
+
+def map_source_to_media_country(source: str) -> str:
+    if source in {"Astro Awani", "Bernama", "The Star", "The Edge Malaysia"}:
+        return "Malaysia"
+    if source in {"Antara", "Kompas Indonesia", "Tempo", "The Jakarta Post"}:
+        return "Indonesia"
+    return "Unknown"
+
+
+def build_referent_input_df(file_items: List[Tuple[str, str]], min_year: int, max_year: int) -> pd.DataFrame:
+    rows = []
+    for i, (filename, raw) in enumerate(file_items, start=1):
+        title, body = extract_title_and_body(raw)
+        if not body.strip():
+            continue
+        year = guess_year(filename, raw)
+        if year < min_year or year > max_year:
+            continue
+        source = source_from_raw(raw) or guess_source(filename)
+        media_country = map_source_to_media_country(source)
+        date_guess = str(year)
+        m = re.search(r"\b(20\d{2}-\d{2}-\d{2})\b", raw[:500])
+        if m:
+            date_guess = m.group(1)
+        rows.append(
+            {
+                "doc_id": f"doc_{i:06d}",
+                "media_country": media_country,
+                "outlet_name": source,
+                "date": date_guess,
+                "title": title,
+                "text": core.strip_boilerplate(body),
+                "language": "",
+            }
+        )
+    return pd.DataFrame(rows)
+
+
+def run_referent_analysis(input_df: pd.DataFrame, out_dir: Path, evi_mode: str):
+    if referent_core is None:
+        raise RuntimeError("referent analyzer module is unavailable")
+
+    dict_dir = out_dir / "referent_dicts"
+    referent_core.ensure_default_dictionaries(dict_dir)
+    docs = referent_core.ensure_required_fields(input_df)
+    ref_keywords = referent_core.load_ref_keywords(dict_dir)
+    ref_patterns = referent_core.compile_keyword_patterns(ref_keywords)
+    contexts = referent_core.extract_context_rows(docs, ref_patterns)
+    if contexts.empty:
+        raise RuntimeError("Не удалось извлечь референтные контексты (China/USA/Russia).")
+
+    scored = referent_core.apply_metrics(
+        contexts=contexts,
+        dict_dir=dict_dir,
+        evi_mode=evi_mode,
+        evi_manual_path=None,
+        metaphor_review_path=None,
+    )
+    scored = referent_core.add_multicountry_flags(scored)
+    scored = scored[scored["ref_country"].isin(referent_core.REF_COUNTRIES)].copy()
+    scored.loc[(scored["N_content"] <= 0), ["IDI", "EMI", "MTI", "IP"]] = 0.0
+    scored.loc[(~scored["EVI"].isin(referent_core.EVI_ALLOWED)), "EVI"] = 0
+    scored.loc[(scored["EVI"] == 0), "IP"] = 0.0
+    for col in ["IDI", "EMI", "MTI"]:
+        scored[col] = scored[col].clip(lower=0.0, upper=1.0)
+    scored["IP"] = scored["IP"].clip(lower=-6.0, upper=6.0)
+
+    by_article, by_outlet, by_media_ref, matrix = referent_core.aggregate_outputs(scored)
+    flagged = referent_core.build_flagged_cases(scored)
+    referent_core.save_outputs(scored, by_article, by_outlet, by_media_ref, matrix, flagged, out_dir)
+
+    return {
+        "docs": len(docs),
+        "contexts": len(scored),
+        "flagged": len(flagged),
+    }
 
 
 def zip_dir_bytes(dir_path: Path) -> bytes:
@@ -741,8 +823,14 @@ def main() -> None:
         max_year = st.number_input("Максимальный год", min_value=2000, max_value=2100, value=2026)
         analysis_mode = st.selectbox(
             "Режим анализа",
-            options=["Стандартный (5 индикаторов)", "Расширенный (корпусный)"],
+            options=["Стандартный (5 индикаторов)", "Расширенный (корпусный)", "Референтный (China/USA/Russia)"],
             index=0,
+        )
+        referent_evi_mode = st.selectbox(
+            "EVI режим (референтный анализ)",
+            options=["suggested", "manual"],
+            index=0,
+            help="suggested: авто-подсказка EVI; manual: без файла разметки EVI по умолчанию 0.",
         )
         indicator_tab = st.selectbox(
             "Вкладка индикатора",
@@ -806,61 +894,116 @@ def main() -> None:
             st.error("Не найдено входных текстов. Загрузите ZIP/файлы или вставьте текст вручную.")
             return
 
-        docs = build_docs(file_items, int(min_year), int(max_year), use_lemma=use_lemma)
-        if not docs:
-            st.error("После предобработки не осталось документов в указанном диапазоне лет.")
-            return
-
         with tempfile.TemporaryDirectory(prefix="sea_media_analysis_") as tmp:
             out_dir = Path(tmp) / "analysis_output"
             out_dir.mkdir(parents=True, exist_ok=True)
 
-            try:
-                dedup_stats, analyzed_docs, analyzed_doc_objs = run_analysis(
-                    docs=docs,
-                    out_dir=out_dir,
-                    top_n=int(top_n),
-                    kwic_window=int(kwic_window),
-                    kwic_max=int(kwic_max),
-                    colloc_window=int(colloc_window),
-                    colloc_min=int(colloc_min),
-                    top_n_logodds=int(top_n_logodds),
-                    dedup=dedup,
-                    near_dup_jaccard=float(near_dup_jaccard),
-                    near_dup_hamming=int(near_dup_hamming),
-                )
-            except Exception as e:
-                st.exception(e)
-                return
+            if analysis_mode == "Референтный (China/USA/Russia)":
+                if referent_core is None:
+                    st.error("Референтный модуль не найден. Добавьте media_analyzer_referent.py в корень проекта.")
+                    return
+                input_df = build_referent_input_df(file_items, int(min_year), int(max_year))
+                if input_df.empty:
+                    st.error("После фильтрации по годам не осталось документов для референтного анализа.")
+                    return
+                try:
+                    stats = run_referent_analysis(input_df=input_df, out_dir=out_dir, evi_mode=referent_evi_mode)
+                except Exception as e:
+                    st.exception(e)
+                    return
 
-            st.success(f"Готово. Проанализировано документов: {analyzed_docs}")
-            if analysis_mode == "Расширенный (корпусный)":
-                st.json(dedup_stats)
-
-            show_five_indicator_charts(analyzed_doc_objs, selected_indicator=indicator_tab)
-
-            if analysis_mode == "Расширенный (корпусный)":
-                st.subheader("Дополнительные исследовательские таблицы")
+                st.success(f"Готово. Документов: {stats['docs']}, контекстов: {stats['contexts']}, flagged: {stats['flagged']}")
+                st.subheader("Референтные результаты")
                 for preview_name in [
-                    "stage1_profile_source.csv",
-                    "stage1_profile_country.csv",
-                    "stage1_profile_year.csv",
-                    "stage1_profile_language.csv",
-                    "stage5_representativeness_country_total.csv",
-                    "stage6_significance_pairwise.csv",
-                    "stage7_persuasion_summary_country_year.csv",
-                    "stage7_persuasion_summary_source.csv",
+                    "contexts_full.csv",
+                    "aggregated_by_article.csv",
+                    "aggregated_by_outlet.csv",
+                    "aggregated_by_media_country_and_ref_country.csv",
+                    "flagged_cases.csv",
                 ]:
                     p = out_dir / preview_name
                     if p.exists():
                         st.markdown(f"**{preview_name}**")
-                        rows = read_csv_preview(p, limit=15)
-                        st.dataframe(rows)
-                show_charts(out_dir)
+                        st.dataframe(pd.read_csv(p).head(20), use_container_width=True)
 
-            if analysis_mode == "Расширенный (корпусный)":
-                with st.expander("DEBUG"):
-                    st.write({"build": APP_BUILD, "docs_for_indicator_charts": len(analyzed_doc_objs)})
+                p_agg = out_dir / "aggregated_by_media_country_and_ref_country.csv"
+                if p_agg.exists():
+                    agg = pd.read_csv(p_agg)
+                    c1, c2 = st.columns(2)
+                    with c1:
+                        fig = px.bar(
+                            agg,
+                            x="ref_country",
+                            y="IP",
+                            color="media_country",
+                            barmode="group",
+                            title="Average IP by media country and referent",
+                            template="plotly_dark",
+                        )
+                        st.plotly_chart(fig, use_container_width=True)
+                    with c2:
+                        fig2 = px.bar(
+                            agg,
+                            x="ref_country",
+                            y="number_of_contexts",
+                            color="media_country",
+                            barmode="group",
+                            title="Number of contexts",
+                            template="plotly_dark",
+                        )
+                        st.plotly_chart(fig2, use_container_width=True)
+            else:
+                docs = build_docs(file_items, int(min_year), int(max_year), use_lemma=use_lemma)
+                if not docs:
+                    st.error("После предобработки не осталось документов в указанном диапазоне лет.")
+                    return
+
+                try:
+                    dedup_stats, analyzed_docs, analyzed_doc_objs = run_analysis(
+                        docs=docs,
+                        out_dir=out_dir,
+                        top_n=int(top_n),
+                        kwic_window=int(kwic_window),
+                        kwic_max=int(kwic_max),
+                        colloc_window=int(colloc_window),
+                        colloc_min=int(colloc_min),
+                        top_n_logodds=int(top_n_logodds),
+                        dedup=dedup,
+                        near_dup_jaccard=float(near_dup_jaccard),
+                        near_dup_hamming=int(near_dup_hamming),
+                    )
+                except Exception as e:
+                    st.exception(e)
+                    return
+
+                st.success(f"Готово. Проанализировано документов: {analyzed_docs}")
+                if analysis_mode == "Расширенный (корпусный)":
+                    st.json(dedup_stats)
+
+                show_five_indicator_charts(analyzed_doc_objs, selected_indicator=indicator_tab)
+
+                if analysis_mode == "Расширенный (корпусный)":
+                    st.subheader("Дополнительные исследовательские таблицы")
+                    for preview_name in [
+                        "stage1_profile_source.csv",
+                        "stage1_profile_country.csv",
+                        "stage1_profile_year.csv",
+                        "stage1_profile_language.csv",
+                        "stage5_representativeness_country_total.csv",
+                        "stage6_significance_pairwise.csv",
+                        "stage7_persuasion_summary_country_year.csv",
+                        "stage7_persuasion_summary_source.csv",
+                    ]:
+                        p = out_dir / preview_name
+                        if p.exists():
+                            st.markdown(f"**{preview_name}**")
+                            rows = read_csv_preview(p, limit=15)
+                            st.dataframe(rows)
+                    show_charts(out_dir)
+
+                if analysis_mode == "Расширенный (корпусный)":
+                    with st.expander("DEBUG"):
+                        st.write({"build": APP_BUILD, "docs_for_indicator_charts": len(analyzed_doc_objs)})
 
             out_zip = zip_dir_bytes(out_dir)
             st.download_button(
