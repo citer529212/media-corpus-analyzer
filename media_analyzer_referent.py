@@ -50,14 +50,17 @@ DEFAULT_REF_KEYWORDS = {
         "China", "Chinese", "Beijing", "Xi Jinping", "Communist Party of China", "CPC", "CCP", "PRC", "yuan",
         "Belt and Road", "BRI", "Chinese economy", "Chinese culture", "Huawei", "Taiwan", "Tiongkok", "Cina",
         "South China Sea", "Xinjiang", "Hong Kong",
+        "Китай", "китайский", "Пекин", "Си Цзиньпин", "КПК", "КНР", "китайская экономика", "китайская культура",
     ],
     "USA": [
         "United States", "US", "U.S.", "America", "American", "Washington", "White House", "Biden", "Trump",
         "dollar", "Pentagon", "Congress", "NATO", "Amerika Serikat", "Amerika Syarikat",
+        "США", "Соединенные Штаты", "Америка", "американский", "Вашингтон", "Белый дом", "Пентагон", "Конгресс",
     ],
     "Russia": [
         "Russia", "Russian", "Moscow", "Kremlin", "Putin", "ruble", "Russian economy", "Russian military",
         "Ukraine war", "sanctions against Russia", "Rusia",
+        "Россия", "российский", "Москва", "Кремль", "Путин", "рубль", "российская экономика", "санкции против России",
     ],
 }
 
@@ -401,6 +404,9 @@ def apply_metrics(
         n_m, found_m = count_marker_hits(ctx, emot_markers["medium"])
         n_s, found_s = count_marker_hits(ctx, emot_markers["strong"])
         n_met_candidates, found_met_candidates = count_marker_hits(ctx, metaphors)
+        pos_hits, found_pos = count_marker_hits(ctx, EVAL_POS)
+        neg_hits, found_neg = count_marker_hits(ctx, EVAL_NEG)
+        evi_score_raw = pos_hits - neg_hits
 
         # Semi-automatic metaphor handling
         n_met = 0
@@ -469,6 +475,11 @@ def apply_metrics(
                 "found_ideol_markers": "; ".join(found_ideol),
                 "found_emotional_markers": "; ".join(sorted(set(found_w + found_m + found_s))),
                 "found_metaphor_markers": "; ".join(found_met_candidates),
+                "evi_pos_hits": int(pos_hits),
+                "evi_neg_hits": int(neg_hits),
+                "evi_score_raw": int(evi_score_raw),
+                "evi_pos_markers": "; ".join(found_pos),
+                "evi_neg_markers": "; ".join(found_neg),
                 "explanation": evi_expl,
                 "notes": "; ".join(sorted(set(notes))),
             }
@@ -487,29 +498,50 @@ def add_multicountry_flags(df: pd.DataFrame) -> pd.DataFrame:
     return out
 
 
+def dominant_evi(series: pd.Series) -> int:
+    vals = []
+    for v in series.dropna().tolist():
+        try:
+            iv = int(round(float(v)))
+        except Exception:
+            continue
+        if iv in EVI_ALLOWED:
+            vals.append(iv)
+    if not vals:
+        return 0
+    vc = pd.Series(vals).value_counts()
+    top_count = int(vc.max())
+    top_vals = [int(x) for x in vc[vc == top_count].index.tolist()]
+    if len(top_vals) == 1:
+        return top_vals[0]
+    mean_v = sum(vals) / len(vals)
+    top_vals.sort(key=lambda x: (abs(x - mean_v), -abs(x)))
+    return int(top_vals[0])
+
+
 def aggregate_outputs(df: pd.DataFrame) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
-    agg_map = {
-        "IDI": "mean", "EMI": "mean", "MTI": "mean", "EVI": "mean", "IP": "mean",
-        "context_id": "count",
-    }
+    def aggregate_group(keys: List[str]) -> pd.DataFrame:
+        grouped = []
+        for key_vals, g in df.groupby(keys, dropna=False):
+            if not isinstance(key_vals, tuple):
+                key_vals = (key_vals,)
+            row = {k: v for k, v in zip(keys, key_vals)}
+            row.update(
+                {
+                    "IDI": float(g["IDI"].mean()),
+                    "EMI": float(g["EMI"].mean()),
+                    "MTI": float(g["MTI"].mean()),
+                    "EVI": int(dominant_evi(g["EVI"])),
+                    "IP": float(g["IP"].mean()),
+                    "number_of_contexts": int(len(g)),
+                }
+            )
+            grouped.append(row)
+        return pd.DataFrame(grouped)
 
-    by_article = (
-        df.groupby(["doc_id", "ref_country", "media_country", "outlet_name"], as_index=False)
-        .agg(agg_map)
-        .rename(columns={"context_id": "number_of_contexts"})
-    )
-
-    by_outlet = (
-        df.groupby(["outlet_name", "media_country", "ref_country"], as_index=False)
-        .agg(agg_map)
-        .rename(columns={"context_id": "number_of_contexts"})
-    )
-
-    by_media_ref = (
-        df.groupby(["media_country", "ref_country"], as_index=False)
-        .agg(agg_map)
-        .rename(columns={"context_id": "number_of_contexts"})
-    )
+    by_article = aggregate_group(["doc_id", "ref_country", "media_country", "outlet_name"])
+    by_outlet = aggregate_group(["outlet_name", "media_country", "ref_country"])
+    by_media_ref = aggregate_group(["media_country", "ref_country"])
 
     art_counts = (
         df.groupby(["media_country", "ref_country"])["doc_id"]
@@ -658,4 +690,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

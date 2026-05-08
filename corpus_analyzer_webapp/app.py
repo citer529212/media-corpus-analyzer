@@ -10,7 +10,7 @@ import sys
 import tempfile
 import zipfile
 from pathlib import Path
-from typing import List, Tuple
+from typing import Dict, List, Optional, Tuple
 
 import pandas as pd
 import plotly.express as px
@@ -29,7 +29,28 @@ try:
 except Exception:
     referent_core = None
 
-APP_BUILD = "2026-05-08-14:15"
+APP_BUILD = "2026-05-08-16:40"
+
+REFERENT_CATEGORY_KEYWORDS: Dict[str, Dict[str, List[str]]] = {
+    "China": {
+        "Leadership": ["xi", "jinping", "beijing", "cpc", "ccp", "prc", "communist party"],
+        "Economy": ["yuan", "renminbi", "economy", "trade", "bri", "belt and road", "huawei", "tiktok", "alibaba"],
+        "Security": ["taiwan", "south china sea", "pla", "xinjiang", "sanction", "military"],
+        "Culture": ["culture", "confucius", "cinema", "music", "sport", "olympic"],
+    },
+    "USA": {
+        "Leadership": ["biden", "trump", "white house", "washington", "congress", "senate"],
+        "Economy": ["dollar", "federal reserve", "treasury", "wall street", "economy", "tariff", "trade"],
+        "Security": ["pentagon", "nato", "military", "sanction", "defense", "state department"],
+        "Culture": ["american culture", "hollywood", "silicon valley", "music", "sport"],
+    },
+    "Russia": {
+        "Leadership": ["putin", "kremlin", "moscow", "lavrov", "medvedev"],
+        "Economy": ["ruble", "economy", "energy", "gazprom", "rosneft", "sanction"],
+        "Security": ["military", "ukraine war", "csto", "eaeu", "defense"],
+        "Culture": ["russian culture", "orthodox", "cinema", "sport"],
+    },
+}
 
 
 SOURCE_ALIASES = {
@@ -227,7 +248,13 @@ def build_referent_input_df(file_items: List[Tuple[str, str]], min_year: int, ma
     return pd.DataFrame(rows)
 
 
-def run_referent_analysis(input_df: pd.DataFrame, out_dir: Path, evi_mode: str):
+def run_referent_analysis(
+    input_df: pd.DataFrame,
+    out_dir: Path,
+    evi_mode: str,
+    evi_manual_path: Optional[Path] = None,
+    metaphor_review_path: Optional[Path] = None,
+):
     if referent_core is None:
         raise RuntimeError("referent analyzer module is unavailable")
 
@@ -244,8 +271,8 @@ def run_referent_analysis(input_df: pd.DataFrame, out_dir: Path, evi_mode: str):
         contexts=contexts,
         dict_dir=dict_dir,
         evi_mode=evi_mode,
-        evi_manual_path=None,
-        metaphor_review_path=None,
+        evi_manual_path=evi_manual_path,
+        metaphor_review_path=metaphor_review_path,
     )
     scored = referent_core.add_multicountry_flags(scored)
     scored = scored[scored["ref_country"].isin(referent_core.REF_COUNTRIES)].copy()
@@ -265,6 +292,257 @@ def run_referent_analysis(input_df: pd.DataFrame, out_dir: Path, evi_mode: str):
         "contexts": len(scored),
         "flagged": len(flagged),
     }
+
+
+def _split_marker_cell(cell: str) -> List[str]:
+    if not isinstance(cell, str) or not cell.strip():
+        return []
+    return [x.strip() for x in cell.split(";") if x.strip()]
+
+
+def _assign_keyword_category(ref_country: str, matched_keywords: str) -> str:
+    cats = REFERENT_CATEGORY_KEYWORDS.get(ref_country, {})
+    kws = [k.casefold() for k in _split_marker_cell(matched_keywords)]
+    if not kws:
+        return "other"
+    matched = []
+    for cat, hints in cats.items():
+        hh = [h.casefold() for h in hints]
+        if any(any(h in kw for h in hh) for kw in kws):
+            matched.append(cat)
+    return "; ".join(matched) if matched else "other"
+
+
+def _build_referent_view_df(contexts_df: pd.DataFrame) -> pd.DataFrame:
+    df = contexts_df.copy()
+    if "matched_keywords" not in df.columns:
+        df["matched_keywords"] = ""
+    df["keyword_category"] = df.apply(
+        lambda r: _assign_keyword_category(str(r.get("ref_country", "")), str(r.get("matched_keywords", ""))),
+        axis=1,
+    )
+    return df
+
+
+def _dominant_discrete_evi(values: pd.Series) -> int:
+    allowed = {-2, -1, 0, 1, 2}
+    vals = []
+    for v in values.dropna().tolist():
+        try:
+            iv = int(round(float(v)))
+        except Exception:
+            continue
+        if iv in allowed:
+            vals.append(iv)
+    if not vals:
+        return 0
+    vc = pd.Series(vals).value_counts()
+    top_count = int(vc.max())
+    top_vals = [int(x) for x in vc[vc == top_count].index.tolist()]
+    if len(top_vals) == 1:
+        return top_vals[0]
+    mean_v = sum(vals) / len(vals)
+    top_vals.sort(key=lambda x: (abs(x - mean_v), -abs(x)))
+    return int(top_vals[0])
+
+
+def _render_proof_contexts(df: pd.DataFrame, marker_col: str, title: str, limit: int = 6) -> None:
+    st.markdown(f"**{title}**")
+    tmp = df.copy()
+    tmp["_marker_list"] = tmp[marker_col].fillna("").astype(str).map(_split_marker_cell)
+    tmp = tmp[tmp["_marker_list"].map(len) > 0]
+    if tmp.empty:
+        st.caption("Маркеры не найдены в текущей выборке.")
+        return
+    tmp = tmp.head(limit)
+    for _, r in tmp.iterrows():
+        terms = r["_marker_list"]
+        meta = f"{r.get('context_id','')} | {r.get('outlet_name','')} | {r.get('date','')} | {r.get('keyword_category','')}"
+        st.caption(meta)
+        st.markdown(
+            f"<div style='padding:10px;border:1px solid #334155;border-radius:8px;line-height:1.6'>{_highlight_terms_html(str(r.get('context_text','')), terms)}</div>",
+            unsafe_allow_html=True,
+        )
+
+
+def show_referent_dashboard(out_dir: Path, default_ref: str, default_category: str) -> None:
+    p_ctx = out_dir / "contexts_full.csv"
+    if not p_ctx.exists():
+        st.error("Файл contexts_full.csv не найден.")
+        return
+    df_all = pd.read_csv(p_ctx)
+    if df_all.empty:
+        st.warning("Нет контекстов для отображения.")
+        return
+    df_all = _build_referent_view_df(df_all)
+
+    refs = [r for r in ["China", "USA", "Russia"] if r in set(df_all["ref_country"].astype(str))]
+    if not refs:
+        st.warning("В данных нет референтов China/USA/Russia.")
+        return
+    if default_ref not in refs:
+        default_ref = refs[0]
+    ref_country = st.selectbox("Референт анализа", options=refs, index=refs.index(default_ref), key="ref_country_main")
+
+    df_ref = df_all[df_all["ref_country"] == ref_country].copy()
+    categories = sorted({c for val in df_ref["keyword_category"].dropna().astype(str) for c in [x.strip() for x in val.split(";")] if c})
+    categories = ["all"] + categories
+    cat_index = categories.index(default_category) if default_category in categories else 0
+    category = st.selectbox("Категория ключевых слов", options=categories, index=cat_index, key="ref_cat_main")
+    if category != "all":
+        df_ref = df_ref[df_ref["keyword_category"].astype(str).str.contains(rf"(^|;\s*){re.escape(category)}($|;)", regex=True)]
+
+    if df_ref.empty:
+        st.warning("После фильтрации по референту/категории не осталось контекстов.")
+        return
+
+    st.subheader(f"Анализ референта: {ref_country}")
+    c1, c2, c3 = st.columns(3)
+    c1.metric("Контексты", int(len(df_ref)))
+    c2.metric("Статьи", int(df_ref["doc_id"].nunique()))
+    c3.metric("Источники", int(df_ref["outlet_name"].nunique()))
+
+    n_content_sum = max(float(df_ref["N_content"].sum()), 1.0)
+    idi = float(df_ref["N_ideol"].sum() / n_content_sum)
+    emi = float((((df_ref["N_e_w"] / 3.0) + (2.0 * df_ref["N_e_m"] / 3.0) + df_ref["N_e_s"]).sum()) / n_content_sum)
+    mti = float(df_ref["N_met"].sum() / n_content_sum)
+    evi = int(_dominant_discrete_evi(df_ref["EVI"]))
+    ip_formula = float((idi + emi + mti) * evi)
+    ip_observed = float(df_ref["IP"].mean())
+
+    def density_level(v: float) -> str:
+        if v < 0.03:
+            return "низкий"
+        if v < 0.08:
+            return "умеренный"
+        if v < 0.15:
+            return "высокий"
+        return "очень высокий"
+
+    def evi_level(v: float) -> str:
+        if v <= -1.5:
+            return "резко негативный"
+        if v < -0.5:
+            return "негативный"
+        if v < 0.5:
+            return "нейтральный"
+        if v < 1.5:
+            return "позитивный"
+        return "резко позитивный"
+
+    def ip_level(v: float) -> str:
+        av = abs(v)
+        if av < 0.5:
+            return "слабое воздействие"
+        if av < 1.5:
+            return "умеренное воздействие"
+        if av < 3.0:
+            return "заметное воздействие"
+        return "сильное воздействие"
+
+    st.markdown("### Индикаторы и доказательства")
+
+    st.markdown("**1) Идеологизированность (IDI)**")
+    st.caption("Кратко: доля идеологических маркеров среди знаменательных слов контекста.")
+    st.code("IDI = N_ideol / N_content", language="text")
+    st.code(f"IDI = {int(df_ref['N_ideol'].sum())} / {int(n_content_sum)} = {idi:.3f}", language="text")
+    st.metric("IDI", f"{idi:.3f}")
+    st.info(f"Интерпретация: {density_level(idi)} уровень идеологической маркированности (шкала долей 0..1).")
+    fig_idi = px.histogram(df_ref, x="IDI", nbins=20, template="plotly_dark", title="Распределение IDI по контекстам")
+    st.plotly_chart(fig_idi, use_container_width=True)
+    _render_proof_contexts(df_ref, "found_ideol_markers", "Пруфы IDI: контексты с идеологическими маркерами")
+
+    st.markdown("**2) Эмоциональность (EMI)**")
+    st.caption("Кратко: взвешенная доля эмоциональных маркеров (слабые/средние/сильные).")
+    st.code("EMI = (1/3*N_e_w + 2/3*N_e_m + 1*N_e_s) / N_content", language="text")
+    weighted_emotion_sum = float(((df_ref["N_e_w"] / 3.0) + (2.0 * df_ref["N_e_m"] / 3.0) + df_ref["N_e_s"]).sum())
+    st.code(f"EMI = {weighted_emotion_sum:.2f} / {int(n_content_sum)} = {emi:.3f}", language="text")
+    st.metric("EMI", f"{emi:.3f}")
+    st.info(f"Интерпретация: {density_level(emi)} уровень эмоционального давления.")
+    fig_emi = px.histogram(df_ref, x="EMI", nbins=20, template="plotly_dark", title="Распределение EMI по контекстам")
+    st.plotly_chart(fig_emi, use_container_width=True)
+    _render_proof_contexts(df_ref, "found_emotional_markers", "Пруфы EMI: контексты с эмоциональными маркерами")
+
+    st.markdown("**3) Метафоричность (MTI)**")
+    st.caption("Кратко: доля метафорических единиц в знаменательных словах контекста.")
+    st.code("MTI = N_met / N_content", language="text")
+    st.code(f"MTI = {int(df_ref['N_met'].sum())} / {int(n_content_sum)} = {mti:.3f}", language="text")
+    st.metric("MTI", f"{mti:.3f}")
+    st.info(f"Интерпретация: {density_level(mti)} уровень образной (метафорической) подачи.")
+    fig_mti = px.histogram(df_ref, x="MTI", nbins=20, template="plotly_dark", title="Распределение MTI по контекстам")
+    st.plotly_chart(fig_mti, use_container_width=True)
+    _render_proof_contexts(df_ref, "found_metaphor_markers", "Пруфы MTI: контексты с метафорическими маркерами")
+
+    st.markdown("**4) Оценочность по референту (EVI)**")
+    st.caption("Кратко: оценка именно выбранного референта по шкале -2..+2, а не текста в целом.")
+    st.code("EVI ∈ {-2, -1, 0, +1, +2}", language="text")
+    st.code(f"EVI = {evi} (доминирующее дискретное значение)", language="text")
+    st.metric("EVI", str(evi))
+    st.info(f"Интерпретация: {evi_level(evi)} отношение к референту.")
+    evi_dist = df_ref.groupby("EVI", as_index=False).size().rename(columns={"size": "contexts"}).sort_values("EVI")
+    fig_evi = px.bar(evi_dist, x="EVI", y="contexts", template="plotly_dark", title="Распределение EVI")
+    st.plotly_chart(fig_evi, use_container_width=True)
+    st.markdown("**Как получен EVI: пояснения и маркеры**")
+    cols = [c for c in ["context_id", "matched_keywords", "EVI", "evi_pos_hits", "evi_neg_hits", "explanation", "notes"] if c in df_ref.columns]
+    st.dataframe(df_ref[cols].head(30), use_container_width=True)
+    if "evi_pos_markers" in df_ref.columns and "evi_neg_markers" in df_ref.columns:
+        evi_proof = df_ref.copy()
+        evi_proof["evi_markers"] = (
+            evi_proof["matched_keywords"].fillna("").astype(str)
+            + "; "
+            + evi_proof["evi_pos_markers"].fillna("").astype(str)
+            + "; "
+            + evi_proof["evi_neg_markers"].fillna("").astype(str)
+        )
+        _render_proof_contexts(evi_proof, "evi_markers", "Пруфы EVI: референт + оценочные маркеры в контексте")
+
+    st.markdown("**5) Воздействующий потенциал (IP)**")
+    st.caption("Кратко: итоговое воздействие как произведение трех описательных параметров на оценочность.")
+    st.code("IP = (IDI + EMI + MTI) × EVI", language="text")
+    st.code(f"IP = ({idi:.3f} + {emi:.3f} + {mti:.3f}) × {evi} = {ip_formula:.3f}", language="text")
+    st.metric("IP (по формуле)", f"{ip_formula:.3f}")
+    st.metric("IP (среднее по контекстам)", f"{ip_observed:.3f}")
+    st.info(f"Интерпретация: {ip_level(ip_formula)}; знак IP показывает направление (минус/плюс).")
+    fig_ip = px.histogram(df_ref, x="IP", nbins=20, template="plotly_dark", title="Распределение IP по контекстам")
+    st.plotly_chart(fig_ip, use_container_width=True)
+
+    st.markdown("### Анализ по категориям ключевых слов")
+    cat_rows = []
+    for _, r in df_ref.iterrows():
+        cats = [x.strip() for x in str(r.get("keyword_category", "other")).split(";") if x.strip()]
+        if not cats:
+            cats = ["other"]
+        for cat in cats:
+            cat_rows.append(
+                {
+                    "category": cat,
+                    "IDI": r["IDI"],
+                    "EMI": r["EMI"],
+                    "MTI": r["MTI"],
+                    "EVI": r["EVI"],
+                    "IP": r["IP"],
+                }
+            )
+    cat_df = pd.DataFrame(cat_rows)
+    if not cat_df.empty:
+        cat_agg = (
+            cat_df.groupby("category", as_index=False)
+            .agg(
+                contexts=("category", "count"),
+                IDI=("IDI", "mean"),
+                EMI=("EMI", "mean"),
+                MTI=("MTI", "mean"),
+                IP=("IP", "mean"),
+            )
+            .sort_values("contexts", ascending=False)
+        )
+        evi_by_cat = []
+        for cat in cat_agg["category"].tolist():
+            evi_by_cat.append(_dominant_discrete_evi(cat_df[cat_df["category"] == cat]["EVI"]))
+        cat_agg["EVI"] = evi_by_cat
+        st.dataframe(cat_agg, use_container_width=True)
+        fig_cat = px.bar(cat_agg, x="category", y="IP", color="contexts", template="plotly_dark", title="IP по категориям ключевых слов")
+        st.plotly_chart(fig_cat, use_container_width=True)
 
 
 def zip_dir_bytes(dir_path: Path) -> bytes:
@@ -826,30 +1104,60 @@ def main() -> None:
             options=["Стандартный (5 индикаторов)", "Расширенный (корпусный)", "Референтный (China/USA/Russia)"],
             index=0,
         )
-        referent_evi_mode = st.selectbox(
-            "EVI режим (референтный анализ)",
-            options=["suggested", "manual"],
-            index=0,
-            help="suggested: авто-подсказка EVI; manual: без файла разметки EVI по умолчанию 0.",
-        )
-        indicator_tab = st.selectbox(
-            "Вкладка индикатора",
-            options=["IDI", "EMI", "EVI", "MTI", "IP"],
-            index=0,
-            help="Выберите индикатор для подробного разбора и подсветки маркеров в тексте.",
-        )
-        dedup = st.checkbox("Dedup (exact + near)", value=True)
-        use_lemma = st.checkbox("Лемматизация (легкая)", value=True)
+        referent_evi_mode = "suggested"
+        referent_target = "China"
+        referent_category_default = "all"
+        indicator_tab = "IDI"
 
-        with st.expander("Расширенные настройки", expanded=False):
-            near_dup_jaccard = st.slider("Near-dup Jaccard", min_value=0.80, max_value=0.99, value=0.92, step=0.01)
-            near_dup_hamming = st.slider("Near-dup SimHash Hamming", min_value=1, max_value=8, value=3)
-            top_n = st.number_input("Top-N частот/коллокаций", min_value=50, max_value=1000, value=250)
-            kwic_window = st.number_input("KWIC окно", min_value=3, max_value=20, value=7)
-            kwic_max = st.number_input("KWIC максимум строк", min_value=500, max_value=50000, value=12000)
-            colloc_window = st.number_input("Collocation окно", min_value=2, max_value=15, value=5)
-            colloc_min = st.number_input("Collocation min cooc", min_value=2, max_value=100, value=5)
-            top_n_logodds = st.number_input("Top log-odds токенов", min_value=30, max_value=500, value=120)
+        dedup = True
+        use_lemma = True
+        near_dup_jaccard = 0.92
+        near_dup_hamming = 3
+        top_n = 250
+        kwic_window = 7
+        kwic_max = 12000
+        colloc_window = 5
+        colloc_min = 5
+        top_n_logodds = 120
+
+        if analysis_mode == "Референтный (China/USA/Russia)":
+            referent_evi_mode = st.selectbox(
+                "EVI режим (референтный анализ)",
+                options=["suggested", "manual"],
+                index=0,
+                help="suggested: авто-подсказка EVI; manual: оценка из evi_manual.csv, иначе EVI=0.",
+            )
+            referent_target = st.selectbox(
+                "Целевой референт (витрина)",
+                options=["China", "USA", "Russia"],
+                index=0,
+                help="Контексты извлекаются по всем референтам, здесь выбирается фокус на странице.",
+            )
+            referent_category_default = st.selectbox(
+                "Категория ключевых слов",
+                options=["all", "Leadership", "Economy", "Security", "Culture", "other"],
+                index=0,
+            )
+            st.caption("Режим ручной EVI: загрузите evi_manual.csv ниже в основном окне.")
+        else:
+            indicator_tab = st.selectbox(
+                "Вкладка индикатора",
+                options=["IDI", "EMI", "EVI", "MTI", "IP"],
+                index=0,
+                help="Выберите индикатор для подробного разбора и подсветки маркеров в тексте.",
+            )
+            dedup = st.checkbox("Dedup (exact + near)", value=True)
+            use_lemma = st.checkbox("Лемматизация (легкая)", value=True)
+
+            with st.expander("Расширенные настройки", expanded=False):
+                near_dup_jaccard = st.slider("Near-dup Jaccard", min_value=0.80, max_value=0.99, value=0.92, step=0.01)
+                near_dup_hamming = st.slider("Near-dup SimHash Hamming", min_value=1, max_value=8, value=3)
+                top_n = st.number_input("Top-N частот/коллокаций", min_value=50, max_value=1000, value=250)
+                kwic_window = st.number_input("KWIC окно", min_value=3, max_value=20, value=7)
+                kwic_max = st.number_input("KWIC максимум строк", min_value=500, max_value=50000, value=12000)
+                colloc_window = st.number_input("Collocation окно", min_value=2, max_value=15, value=5)
+                colloc_min = st.number_input("Collocation min cooc", min_value=2, max_value=100, value=5)
+                top_n_logodds = st.number_input("Top log-odds токенов", min_value=30, max_value=500, value=120)
 
     col1, col2 = st.columns(2)
     with col1:
@@ -860,6 +1168,26 @@ def main() -> None:
             type=["txt", "md", "text", "docx", "pdf"],
             accept_multiple_files=True,
         )
+
+    referent_evi_manual_upload = None
+    referent_metaphor_review_upload = None
+    if analysis_mode == "Референтный (China/USA/Russia)":
+        st.markdown("### Доп. файлы для референтного режима")
+        rc1, rc2 = st.columns(2)
+        with rc1:
+            referent_evi_manual_upload = st.file_uploader(
+                "evi_manual.csv (опционально, для manual режима)",
+                type=["csv"],
+                accept_multiple_files=False,
+                key="evi_manual_csv",
+            )
+        with rc2:
+            referent_metaphor_review_upload = st.file_uploader(
+                "metaphor_review.csv (опционально)",
+                type=["csv"],
+                accept_multiple_files=False,
+                key="metaphor_review_csv",
+            )
 
     st.markdown("### Или вставьте текст вручную")
     manual_text = st.text_area("Текст для анализа", height=180, placeholder="Вставьте сюда любой медиатекст...")
@@ -906,52 +1234,45 @@ def main() -> None:
                 if input_df.empty:
                     st.error("После фильтрации по годам не осталось документов для референтного анализа.")
                     return
+                evi_manual_path = None
+                metaphor_review_path = None
+                if referent_evi_manual_upload is not None:
+                    evi_manual_path = out_dir / "evi_manual.csv"
+                    evi_manual_path.write_bytes(referent_evi_manual_upload.getvalue())
+                if referent_metaphor_review_upload is not None:
+                    metaphor_review_path = out_dir / "metaphor_review.csv"
+                    metaphor_review_path.write_bytes(referent_metaphor_review_upload.getvalue())
                 try:
-                    stats = run_referent_analysis(input_df=input_df, out_dir=out_dir, evi_mode=referent_evi_mode)
+                    stats = run_referent_analysis(
+                        input_df=input_df,
+                        out_dir=out_dir,
+                        evi_mode=referent_evi_mode,
+                        evi_manual_path=evi_manual_path,
+                        metaphor_review_path=metaphor_review_path,
+                    )
                 except Exception as e:
                     st.exception(e)
                     return
 
                 st.success(f"Готово. Документов: {stats['docs']}, контекстов: {stats['contexts']}, flagged: {stats['flagged']}")
-                st.subheader("Референтные результаты")
-                for preview_name in [
-                    "contexts_full.csv",
-                    "aggregated_by_article.csv",
-                    "aggregated_by_outlet.csv",
-                    "aggregated_by_media_country_and_ref_country.csv",
-                    "flagged_cases.csv",
-                ]:
-                    p = out_dir / preview_name
-                    if p.exists():
-                        st.markdown(f"**{preview_name}**")
-                        st.dataframe(pd.read_csv(p).head(20), use_container_width=True)
+                show_referent_dashboard(
+                    out_dir=out_dir,
+                    default_ref=referent_target,
+                    default_category=referent_category_default,
+                )
 
-                p_agg = out_dir / "aggregated_by_media_country_and_ref_country.csv"
-                if p_agg.exists():
-                    agg = pd.read_csv(p_agg)
-                    c1, c2 = st.columns(2)
-                    with c1:
-                        fig = px.bar(
-                            agg,
-                            x="ref_country",
-                            y="IP",
-                            color="media_country",
-                            barmode="group",
-                            title="Average IP by media country and referent",
-                            template="plotly_dark",
-                        )
-                        st.plotly_chart(fig, use_container_width=True)
-                    with c2:
-                        fig2 = px.bar(
-                            agg,
-                            x="ref_country",
-                            y="number_of_contexts",
-                            color="media_country",
-                            barmode="group",
-                            title="Number of contexts",
-                            template="plotly_dark",
-                        )
-                        st.plotly_chart(fig2, use_container_width=True)
+                with st.expander("Технические таблицы (референтный режим)"):
+                    for preview_name in [
+                        "contexts_full.csv",
+                        "aggregated_by_article.csv",
+                        "aggregated_by_outlet.csv",
+                        "aggregated_by_media_country_and_ref_country.csv",
+                        "flagged_cases.csv",
+                    ]:
+                        p = out_dir / preview_name
+                        if p.exists():
+                            st.markdown(f"**{preview_name}**")
+                            st.dataframe(pd.read_csv(p).head(20), use_container_width=True)
             else:
                 docs = build_docs(file_items, int(min_year), int(max_year), use_lemma=use_lemma)
                 if not docs:
