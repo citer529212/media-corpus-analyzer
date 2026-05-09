@@ -28,7 +28,7 @@ if str(ROOT_DIR) not in sys.path:
 import corpus_analysis_strict_method as core
 try:
     import media_analyzer_referent as referent_core
-except Exception:
+except Exception as _calibration_import_exc:
     referent_core = None
 try:
     from calibration.calibration_builder import CalibrationBuilder
@@ -36,14 +36,19 @@ try:
     from calibration.calibration_metrics import add_percentiles as calibration_add_percentiles
     from calibration.calibration_ui import render_main_tabs as render_calibration_panel
     from calibration.calibration_ui import render_sidebar_controls as render_calibration_sidebar
+    CALIBRATION_IMPORT_ERROR = ""
 except Exception:
     CalibrationBuilder = None
     apply_verified_terms_to_lexicons = None
     calibration_add_percentiles = None
     render_calibration_panel = None
     render_calibration_sidebar = None
+    CALIBRATION_IMPORT_ERROR = f"Calibration modules import failed: {_calibration_import_exc}"
 
-APP_BUILD = "2026-05-08-18:35"
+APP_BUILD = "2026-05-10-01:46"
+APP_DIR = Path(__file__).resolve().parent
+DEFAULT_CALIBRATION_TEXTS_PATH = APP_DIR / "default_calibration_texts.csv"
+DEFAULT_CALIBRATION_CONTEXTS_PATH = APP_DIR / "default_calibration_contexts.csv"
 
 REFERENT_CATEGORY_KEYWORDS: Dict[str, Dict[str, List[str]]] = {
     "China": {
@@ -517,6 +522,7 @@ def run_referent_analysis(
     aggregation_mode: str = "weighted by S_r",
     percentile_basis: str = "full corpus",
     calibration_texts_df: Optional[pd.DataFrame] = None,
+    calibration_contexts_df: Optional[pd.DataFrame] = None,
     calibration_filter: str = "full_calibration_corpus",
     use_empirical_percentile_interpretation: bool = True,
     lexicon_version: str = "default",
@@ -575,6 +581,7 @@ def run_referent_analysis(
     scored["IP_abs_i"] = scored["IP_i"].abs()
     scored["IP_context"] = scored["IP_i"]
     scored["IP_context_abs"] = scored["IP_abs_i"]
+    scored["IP_abs_context"] = scored["IP_abs_i"]
     scored["IP"] = scored["IP_i"]
     scored["IP_formula_version"] = formula_ver
     scored["IP_old_context"] = scored["EVI_norm"] * scored["Discursive_energy"]
@@ -607,13 +614,19 @@ def run_referent_analysis(
         scored.loc[pd.to_numeric(scored["N_content"], errors="coerce").fillna(0) <= 0, "aggregation_weight"] = 0.0
 
     # Percentiles
+    baseline_df = None
+    if calibration_contexts_df is not None and not calibration_contexts_df.empty:
+        baseline_df = calibration_contexts_df.copy()
+    elif calibration_texts_df is not None and not calibration_texts_df.empty:
+        baseline_df = calibration_texts_df.copy()
+
     if (
         use_empirical_percentile_interpretation
         and calibration_add_percentiles is not None
-        and calibration_texts_df is not None
-        and not calibration_texts_df.empty
+        and baseline_df is not None
+        and not baseline_df.empty
     ):
-        base = calibration_texts_df.copy()
+        base = baseline_df.copy()
         if calibration_filter == "neutral_news_only":
             base = base[base.get("calibration_type", "") == "neutral_news"]
         elif calibration_filter == "political_news_only":
@@ -625,9 +638,26 @@ def run_referent_analysis(
             refs = set(scored["ref_country"].dropna().astype(str).tolist())
             base = base[base["ref_country"].astype(str).isin(refs)]
         if base.empty:
-            base = calibration_texts_df.copy()
+            base = baseline_df.copy()
 
-        scored = calibration_add_percentiles(scored, base)
+        # Require indicator columns in baseline, otherwise fallback to corpus percentile ranking.
+        needed = {"IDI_raw", "EMI_raw", "MTI_raw", "IP_context", "IP_abs_context"}
+        if not needed.issubset(set(base.columns)):
+            base = pd.DataFrame()
+
+        if not base.empty:
+            scored = calibration_add_percentiles(scored, base)
+        else:
+            scored = _assign_percentiles(scored, "IDI_raw", "IDI_percentile", percentile_basis)
+            scored = _assign_percentiles(scored, "EMI_raw", "EMI_percentile", percentile_basis)
+            scored = _assign_percentiles(scored, "MTI_raw", "MTI_percentile", percentile_basis)
+            scored = _assign_percentiles(scored, "IP_i", "IP_percentile", percentile_basis)
+            scored = _assign_percentiles(scored, "IP_abs_i", "IP_abs_percentile", percentile_basis)
+            scored["IDI_empirical_level"] = scored["IDI_percentile"].map(_empirical_level)
+            scored["EMI_empirical_level"] = scored["EMI_percentile"].map(_empirical_level)
+            scored["MTI_empirical_level"] = scored["MTI_percentile"].map(_empirical_level)
+            scored["IP_empirical_level"] = scored["IP_percentile"].map(_empirical_level)
+            scored["IP_abs_empirical_level"] = scored["IP_abs_percentile"].map(_empirical_level)
         # alias naming used in dashboard
         rename_map = {
             "IDI_percentile": "IDI_percentile",
@@ -2215,6 +2245,8 @@ def main() -> None:
 
         if render_calibration_sidebar is not None:
             calibration_sidebar_state = render_calibration_sidebar()
+        else:
+            st.warning(CALIBRATION_IMPORT_ERROR or "Calibration UI is unavailable")
 
     col1, col2 = st.columns(2)
     with col1:
@@ -2252,6 +2284,11 @@ def main() -> None:
                 type=["csv", "xlsx", "xls"],
                 accept_multiple_files=False,
                 key="calibration_upload",
+            )
+        if DEFAULT_CALIBRATION_TEXTS_PATH.exists() and DEFAULT_CALIBRATION_CONTEXTS_PATH.exists():
+            st.caption(
+                "Встроенный calibration corpus подключен по умолчанию. "
+                "Загрузка файла нужна только если хотите временно заменить базу."
             )
 
     st.markdown("### Или вставьте текст вручную")
@@ -2305,6 +2342,7 @@ def main() -> None:
             prog_box.markdown("**Статус анализа корпуса:** 35%")
 
             calibration_texts_df = pd.DataFrame()
+            calibration_contexts_df = pd.DataFrame()
             calibration_dir = out_dir / "calibration"
             calibration_baseline = str(calibration_sidebar_state.get("baseline", "full_calibration_corpus"))
             cal_interpretation_mode = str(calibration_sidebar_state.get("interpretation_mode", "use_empirical_percentiles"))
@@ -2319,7 +2357,25 @@ def main() -> None:
             cal_extract_btn = bool(calibration_sidebar_state.get("extract_btn", False))
             cal_reload_btn = bool(calibration_sidebar_state.get("reload_btn", False))
 
-            if CalibrationBuilder is not None and (use_empirical_calibration or cal_build_btn or cal_recalc_btn or cal_extract_btn):
+            # Default packaged calibration corpus for Streamlit Cloud / no-upload mode.
+            if DEFAULT_CALIBRATION_TEXTS_PATH.exists():
+                try:
+                    calibration_texts_df = pd.read_csv(DEFAULT_CALIBRATION_TEXTS_PATH)
+                except Exception:
+                    calibration_texts_df = pd.DataFrame()
+            if DEFAULT_CALIBRATION_CONTEXTS_PATH.exists():
+                try:
+                    calibration_contexts_df = pd.read_csv(DEFAULT_CALIBRATION_CONTEXTS_PATH)
+                except Exception:
+                    calibration_contexts_df = pd.DataFrame()
+
+            needs_build = (
+                calibration_texts_df.empty
+                and calibration_contexts_df.empty
+                and use_empirical_calibration
+                and referent_calibration_upload is None
+            )
+            if CalibrationBuilder is not None and (cal_build_btn or cal_recalc_btn or cal_extract_btn or needs_build):
                 try:
                     calibration_dir.mkdir(parents=True, exist_ok=True)
                     builder = CalibrationBuilder(dict_dir=out_dir / "referent_dicts", lexicons_dir=ROOT_DIR / "lexicons")
@@ -2362,8 +2418,11 @@ def main() -> None:
                         if cal_extract_btn:
                             st.info(f"Dictionary candidates extracted: {len(artifacts.candidate_terms_df)}")
                         p_cal = calibration_dir / "calibration_texts.csv"
+                        p_cal_ctx = calibration_dir / "calibration_contexts.csv"
                         if p_cal.exists():
                             calibration_texts_df = pd.read_csv(p_cal)
+                        if p_cal_ctx.exists():
+                            calibration_contexts_df = pd.read_csv(p_cal_ctx)
                     if cal_reload_btn and apply_verified_terms_to_lexicons is not None:
                         version = apply_verified_terms_to_lexicons(
                             lexicons_dir=ROOT_DIR / "lexicons",
@@ -2394,6 +2453,8 @@ def main() -> None:
                 if referent_calibration_upload is not None:
                     calibration_path = out_dir / referent_calibration_upload.name
                     calibration_path.write_bytes(referent_calibration_upload.getvalue())
+                elif DEFAULT_CALIBRATION_TEXTS_PATH.exists():
+                    calibration_path = DEFAULT_CALIBRATION_TEXTS_PATH
                 try:
                     prog_bar.progress(55, text="Референтный анализ выполняется: 55%")
                     prog_box.markdown("**Статус анализа корпуса:** 55%")
@@ -2409,6 +2470,7 @@ def main() -> None:
                         aggregation_mode=aggregation_mode,
                         percentile_basis=percentile_basis,
                         calibration_texts_df=calibration_texts_df if not calibration_texts_df.empty else None,
+                        calibration_contexts_df=calibration_contexts_df if not calibration_contexts_df.empty else None,
                         calibration_filter=calibration_baseline,
                         use_empirical_percentile_interpretation=use_empirical_calibration,
                         lexicon_version=str(st.session_state.get("lexicon_version", "default")),
