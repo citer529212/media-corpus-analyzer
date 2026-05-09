@@ -512,6 +512,9 @@ def _dominant_discrete_evi(values: pd.Series) -> int:
 
 def _render_proof_contexts(df: pd.DataFrame, marker_col: str, title: str, limit: int = 6) -> None:
     st.markdown(f"**{title}**")
+    if marker_col not in df.columns:
+        st.caption("Для этой версии данных колонка маркеров отсутствует.")
+        return
     tmp = df.copy()
     tmp["_marker_list"] = tmp[marker_col].fillna("").astype(str).map(_split_marker_cell)
     tmp = tmp[tmp["_marker_list"].map(len) > 0]
@@ -645,6 +648,52 @@ def show_referent_dashboard(
     if df_ref.empty:
         st.warning("После фильтрации по референту/категории не осталось контекстов.")
         return
+
+    # Compatibility layer: some cloud runs may have reduced schemas from older referent modules.
+    numeric_defaults = {
+        "IDI": 0.0,
+        "EMI": 0.0,
+        "MTI": 0.0,
+        "N_content": 0,
+        "N_ideol": 0,
+        "N_e_w": 0,
+        "N_e_m": 0,
+        "N_e_s": 0,
+        "N_met": 0,
+        "referent_salience": 1.0,
+        "EVI": 0,
+        "IP": 0.0,
+    }
+    text_defaults = {
+        "context_id": "",
+        "outlet_name": "Unknown",
+        "date": "",
+        "matched_keywords": "",
+        "context_text": "",
+        "found_ideol_markers": "",
+        "found_emotional_markers": "",
+        "found_metaphor_markers": "",
+        "evi_pos_markers": "",
+        "evi_neg_markers": "",
+        "positive_evidence_terms": "",
+        "negative_evidence_terms": "",
+        "evi_explanation": "",
+        "notes": "",
+    }
+    for c, d in numeric_defaults.items():
+        if c not in df_ref.columns:
+            df_ref[c] = d
+    for c, d in text_defaults.items():
+        if c not in df_ref.columns:
+            df_ref[c] = d
+    if "positive_score" not in df_ref.columns:
+        df_ref["positive_score"] = 0
+    if "negative_score" not in df_ref.columns:
+        df_ref["negative_score"] = 0
+    if "EVI_raw" not in df_ref.columns:
+        df_ref["EVI_raw"] = pd.to_numeric(df_ref["EVI"], errors="coerce").fillna(0).astype(int) * 5
+    if "EVI_norm" not in df_ref.columns:
+        df_ref["EVI_norm"] = pd.to_numeric(df_ref["EVI_raw"], errors="coerce").fillna(0.0) / 5.0
 
     st.subheader(f"Анализ референта: {ref_country}")
     c1, c2, c3 = st.columns(3)
