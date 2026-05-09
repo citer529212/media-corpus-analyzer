@@ -720,15 +720,30 @@ def show_referent_dashboard(
             ip = valid_tmp["IP_context"]
             agg = {"IP_final": float((ip * w).sum() / w.sum()), "IP_abs_final": float((ip.abs() * w).sum() / w.sum()), "mean_IP_unweighted": float(ip.mean()), "contexts_analyzed": int(len(valid_tmp)), "contexts_excluded": int((df_ref["aggregation_weight"] == 0).sum()), "warning": None}
     valid = df_ref[df_ref["aggregation_weight"] > 0].copy()
+    metric_df = valid.copy()
+    metric_scope = "взвешенные контексты (S_r > 0)"
+    if metric_df.empty:
+        if exclude_technical_mentions and "is_technical_mention" in df_ref.columns:
+            non_tech = df_ref[df_ref["is_technical_mention"] != True].copy()
+            if not non_tech.empty:
+                metric_df = non_tech
+                metric_scope = "нетехнические контексты (fallback)"
+        if metric_df.empty:
+            metric_df = df_ref.copy()
+            metric_scope = "все контексты (fallback)"
 
-    n_content_sum = max(float(valid["N_content"].sum()), 1.0) if not valid.empty else 1.0
-    idi = float(valid["N_ideol"].sum() / n_content_sum) if not valid.empty else 0.0
-    emi = float((((valid["N_e_w"] / 3.0) + (2.0 * valid["N_e_m"] / 3.0) + valid["N_e_s"]).sum()) / n_content_sum) if not valid.empty else 0.0
-    mti = float(valid["N_met"].sum() / n_content_sum) if not valid.empty else 0.0
-    evi_raw = float(valid["EVI_raw"].mean()) if "EVI_raw" in valid.columns and not valid.empty else 0.0
-    evi_norm = float(valid["EVI_norm"].mean()) if "EVI_norm" in valid.columns and not valid.empty else 0.0
-    salience_mean = float(valid["referent_salience"].mean()) if "referent_salience" in valid.columns and not valid.empty else 0.0
-    evi_coarse = int(_dominant_discrete_evi(valid["EVI"])) if "EVI" in valid.columns and not valid.empty else 0
+    n_content_sum = max(float(metric_df["N_content"].sum()), 1.0)
+    n_ideol_sum = float(metric_df["N_ideol"].sum())
+    weighted_emotion_sum = float(((metric_df["N_e_w"] / 3.0) + (2.0 * metric_df["N_e_m"] / 3.0) + metric_df["N_e_s"]).sum())
+    n_met_sum = float(metric_df["N_met"].sum())
+
+    idi = float(n_ideol_sum / n_content_sum)
+    emi = float(weighted_emotion_sum / n_content_sum)
+    mti = float(n_met_sum / n_content_sum)
+    evi_raw = float(metric_df["EVI_raw"].mean()) if "EVI_raw" in metric_df.columns and not metric_df.empty else 0.0
+    evi_norm = float(metric_df["EVI_norm"].mean()) if "EVI_norm" in metric_df.columns and not metric_df.empty else 0.0
+    salience_mean = float(metric_df["referent_salience"].mean()) if "referent_salience" in metric_df.columns and not metric_df.empty else 0.0
+    evi_coarse = int(_dominant_discrete_evi(metric_df["EVI"])) if "EVI" in metric_df.columns and not metric_df.empty else 0
     ip_formula = float(agg["IP_final"])
     ip_abs_formula = float(agg["IP_abs_final"])
     ip_unweighted = float(agg["mean_IP_unweighted"])
@@ -736,6 +751,11 @@ def show_referent_dashboard(
     contexts_excluded = int(agg["contexts_excluded"])
     technical_mentions_excluded = int((df_ref["aggregation_weight"] == 0).sum())
     warning_msg = agg["warning"]
+    if metric_scope != "взвешенные контексты (S_r > 0)":
+        st.warning(
+            f"Для описательных индикаторов использован набор: {metric_scope}. "
+            "Это предотвращает ложные нули, когда взвешенная выборка пуста."
+        )
 
     def density_level(v: float) -> str:
         if v < 0.03:
@@ -789,7 +809,7 @@ def show_referent_dashboard(
         st.info(f"Уровень: {density_level(idi)}. Чем выше IDI, тем сильнее текст рамочно направляет интерпретацию.")
         with st.expander("Формула и объяснение", expanded=False):
             st.code("IDI = N_ideol / N_content", language="text")
-            st.code(f"IDI = {int(df_ref['N_ideol'].sum())} / {int(n_content_sum)} = {idi:.3f}", language="text")
+            st.code(f"IDI = {int(n_ideol_sum)} / {int(n_content_sum)} = {idi:.3f}", language="text")
             st.write("`N_ideol` — число идеологических маркеров, `N_content` — знаменательные слова.")
         cc1, cc2 = st.columns(2)
         with cc1:
@@ -801,7 +821,6 @@ def show_referent_dashboard(
             _render_proof_contexts(df_ref, "found_ideol_markers", "Контексты с идеологическими маркерами")
 
     with tabs[1]:
-        weighted_emotion_sum = float(((df_ref["N_e_w"] / 3.0) + (2.0 * df_ref["N_e_m"] / 3.0) + df_ref["N_e_s"]).sum())
         st.markdown("**Эмоциональность (EMI)**")
         st.caption("Взвешенная доля эмоциональных маркеров (слабые/средние/сильные).")
         st.metric("EMI", f"{emi:.3f}")
@@ -828,7 +847,7 @@ def show_referent_dashboard(
         st.info(f"Уровень: {density_level(mti)}. Чем выше MTI, тем сильнее образная подача политической реальности.")
         with st.expander("Формула и объяснение", expanded=False):
             st.code("MTI = N_met / N_content", language="text")
-            st.code(f"MTI = {int(df_ref['N_met'].sum())} / {int(n_content_sum)} = {mti:.3f}", language="text")
+            st.code(f"MTI = {int(n_met_sum)} / {int(n_content_sum)} = {mti:.3f}", language="text")
             st.write("Метафоры создают когнитивные рамки восприятия политических событий.")
         cc1, cc2 = st.columns(2)
         with cc1:
