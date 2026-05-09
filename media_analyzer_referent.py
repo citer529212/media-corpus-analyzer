@@ -16,14 +16,15 @@ import json
 import re
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, Iterable, List, Tuple
+from typing import Dict, Iterable, List, Optional, Set, Tuple
 
 import pandas as pd
 
 
 REQUIRED_FIELDS = ["doc_id", "media_country", "outlet_name", "date", "title", "text"]
 REF_COUNTRIES = ["China", "USA", "Russia"]
-EVI_ALLOWED = {-2, -1, 0, 1, 2}
+EVI_COARSE_ALLOWED = {-2, -1, 0, 1, 2}
+SALIENCE_ALLOWED = {0.0, 0.25, 0.5, 1.0}
 
 TOKEN_RE = re.compile(r"[A-Za-zА-Яа-яЁёІіЇїЄє'\-]+")
 SENT_SPLIT_RE = re.compile(r"(?<=[\.\!\?])\s+")
@@ -64,14 +65,287 @@ DEFAULT_REF_KEYWORDS = {
     ],
 }
 
-EVAL_POS = {
-    "support", "stability", "cooperation", "progress", "benefit", "peace", "growth", "successful", "heroic",
-    "defends sovereignty", "protects national interests",
+RUBRIC_POS_LEX = {
+    "partner", "cooperation", "support", "stability", "opportunity", "contribution", "leadership", "development",
+    "trust", "constructive", "benefit", "growth", "peace", "responsible", "legitimate",
+    "kemitraan", "kerja sama", "kerjasama", "dukungan", "sokongan", "stabilitas", "kestabilan", "peluang",
+    "kontribusi", "kepemimpinan", "kepimpinan", "pembangunan", "kepercayaan", "konstruktif", "membina",
+    "manfaat", "faedah", "pertumbuhan", "damai", "aman", "bertanggung jawab", "bertanggungjawab", "sah",
+    "партнер", "партнерство", "сотрудничество", "поддержка", "стабильность", "возможность", "вклад", "лидерство",
+    "развитие", "доверие", "конструктивный", "выгода", "рост", "мир", "ответственный", "легитимный",
 }
-EVAL_NEG = {
-    "threat", "aggression", "catastrophe", "disaster", "collapse", "betrayal", "violates international law",
-    "dictatorship", "hegemony", "regime", "authoritarian", "tension", "conflict", "sanctions",
+RUBRIC_NEG_LEX = {
+    "threat", "aggression", "pressure", "crisis", "interference", "destabilize", "risk", "failure", "repression",
+    "coercion", "conflict", "instability", "violates", "authoritarian", "hegemony",
+    "ancaman", "agresi", "tekanan", "krisis", "campur tangan", "risiko", "kegagalan", "represi", "paksaan",
+    "konflik", "ketidakstabilan", "pelanggaran", "otoriter", "hegemoni", "ugutan",
+    "угроза", "агрессия", "давление", "кризис", "вмешательство", "дестабилизация", "риск", "провал",
+    "репрессии", "принуждение", "конфликт", "нестабильность", "нарушает", "авторитарный", "гегемония",
 }
+RUBRIC_POS_ACTION = {
+    "supports", "cooperates", "contributes", "stabilizes", "protects", "invests", "develops",
+    "mendukung", "menyokong", "bekerja sama", "berkerjasama", "berkolaborasi", "berkontribusi",
+    "menstabilkan", "melindungi", "berinvestasi", "mengembangkan",
+    "поддерживает", "сотрудничает", "вкладывает", "инвестирует", "развивает", "стабилизирует", "защищает",
+}
+RUBRIC_NEG_ACTION = {
+    "threatens", "pressures", "interferes", "attacks", "destabilizes", "violates", "controls",
+    "mengancam", "menekan", "campur tangan", "menyerang", "mendestabilisasi", "melanggar", "mengontrol",
+    "mengawal", "угрожает", "давит", "вмешивается", "атакует", "дестабилизирует", "нарушает", "контролирует",
+}
+RUBRIC_POS_CONSEQUENCE = {
+    "development", "stability", "security", "growth", "peace", "partnership", "opportunities",
+    "pembangunan", "stabilitas", "kestabilan", "keamanan", "pertumbuhan", "damai", "kemitraan", "peluang",
+    "развитие", "стабильность", "безопасность", "рост", "мир", "партнерство", "возможности",
+}
+RUBRIC_NEG_CONSEQUENCE = {
+    "instability", "tension", "conflict", "crisis", "dependence", "sovereignty risk",
+    "ketidakstabilan", "ketegangan", "konflik", "krisis", "ketergantungan", "risiko kedaulatan",
+    "нестабильность", "напряженность", "конфликт", "кризис", "зависимость", "риск суверенитету", "риск суверенитета",
+}
+RUBRIC_POS_FRAME = {
+    "legitimate partner", "responsible actor", "defender of sovereignty", "stabilizing power",
+    "mitra yang sah", "aktor bertanggung jawab", "pembela kedaulatan", "kekuatan penstabil",
+    "легитимный партнер", "ответственный актор", "защитник суверенитета", "стабилизирующая сила",
+}
+RUBRIC_NEG_FRAME = {
+    "hegemon", "aggressor", "authoritarian regime", "violator of international law", "destabilizing force",
+    "hegemoni", "agresor", "rezim otoriter", "pelanggar hukum internasional", "kekuatan destabilisasi",
+    "гегемон", "агрессор", "авторитарный режим", "нарушитель международного права", "дестабилизирующая сила",
+}
+AUTHORITY_CUES = {
+    "according to", "official", "minister", "president", "government", "spokesperson", "analyst", "diplomat",
+    "menurut", "pemerintah", "kerajaan", "menteri", "jurucakap", "analis", "diplomat",
+    "президент", "министр", "правительство", "по словам", "заявил", "сообщил", "дипломат",
+}
+NEUTRAL_ACTION_CUES = {
+    "said", "stated", "announced", "met", "meeting", "discussed", "agreed", "visited", "reported",
+    "mengatakan", "menyatakan", "bertemu", "membahas", "setuju", "melaporkan",
+    "заявил", "сообщил", "обсудил", "встретился", "провел встречу",
+}
+
+COARSE_TO_RAW = {-2: -10, -1: -5, 0: 0, 1: 5, 2: 10}
+
+DEFAULT_IDEO_MARKERS = [
+    # EN
+    "democracy", "sovereignty", "freedom", "authoritarianism", "communism", "imperialism", "colonialism",
+    "neocolonialism", "multipolarity", "rules-based order", "regime", "dictatorship", "hegemony",
+    "communist party", "liberal order", "authoritarian state", "violates international law",
+    "defends sovereignty", "threatens regional stability", "protects national interests",
+    # RU
+    "демократия", "суверенитет", "свобода", "авторитаризм", "коммунизм", "империализм", "колониализм",
+    "неоколониализм", "многополярность", "порядок, основанный на правилах", "режим", "диктатура", "гегемония",
+    "коммунистическая партия", "либеральный порядок", "авторитарное государство",
+    "нарушает международное право", "защищает суверенитет", "угрожает региональной стабильности",
+    "защищает национальные интересы",
+    # ID / MS
+    "demokrasi", "kedaulatan", "kebebasan", "otoritarianisme", "komunisme", "imperialisme", "kolonialisme",
+    "neokolonialisme", "multipolaritas", "aturan berbasis tatanan", "rezim", "kediktatoran", "hegemoni",
+    "partai komunis", "tatanan liberal", "negara otoriter", "melanggar hukum internasional",
+    "membela kedaulatan", "mengancam stabilitas regional", "melindungi kepentingan nasional",
+]
+
+DEFAULT_EMOT_ROWS = [
+    # weak
+    ("concern", "weak"), ("problem", "weak"), ("support", "weak"), ("challenge", "weak"), ("tension", "weak"),
+    ("kebimbangan", "weak"), ("keprihatinan", "weak"), ("masalah", "weak"), ("dukungan", "weak"), ("sokongan", "weak"),
+    ("cabaran", "weak"), ("tantangan", "weak"), ("ketegangan", "weak"),
+    ("озабоченность", "weak"), ("проблема", "weak"), ("поддержка", "weak"), ("вызов", "weak"), ("напряжение", "weak"),
+    # medium
+    ("threat", "medium"), ("anger", "medium"), ("fear", "medium"), ("pressure", "medium"), ("conflict", "medium"), ("criticism", "medium"),
+    ("ancaman", "medium"), ("kemarahan", "medium"), ("ketakutan", "medium"), ("tekanan", "medium"), ("konflik", "medium"), ("kritik", "medium"),
+    ("угроза", "medium"), ("гнев", "medium"), ("страх", "medium"), ("давление", "medium"), ("конфликт", "medium"), ("критика", "medium"),
+    # strong
+    ("catastrophe", "strong"), ("betrayal", "strong"), ("aggression", "strong"), ("triumph", "strong"), ("heroic", "strong"), ("disaster", "strong"), ("collapse", "strong"),
+    ("bencana", "strong"), ("pengkhianatan", "strong"), ("agresi", "strong"), ("kejayaan", "strong"), ("heroik", "strong"), ("runtuh", "strong"),
+    ("катастрофа", "strong"), ("предательство", "strong"), ("агрессия", "strong"), ("триумф", "strong"), ("героический", "strong"), ("бедствие", "strong"), ("коллапс", "strong"),
+]
+
+DEFAULT_META_ROWS = [
+    ("battle", "war"), ("fight", "war"), ("attack", "war"), ("defense", "war"), ("frontline", "war"),
+    ("pertempuran", "war"), ("bertarung", "war"), ("serangan", "war"), ("pertahanan", "war"), ("garis depan", "war"),
+    ("битва", "war"), ("борьба", "war"), ("атака", "war"), ("оборона", "war"), ("фронт", "war"),
+    ("healthy economy", "organism"), ("sick system", "organism"), ("recovery", "organism"), ("virus", "organism"),
+    ("ekonomi sehat", "organism"), ("sistem sakit", "organism"), ("pemulihan", "organism"), ("восстановление", "organism"),
+    ("growth path", "movement"), ("wave", "movement"), ("flow", "movement"), ("collapse", "movement"),
+    ("jalur pertumbuhan", "movement"), ("gelombang", "movement"), ("aliran", "movement"), ("runtuh", "movement"),
+    ("player", "game"), ("move", "game"), ("strategy", "game"), ("chessboard", "game"),
+    ("pemain", "game"), ("langkah", "game"), ("strategi", "game"), ("papan catur", "game"),
+    ("wants", "personification"), ("fears", "personification"), ("pressures", "personification"),
+    ("ingin", "personification"), ("takut", "personification"), ("menekan", "personification"),
+    ("хочет", "personification"), ("боится", "personification"), ("давит", "personification"),
+]
+
+
+def _dedupe_keep_order(values: Iterable[str]) -> List[str]:
+    seen: Set[str] = set()
+    out: List[str] = []
+    for raw in values:
+        v = str(raw).strip()
+        if not v:
+            continue
+        k = v.casefold()
+        if k in seen:
+            continue
+        seen.add(k)
+        out.append(v)
+    return out
+
+
+def _read_terms_column(df: pd.DataFrame, candidates: List[str]) -> List[str]:
+    for c in candidates:
+        if c in df.columns:
+            return _dedupe_keep_order(df[c].fillna("").astype(str).tolist())
+    return []
+
+
+def _project_lexicons_dir() -> Path:
+    return Path(__file__).resolve().parent / "lexicons"
+
+
+def _load_project_lexicon_overrides() -> Dict[str, object]:
+    out: Dict[str, object] = {
+        "ideological": [],
+        "emotional": {"weak": [], "medium": [], "strong": []},
+        "metaphor": [],
+        "rubric_pos_lex": [],
+        "rubric_neg_lex": [],
+        "rubric_pos_action": [],
+        "rubric_neg_action": [],
+        "rubric_pos_consequence": [],
+        "rubric_neg_consequence": [],
+        "technical_patterns": [],
+    }
+    lex_dir = _project_lexicons_dir()
+    if not lex_dir.exists():
+        return out
+
+    p_ideo = lex_dir / "ideological_markers.csv"
+    if p_ideo.exists():
+        try:
+            df = pd.read_csv(p_ideo).fillna("")
+            out["ideological"] = _read_terms_column(df, ["marker", "term", "lemma"])
+        except Exception:
+            pass
+
+    p_emot = lex_dir / "emotional_markers.csv"
+    if p_emot.exists():
+        try:
+            df = pd.read_csv(p_emot).fillna("")
+            term_col = "marker" if "marker" in df.columns else ("term" if "term" in df.columns else None)
+            int_col = "intensity" if "intensity" in df.columns else ("intensity_level" if "intensity_level" in df.columns else None)
+            if term_col and int_col:
+                emo = {"weak": [], "medium": [], "strong": []}
+                for _, r in df.iterrows():
+                    term = str(r.get(term_col, "")).strip()
+                    intensity = str(r.get(int_col, "")).strip().lower()
+                    if not term:
+                        continue
+                    if intensity in {"weak", "low"}:
+                        emo["weak"].append(term)
+                    elif intensity in {"medium", "mid"}:
+                        emo["medium"].append(term)
+                    elif intensity in {"strong", "high"}:
+                        emo["strong"].append(term)
+                out["emotional"] = {k: _dedupe_keep_order(v) for k, v in emo.items()}
+        except Exception:
+            pass
+
+    p_meta = lex_dir / "metaphor_markers.csv"
+    if p_meta.exists():
+        try:
+            df = pd.read_csv(p_meta).fillna("")
+            out["metaphor"] = _read_terms_column(df, ["marker", "term", "lemma"])
+        except Exception:
+            pass
+
+    p_evi = lex_dir / "evi_lexicon.csv"
+    if p_evi.exists():
+        try:
+            df = pd.read_csv(p_evi).fillna("")
+            term_col = "term" if "term" in df.columns else ("marker" if "marker" in df.columns else None)
+            pol_col = "polarity" if "polarity" in df.columns else ("polarity_hint" if "polarity_hint" in df.columns else None)
+            cat_col = "category" if "category" in df.columns else None
+            if term_col and pol_col:
+                pos, neg = [], []
+                for _, r in df.iterrows():
+                    term = str(r.get(term_col, "")).strip()
+                    pol = str(r.get(pol_col, "")).strip().lower()
+                    cat = str(r.get(cat_col, "")).strip().lower() if cat_col else ""
+                    if not term:
+                        continue
+                    if pol in {"positive", "pos", "+"}:
+                        if cat in {"action", "actor_action"}:
+                            out["rubric_pos_action"].append(term)
+                        elif cat in {"consequence"}:
+                            out["rubric_pos_consequence"].append(term)
+                        else:
+                            pos.append(term)
+                    elif pol in {"negative", "neg", "-"}:
+                        if cat in {"action", "actor_action"}:
+                            out["rubric_neg_action"].append(term)
+                        elif cat in {"consequence"}:
+                            out["rubric_neg_consequence"].append(term)
+                        else:
+                            neg.append(term)
+                out["rubric_pos_lex"] = _dedupe_keep_order(pos)
+                out["rubric_neg_lex"] = _dedupe_keep_order(neg)
+        except Exception:
+            pass
+
+    p_actions = lex_dir / "actor_actions.csv"
+    if p_actions.exists():
+        try:
+            df = pd.read_csv(p_actions).fillna("")
+            term_col = "verb_or_phrase" if "verb_or_phrase" in df.columns else "term"
+            pol_col = "action_polarity" if "action_polarity" in df.columns else "polarity"
+            for _, r in df.iterrows():
+                term = str(r.get(term_col, "")).strip()
+                pol = str(r.get(pol_col, "")).strip().lower()
+                if not term:
+                    continue
+                if pol in {"positive", "pos", "+"}:
+                    out["rubric_pos_action"].append(term)
+                elif pol in {"negative", "neg", "-"}:
+                    out["rubric_neg_action"].append(term)
+        except Exception:
+            pass
+
+    p_cons = lex_dir / "consequence_markers.csv"
+    if p_cons.exists():
+        try:
+            df = pd.read_csv(p_cons).fillna("")
+            term_col = "term_or_phrase" if "term_or_phrase" in df.columns else "term"
+            pol_col = "consequence_polarity" if "consequence_polarity" in df.columns else "polarity"
+            for _, r in df.iterrows():
+                term = str(r.get(term_col, "")).strip()
+                pol = str(r.get(pol_col, "")).strip().lower()
+                if not term:
+                    continue
+                if pol in {"positive", "pos", "+"}:
+                    out["rubric_pos_consequence"].append(term)
+                elif pol in {"negative", "neg", "-"}:
+                    out["rubric_neg_consequence"].append(term)
+        except Exception:
+            pass
+
+    p_tech = lex_dir / "technical_mention_patterns.csv"
+    if p_tech.exists():
+        try:
+            df = pd.read_csv(p_tech).fillna("")
+            out["technical_patterns"] = _read_terms_column(df, ["pattern"])
+        except Exception:
+            pass
+
+    # Final normalize
+    out["ideological"] = _dedupe_keep_order(out["ideological"])  # type: ignore[index]
+    out["metaphor"] = _dedupe_keep_order(out["metaphor"])  # type: ignore[index]
+    for k in ["rubric_pos_lex", "rubric_neg_lex", "rubric_pos_action", "rubric_neg_action", "rubric_pos_consequence", "rubric_neg_consequence", "technical_patterns"]:
+        out[k] = _dedupe_keep_order(out[k])  # type: ignore[index]
+    emo_obj = out["emotional"]  # type: ignore[assignment]
+    if isinstance(emo_obj, dict):
+        out["emotional"] = {x: _dedupe_keep_order(emo_obj.get(x, [])) for x in ["weak", "medium", "strong"]}
+    return out
 
 
 @dataclass
@@ -140,35 +414,58 @@ def ensure_required_fields(df: pd.DataFrame) -> pd.DataFrame:
 
 def ensure_default_dictionaries(dict_dir: Path) -> None:
     dict_dir.mkdir(parents=True, exist_ok=True)
+    lex_overrides = _load_project_lexicon_overrides()
 
+    # Ideological markers: create or merge.
     p_ideo = dict_dir / "ideological_markers.csv"
-    if not p_ideo.exists():
-        markers = [
-            "democracy", "sovereignty", "freedom", "authoritarianism", "communism", "imperialism", "colonialism",
-            "neocolonialism", "multipolarity", "rules-based order", "regime", "dictatorship", "hegemony",
-            "communist party", "liberal order", "authoritarian state", "violates international law",
-            "defends sovereignty", "threatens regional stability", "protects national interests",
-        ]
-        pd.DataFrame({"marker": markers}).to_csv(p_ideo, index=False)
+    existing_ideo: List[str] = []
+    if p_ideo.exists():
+        try:
+            df0 = pd.read_csv(p_ideo).fillna("")
+            existing_ideo = _read_terms_column(df0, ["marker", "term", "lemma"])
+        except Exception:
+            existing_ideo = []
+    ideol_merged = _dedupe_keep_order(existing_ideo + DEFAULT_IDEO_MARKERS + list(lex_overrides.get("ideological", [])))
+    pd.DataFrame({"marker": ideol_merged}).to_csv(p_ideo, index=False)
 
+    # Emotional markers: create or merge with intensity.
     p_emot = dict_dir / "emotional_markers.csv"
-    if not p_emot.exists():
-        rows = []
-        rows += [{"marker": m, "intensity": "weak"} for m in ["concern", "problem", "support", "challenge", "tension"]]
-        rows += [{"marker": m, "intensity": "medium"} for m in ["threat", "anger", "fear", "pressure", "conflict", "criticism"]]
-        rows += [{"marker": m, "intensity": "strong"} for m in ["catastrophe", "betrayal", "aggression", "triumph", "heroic", "disaster", "collapse"]]
-        pd.DataFrame(rows).to_csv(p_emot, index=False)
+    emo_map: Dict[Tuple[str, str], bool] = {}
+    if p_emot.exists():
+        try:
+            dfe = pd.read_csv(p_emot).fillna("")
+            term_col = "marker" if "marker" in dfe.columns else ("term" if "term" in dfe.columns else None)
+            int_col = "intensity" if "intensity" in dfe.columns else ("intensity_level" if "intensity_level" in dfe.columns else None)
+            if term_col and int_col:
+                for _, r in dfe.iterrows():
+                    term = str(r.get(term_col, "")).strip()
+                    intensity = str(r.get(int_col, "")).strip().lower()
+                    if term and intensity in {"weak", "medium", "strong"}:
+                        emo_map[(term.casefold(), intensity)] = True
+        except Exception:
+            pass
+    for term, intensity in DEFAULT_EMOT_ROWS:
+        emo_map[(term.casefold(), intensity)] = True
+    emo_override = lex_overrides.get("emotional", {})
+    if isinstance(emo_override, dict):
+        for intensity in ["weak", "medium", "strong"]:
+            for term in emo_override.get(intensity, []):
+                emo_map[(str(term).casefold(), intensity)] = True
+    emo_rows = [{"marker": t, "intensity": i} for (t, i) in sorted(emo_map.keys(), key=lambda x: (x[1], x[0]))]
+    pd.DataFrame(emo_rows).to_csv(p_emot, index=False)
 
+    # Metaphor markers: create or merge.
     p_meta = dict_dir / "metaphor_candidates.csv"
-    if not p_meta.exists():
-        rows = [
-            ("battle", "war"), ("fight", "war"), ("attack", "war"), ("defense", "war"), ("frontline", "war"),
-            ("healthy economy", "organism"), ("sick system", "organism"), ("recovery", "organism"), ("virus", "organism"),
-            ("growth path", "movement"), ("wave", "movement"), ("flow", "movement"), ("collapse", "movement"),
-            ("player", "game"), ("move", "game"), ("strategy", "game"), ("chessboard", "game"),
-            ("wants", "personification"), ("fears", "personification"), ("pressures", "personification"),
-        ]
-        pd.DataFrame(rows, columns=["marker", "type"]).to_csv(p_meta, index=False)
+    meta_terms: List[str] = []
+    if p_meta.exists():
+        try:
+            dfm = pd.read_csv(p_meta).fillna("")
+            meta_terms = _read_terms_column(dfm, ["marker", "term", "lemma"])
+        except Exception:
+            meta_terms = []
+    default_meta_terms = [x[0] for x in DEFAULT_META_ROWS]
+    merged_meta = _dedupe_keep_order(meta_terms + default_meta_terms + list(lex_overrides.get("metaphor", [])))
+    pd.DataFrame({"marker": merged_meta}).to_csv(p_meta, index=False)
 
 
 def load_ref_keywords(dict_dir: Path) -> Dict[str, List[str]]:
@@ -195,23 +492,29 @@ def load_ref_keywords(dict_dir: Path) -> Dict[str, List[str]]:
 
 def load_ideological_markers(dict_dir: Path) -> List[str]:
     df = pd.read_csv(dict_dir / "ideological_markers.csv").fillna("")
-    return [str(x).strip() for x in df["marker"].tolist() if str(x).strip()]
+    return _read_terms_column(df, ["marker", "term", "lemma"])
 
 
 def load_emotional_markers(dict_dir: Path) -> Dict[str, List[str]]:
     df = pd.read_csv(dict_dir / "emotional_markers.csv").fillna("")
     out = {"weak": [], "medium": [], "strong": []}
+    term_col = "marker" if "marker" in df.columns else ("term" if "term" in df.columns else None)
+    int_col = "intensity" if "intensity" in df.columns else ("intensity_level" if "intensity_level" in df.columns else None)
+    if not term_col or not int_col:
+        return out
     for _, r in df.iterrows():
-        marker = str(r.get("marker", "")).strip()
-        intensity = str(r.get("intensity", "")).strip().lower()
+        marker = str(r.get(term_col, "")).strip()
+        intensity = str(r.get(int_col, "")).strip().lower()
         if marker and intensity in out:
             out[intensity].append(marker)
+    for k in out:
+        out[k] = _dedupe_keep_order(out[k])
     return out
 
 
 def load_metaphor_candidates(dict_dir: Path) -> List[str]:
     df = pd.read_csv(dict_dir / "metaphor_candidates.csv").fillna("")
-    return [str(x).strip() for x in df["marker"].tolist() if str(x).strip()]
+    return _read_terms_column(df, ["marker", "term", "lemma"])
 
 
 def compile_keyword_patterns(ref_keywords: Dict[str, List[str]]) -> Dict[str, List[Tuple[str, re.Pattern[str]]]]:
@@ -335,7 +638,194 @@ def compute_n_content(text: str) -> int:
     return sum(1 for t in toks if is_content_token(t))
 
 
-def suggest_evi(context_text: str, ref_keywords: List[str]) -> Tuple[int, str]:
+def clamp(v: float, lo: float, hi: float) -> float:
+    return max(lo, min(hi, v))
+
+
+def coarse_from_raw(evi_raw: int) -> int:
+    if evi_raw <= -8:
+        return -2
+    if evi_raw <= -3:
+        return -1
+    if evi_raw < 3:
+        return 0
+    if evi_raw < 8:
+        return 1
+    return 2
+
+
+def score_by_terms(text: str, terms: Iterable[str], max_points: int) -> Tuple[int, List[str], int]:
+    total, found = count_marker_hits(text, terms)
+    points = int(min(max_points, len(found)))
+    return points, found, total
+
+
+def detect_technical_mention(context_text: str, ref_country: str, extra_patterns: Optional[List[str]] = None) -> Tuple[bool, str]:
+    txt = context_text.casefold().strip()
+    loc = {"USA": "washington", "China": "beijing", "Russia": "moscow"}.get(ref_country, "")
+    if not txt:
+        return True, "Empty context."
+    byline_patterns = [
+        rf"^reporting by .+ in {re.escape(loc)}\.?$",
+        rf"^by .+ in {re.escape(loc)}\.?$",
+        rf"^reuters in {re.escape(loc)}\.?$",
+        rf"^associated press in {re.escape(loc)}\.?$",
+        rf"^reporting from {re.escape(loc)}\.?$",
+        rf"^laporan oleh .+ di {re.escape(loc)}\.?$",
+        rf"^dilaporkan dari {re.escape(loc)}\.?$",
+        rf"^из {re.escape(loc)}\.?$",
+        rf"^в {re.escape(loc)}\.?$",
+    ]
+    if extra_patterns:
+        byline_patterns.extend([p for p in extra_patterns if p])
+    for p in byline_patterns:
+        if re.match(p, txt):
+            return True, f"{loc.title()} appears only in byline/dateline."
+    if loc and re.search(rf"\b(in|from|di|dari|в|из)\s+{re.escape(loc)}\b", txt):
+        has_predicate = bool(re.search(r"\b(support|threat|pressure|cooperat|invest|develop|aggress|violat|stabil|interfer)\w*\b", txt))
+        if not has_predicate and len(tokenize(txt)) <= 14:
+            return True, f"{loc.title()} used as geographic location only."
+    return False, ""
+
+
+def calc_referent_salience(
+    ref_country: str,
+    context_text: str,
+    title: str,
+    target_sentence: str,
+    positive_score: int,
+    negative_score: int,
+    matched_keywords: str,
+    technical_patterns: Optional[List[str]] = None,
+) -> Tuple[float, str, bool, str, str]:
+    technical, reason = detect_technical_mention(context_text, ref_country, extra_patterns=technical_patterns)
+    if technical:
+        return 0.0, "technical", True, reason, "Technical mention only; excluded from image formation."
+
+    eval_present = (positive_score + negative_score) > 0
+    target_txt = target_sentence.casefold()
+    title_txt = title.casefold()
+    action_present = any(k in target_txt for k in (RUBRIC_POS_ACTION | RUBRIC_NEG_ACTION | NEUTRAL_ACTION_CUES))
+    ref_in_title = any(k.casefold() in title_txt for k in [x.strip() for x in matched_keywords.split(";") if x.strip()])
+    match_count = len([x for x in matched_keywords.split(";") if x.strip()])
+
+    if not eval_present and not action_present:
+        return 0.25, "background", False, "", "Referent mentioned as background reference without evaluative role."
+    if action_present and not eval_present:
+        return 0.5, "secondary_actor", False, "", "Referent participates in event, but evaluation focus is weak."
+    if eval_present and (ref_in_title or match_count >= 2):
+        return 1.0, "central_actor", False, "", "Referent is central actor and explicit object of evaluation."
+    if eval_present:
+        return 1.0, "central_actor", False, "", "Referent is explicitly evaluated in the context."
+    return 0.5, "secondary_actor", False, "", "Referent has partial discourse role."
+
+
+def calc_evi_rubric(
+    ref_country: str,
+    row: pd.Series,
+    rubric_pos_lex: Optional[Set[str]] = None,
+    rubric_neg_lex: Optional[Set[str]] = None,
+    rubric_pos_action: Optional[Set[str]] = None,
+    rubric_neg_action: Optional[Set[str]] = None,
+    rubric_pos_consequence: Optional[Set[str]] = None,
+    rubric_neg_consequence: Optional[Set[str]] = None,
+    rubric_pos_frame: Optional[Set[str]] = None,
+    rubric_neg_frame: Optional[Set[str]] = None,
+) -> dict:
+    rubric_pos_lex = rubric_pos_lex or set(RUBRIC_POS_LEX)
+    rubric_neg_lex = rubric_neg_lex or set(RUBRIC_NEG_LEX)
+    rubric_pos_action = rubric_pos_action or set(RUBRIC_POS_ACTION)
+    rubric_neg_action = rubric_neg_action or set(RUBRIC_NEG_ACTION)
+    rubric_pos_consequence = rubric_pos_consequence or set(RUBRIC_POS_CONSEQUENCE)
+    rubric_neg_consequence = rubric_neg_consequence or set(RUBRIC_NEG_CONSEQUENCE)
+    rubric_pos_frame = rubric_pos_frame or set(RUBRIC_POS_FRAME)
+    rubric_neg_frame = rubric_neg_frame or set(RUBRIC_NEG_FRAME)
+
+    context_text = str(row.get("context_text", ""))
+    target_sentence = str(row.get("target_sentence", "")) or context_text
+    title = str(row.get("title", ""))
+    eval_text = " ".join([title, target_sentence]).strip()
+    full_text = context_text
+
+    p1, p1_terms, p1_hits = score_by_terms(eval_text, rubric_pos_lex, 3)
+    n1, n1_terms, n1_hits = score_by_terms(eval_text, rubric_neg_lex, 3)
+
+    p2, p2_terms, p2_hits = score_by_terms(eval_text, rubric_pos_action, 2)
+    n2, n2_terms, n2_hits = score_by_terms(eval_text, rubric_neg_action, 2)
+
+    p3, p3_terms, p3_hits = score_by_terms(eval_text, rubric_pos_consequence, 2)
+    n3, n3_terms, n3_hits = score_by_terms(eval_text, rubric_neg_consequence, 2)
+
+    p4, p4_terms, p4_hits = score_by_terms(eval_text, rubric_pos_frame, 2)
+    n4, n4_terms, n4_hits = score_by_terms(eval_text, rubric_neg_frame, 2)
+
+    has_authority = any(cue in full_text.casefold() for cue in AUTHORITY_CUES)
+    pos_repeat = (p1_hits + p2_hits + p3_hits + p4_hits) >= 2
+    neg_repeat = (n1_hits + n2_hits + n3_hits + n4_hits) >= 2
+    title_casefold = title.casefold()
+    ref_in_title = ref_country.casefold() in title_casefold or any(k in title_casefold for k in ["washington", "beijing", "moscow"])
+    p5 = 1 if (p1 + p2 + p3 + p4) > 0 and (ref_in_title or pos_repeat or has_authority) else 0
+    n5 = 1 if (n1 + n2 + n3 + n4) > 0 and (ref_in_title or neg_repeat or has_authority) else 0
+
+    positive_score = int(clamp(p1 + p2 + p3 + p4 + p5, 0, 10))
+    negative_score = int(clamp(n1 + n2 + n3 + n4 + n5, 0, 10))
+    evi_raw = int(clamp(positive_score - negative_score, -10, 10))
+    evi_norm = float(evi_raw / 5.0)
+
+    pos_terms = sorted(set(p1_terms + p2_terms + p3_terms + p4_terms))
+    neg_terms = sorted(set(n1_terms + n2_terms + n3_terms + n4_terms))
+    evi_evidence = {
+        "criterion_1_lex": {"positive": p1, "negative": n1},
+        "criterion_2_action": {"positive": p2, "negative": n2},
+        "criterion_3_consequence": {"positive": p3, "negative": n3},
+        "criterion_4_frame": {"positive": p4, "negative": n4},
+        "criterion_5_salience": {"positive": p5, "negative": n5},
+    }
+    if evi_raw > 0:
+        pol = "positive"
+    elif evi_raw < 0:
+        pol = "negative"
+    else:
+        pol = "neutral"
+    evi_expl = (
+        f"{ref_country} receives a {pol} score: P={positive_score}, N={negative_score}, EVI_raw={evi_raw}. "
+        "Score is derived from lexical, action, consequence, ideological and prominence criteria."
+    )
+    return {
+        "positive_score": positive_score,
+        "negative_score": negative_score,
+        "evi_raw": evi_raw,
+        "evi_norm": evi_norm,
+        "evi_evidence": json.dumps(evi_evidence, ensure_ascii=False),
+        "evi_explanation": evi_expl,
+        "positive_evidence_terms": "; ".join(pos_terms),
+        "negative_evidence_terms": "; ".join(neg_terms),
+        "evi_pos_hits": int(p1_hits + p2_hits + p3_hits + p4_hits),
+        "evi_neg_hits": int(n1_hits + n2_hits + n3_hits + n4_hits),
+    }
+
+
+def suggest_evi_coarse(
+    context_text: str,
+    ref_keywords: List[str],
+    rubric_pos_lex: Optional[Set[str]] = None,
+    rubric_neg_lex: Optional[Set[str]] = None,
+    rubric_pos_action: Optional[Set[str]] = None,
+    rubric_neg_action: Optional[Set[str]] = None,
+    rubric_pos_consequence: Optional[Set[str]] = None,
+    rubric_neg_consequence: Optional[Set[str]] = None,
+    rubric_pos_frame: Optional[Set[str]] = None,
+    rubric_neg_frame: Optional[Set[str]] = None,
+) -> Tuple[int, str]:
+    rubric_pos_lex = rubric_pos_lex or set(RUBRIC_POS_LEX)
+    rubric_neg_lex = rubric_neg_lex or set(RUBRIC_NEG_LEX)
+    rubric_pos_action = rubric_pos_action or set(RUBRIC_POS_ACTION)
+    rubric_neg_action = rubric_neg_action or set(RUBRIC_NEG_ACTION)
+    rubric_pos_consequence = rubric_pos_consequence or set(RUBRIC_POS_CONSEQUENCE)
+    rubric_neg_consequence = rubric_neg_consequence or set(RUBRIC_NEG_CONSEQUENCE)
+    rubric_pos_frame = rubric_pos_frame or set(RUBRIC_POS_FRAME)
+    rubric_neg_frame = rubric_neg_frame or set(RUBRIC_NEG_FRAME)
+
     ref_hit = False
     for kw in ref_keywords:
         if re.search(rf"\b{re.escape(kw)}\b", context_text, flags=re.IGNORECASE):
@@ -344,18 +834,18 @@ def suggest_evi(context_text: str, ref_keywords: List[str]) -> Tuple[int, str]:
     if not ref_hit:
         return 0, "No clear referent cue in context."
 
-    pos_hits, _ = count_marker_hits(context_text, EVAL_POS)
-    neg_hits, _ = count_marker_hits(context_text, EVAL_NEG)
+    pos_hits, _ = count_marker_hits(context_text, rubric_pos_lex | rubric_pos_action | rubric_pos_consequence | rubric_pos_frame)
+    neg_hits, _ = count_marker_hits(context_text, rubric_neg_lex | rubric_neg_action | rubric_neg_consequence | rubric_neg_frame)
     score = pos_hits - neg_hits
     if score <= -3:
-        return -2, f"Strong negative evaluative cues: pos={pos_hits}, neg={neg_hits}"
+        return -2, f"Strong negative cues: pos={pos_hits}, neg={neg_hits}"
     if score < 0:
         return -1, f"Moderate negative cues: pos={pos_hits}, neg={neg_hits}"
     if score == 0:
         return 0, "Balanced or informational context."
     if score < 3:
         return 1, f"Moderate positive cues: pos={pos_hits}, neg={neg_hits}"
-    return 2, f"Strong positive evaluative cues: pos={pos_hits}, neg={neg_hits}"
+    return 2, f"Strong positive cues: pos={pos_hits}, neg={neg_hits}"
 
 
 def apply_metrics(
@@ -369,6 +859,22 @@ def apply_metrics(
     emot_markers = load_emotional_markers(dict_dir)
     metaphors = load_metaphor_candidates(dict_dir)
     ref_kw = load_ref_keywords(dict_dir)
+    lex_overrides = _load_project_lexicon_overrides()
+    ideol_markers = _dedupe_keep_order(ideol_markers + list(lex_overrides.get("ideological", [])))
+    metaphors = _dedupe_keep_order(metaphors + list(lex_overrides.get("metaphor", [])))
+    emo_override = lex_overrides.get("emotional", {})
+    if isinstance(emo_override, dict):
+        for k in ["weak", "medium", "strong"]:
+            emot_markers[k] = _dedupe_keep_order(emot_markers.get(k, []) + list(emo_override.get(k, [])))
+
+    rubric_pos_lex = set(RUBRIC_POS_LEX) | set(lex_overrides.get("rubric_pos_lex", []))
+    rubric_neg_lex = set(RUBRIC_NEG_LEX) | set(lex_overrides.get("rubric_neg_lex", []))
+    rubric_pos_action = set(RUBRIC_POS_ACTION) | set(lex_overrides.get("rubric_pos_action", []))
+    rubric_neg_action = set(RUBRIC_NEG_ACTION) | set(lex_overrides.get("rubric_neg_action", []))
+    rubric_pos_consequence = set(RUBRIC_POS_CONSEQUENCE) | set(lex_overrides.get("rubric_pos_consequence", []))
+    rubric_neg_consequence = set(RUBRIC_NEG_CONSEQUENCE) | set(lex_overrides.get("rubric_neg_consequence", []))
+    rubric_pos_frame = set(RUBRIC_POS_FRAME)
+    rubric_neg_frame = set(RUBRIC_NEG_FRAME)
 
     manual_evi = {}
     if evi_manual_path and evi_manual_path.exists():
@@ -376,12 +882,25 @@ def apply_metrics(
         for _, r in mdf.iterrows():
             key = (str(r.get("context_id", "")), str(r.get("ref_country", "")))
             try:
-                val = int(r.get("EVI"))
+                raw_val = int(float(r.get("EVI_raw", r.get("EVI", 0))))
             except Exception:
                 continue
-            expl = str(r.get("explanation", "")).strip()
-            if val in EVI_ALLOWED:
-                manual_evi[key] = (val, expl if expl else "Manual EVI")
+            sal_raw = r.get("referent_salience", "")
+            sal_val = None
+            if str(sal_raw).strip() != "":
+                try:
+                    sv = float(sal_raw)
+                    if sv in SALIENCE_ALLOWED:
+                        sal_val = sv
+                except Exception:
+                    sal_val = None
+            expl = str(r.get("evi_explanation", r.get("explanation", ""))).strip()
+            if -10 <= raw_val <= 10:
+                manual_evi[key] = {
+                    "evi_raw": raw_val,
+                    "salience": sal_val,
+                    "evi_explanation": expl if expl else "Manual EVI annotation",
+                }
 
     metaphor_review = {}
     if metaphor_review_path and metaphor_review_path.exists():
@@ -404,10 +923,6 @@ def apply_metrics(
         n_m, found_m = count_marker_hits(ctx, emot_markers["medium"])
         n_s, found_s = count_marker_hits(ctx, emot_markers["strong"])
         n_met_candidates, found_met_candidates = count_marker_hits(ctx, metaphors)
-        pos_hits, found_pos = count_marker_hits(ctx, EVAL_POS)
-        neg_hits, found_neg = count_marker_hits(ctx, EVAL_NEG)
-        evi_score_raw = pos_hits - neg_hits
-
         # Semi-automatic metaphor handling
         n_met = 0
         if metaphor_review:
@@ -436,27 +951,123 @@ def apply_metrics(
         key = (context_id, ref_country)
         if evi_mode == "manual":
             if key in manual_evi:
-                evi, evi_expl = manual_evi[key]
+                rubric = calc_evi_rubric(
+                    ref_country,
+                    row,
+                    rubric_pos_lex=rubric_pos_lex,
+                    rubric_neg_lex=rubric_neg_lex,
+                    rubric_pos_action=rubric_pos_action,
+                    rubric_neg_action=rubric_neg_action,
+                    rubric_pos_consequence=rubric_pos_consequence,
+                    rubric_neg_consequence=rubric_neg_consequence,
+                    rubric_pos_frame=rubric_pos_frame,
+                    rubric_neg_frame=rubric_neg_frame,
+                )
+                rubric["evi_raw"] = int(manual_evi[key]["evi_raw"])
+                rubric["evi_norm"] = float(rubric["evi_raw"] / 5.0)
+                rubric["evi_explanation"] = manual_evi[key]["evi_explanation"]
+                manual_sal = manual_evi[key]["salience"]
             else:
-                evi = 0
-                evi_expl = "Manual EVI missing -> default 0"
+                rubric = {
+                    "positive_score": 0,
+                    "negative_score": 0,
+                    "evi_raw": 0,
+                    "evi_norm": 0.0,
+                    "evi_evidence": "{}",
+                    "evi_explanation": "Manual EVI missing -> default 0",
+                    "positive_evidence_terms": "",
+                    "negative_evidence_terms": "",
+                    "evi_pos_hits": 0,
+                    "evi_neg_hits": 0,
+                }
+                manual_sal = None
                 notes.append("manual_evi_missing")
+        elif evi_mode == "coarse":
+            coarse_evi, coarse_expl = suggest_evi_coarse(
+                str(row.get("target_sentence", ctx)),
+                ref_kw[ref_country],
+                rubric_pos_lex=rubric_pos_lex,
+                rubric_neg_lex=rubric_neg_lex,
+                rubric_pos_action=rubric_pos_action,
+                rubric_neg_action=rubric_neg_action,
+                rubric_pos_consequence=rubric_pos_consequence,
+                rubric_neg_consequence=rubric_neg_consequence,
+                rubric_pos_frame=rubric_pos_frame,
+                rubric_neg_frame=rubric_neg_frame,
+            )
+            coarse_evi = int(clamp(coarse_evi, -2, 2))
+            rubric = calc_evi_rubric(
+                ref_country,
+                row,
+                rubric_pos_lex=rubric_pos_lex,
+                rubric_neg_lex=rubric_neg_lex,
+                rubric_pos_action=rubric_pos_action,
+                rubric_neg_action=rubric_neg_action,
+                rubric_pos_consequence=rubric_pos_consequence,
+                rubric_neg_consequence=rubric_neg_consequence,
+                rubric_pos_frame=rubric_pos_frame,
+                rubric_neg_frame=rubric_neg_frame,
+            )
+            rubric["evi_raw"] = int(COARSE_TO_RAW.get(coarse_evi, 0))
+            rubric["evi_norm"] = float(rubric["evi_raw"] / 5.0)
+            rubric["evi_explanation"] = f"Coarse mode: {coarse_expl}; mapped to EVI_raw={rubric['evi_raw']}"
+            manual_sal = None
         else:
-            evi, evi_expl = suggest_evi(ctx, ref_kw[ref_country])
+            rubric = calc_evi_rubric(
+                ref_country,
+                row,
+                rubric_pos_lex=rubric_pos_lex,
+                rubric_neg_lex=rubric_neg_lex,
+                rubric_pos_action=rubric_pos_action,
+                rubric_neg_action=rubric_neg_action,
+                rubric_pos_consequence=rubric_pos_consequence,
+                rubric_neg_consequence=rubric_neg_consequence,
+                rubric_pos_frame=rubric_pos_frame,
+                rubric_neg_frame=rubric_neg_frame,
+            )
+            if evi_mode == "suggested":
+                rubric["evi_explanation"] = "Suggested mode: " + rubric["evi_explanation"]
+            manual_sal = None
 
-        if evi not in EVI_ALLOWED:
-            notes.append("invalid_evi_value")
-            evi = 0
+        salience, sal_label, is_technical, technical_reason, sal_expl = calc_referent_salience(
+            ref_country=ref_country,
+            context_text=ctx,
+            title=str(row.get("title", "")),
+            target_sentence=str(row.get("target_sentence", "")),
+            positive_score=int(rubric["positive_score"]),
+            negative_score=int(rubric["negative_score"]),
+            matched_keywords=str(row.get("matched_keywords", "")),
+            technical_patterns=list(lex_overrides.get("technical_patterns", [])),
+        )
+        if manual_sal is not None:
+            salience = manual_sal
+            is_technical = salience == 0.0
+            sal_label = "technical" if is_technical else sal_label
+            sal_expl = "Manual salience annotation."
+            technical_reason = "Manual salience annotation." if is_technical else ""
 
-        ip = (idi + emi + mti) * evi
-        if evi == 0:
-            ip = 0.0
-        ip = max(-6.0, min(6.0, ip))
+        evi_raw = int(clamp(int(rubric["evi_raw"]), -10, 10))
+        evi_norm = float(evi_raw / 5.0)
+        evi = int(coarse_from_raw(evi_raw))
+        discursive_energy = float(idi + emi + mti)
+        ip_context = float(evi_norm * (1.0 + discursive_energy))
+        if evi_norm == 0.0:
+            ip_context = 0.0
+        ip_old_context = float(discursive_energy * evi_norm)
+        aggregation_weight = float(clamp(salience, 0.0, 1.0))
 
-        if (emi >= 0.12) and evi == 0:
-            notes.append("high_emi_but_evi_zero")
+        if (emi >= 0.12) and evi_raw == 0:
+            notes.append("high_emi_neutral_evi")
+        if (idi >= 0.12) and evi_raw == 0:
+            notes.append("high_idi_neutral_evi")
         if n_content < 8:
             notes.append("low_n_content")
+        if int(rubric["positive_score"]) > 0 and int(rubric["negative_score"]) > 0:
+            notes.append("ambivalent_context")
+        if abs(evi_raw) >= 7 and not (rubric["positive_evidence_terms"] or rubric["negative_evidence_terms"]):
+            notes.append("high_evi_low_evidence")
+        if salience == 0.0 and not is_technical:
+            notes.append("salience_zero_but_not_technical")
 
         out = row.to_dict()
         out.update(
@@ -471,21 +1082,44 @@ def apply_metrics(
                 "EMI": round(emi, 6),
                 "MTI": round(mti, 6),
                 "EVI": int(evi),
-                "IP": round(ip, 6),
+                "EVI_raw": int(evi_raw),
+                "EVI_norm": round(evi_norm, 6),
+                "positive_score": int(rubric["positive_score"]),
+                "negative_score": int(rubric["negative_score"]),
+                "referent_salience": float(salience),
+                "salience_label": sal_label,
+                "is_technical_mention": bool(salience == 0.0),
+                "salience_explanation": sal_expl,
+                "technical_mention_reason": technical_reason,
+                "discursive_energy": round(discursive_energy, 6),
+                "IP_context": round(ip_context, 6),
+                "IP_context_abs": round(abs(ip_context), 6),
+                "IP_old_context": round(ip_old_context, 6),
+                "aggregation_weight": round(aggregation_weight, 6),
+                "IP_formula_version": "EVI_norm_times_1_plus_energy_weighted_by_salience",
+                "IP": round(ip_context, 6),  # backward-compat alias
                 "found_ideol_markers": "; ".join(found_ideol),
                 "found_emotional_markers": "; ".join(sorted(set(found_w + found_m + found_s))),
                 "found_metaphor_markers": "; ".join(found_met_candidates),
-                "evi_pos_hits": int(pos_hits),
-                "evi_neg_hits": int(neg_hits),
-                "evi_score_raw": int(evi_score_raw),
-                "evi_pos_markers": "; ".join(found_pos),
-                "evi_neg_markers": "; ".join(found_neg),
-                "explanation": evi_expl,
+                "evi_pos_hits": int(rubric["evi_pos_hits"]),
+                "evi_neg_hits": int(rubric["evi_neg_hits"]),
+                "evi_score_raw": int(rubric["positive_score"] - rubric["negative_score"]),
+                "evi_pos_markers": str(rubric["positive_evidence_terms"]),
+                "evi_neg_markers": str(rubric["negative_evidence_terms"]),
+                "evi_evidence": str(rubric["evi_evidence"]),
+                "evi_explanation": str(rubric["evi_explanation"]),
+                "positive_evidence_terms": str(rubric["positive_evidence_terms"]),
+                "negative_evidence_terms": str(rubric["negative_evidence_terms"]),
+                "explanation": str(rubric["evi_explanation"]),  # backward-compat
                 "notes": "; ".join(sorted(set(notes))),
             }
         )
         out_rows.append(out)
-    return pd.DataFrame(out_rows)
+    out_df = pd.DataFrame(out_rows)
+    out_df = compute_context_ip(out_df)
+    if "IP_context" in out_df.columns:
+        out_df["IP"] = out_df["IP_context"]
+    return out_df
 
 
 def add_multicountry_flags(df: pd.DataFrame) -> pd.DataFrame:
@@ -505,7 +1139,7 @@ def dominant_evi(series: pd.Series) -> int:
             iv = int(round(float(v)))
         except Exception:
             continue
-        if iv in EVI_ALLOWED:
+        if iv in EVI_COARSE_ALLOWED:
             vals.append(iv)
     if not vals:
         return 0
@@ -519,21 +1153,155 @@ def dominant_evi(series: pd.Series) -> int:
     return int(top_vals[0])
 
 
-def aggregate_outputs(df: pd.DataFrame) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+def compute_context_ip(df: pd.DataFrame) -> pd.DataFrame:
+    df = df.copy()
+    col_map_candidates = {
+        "IDI": ["IDI_i", "IDI_r", "IDI"],
+        "EMI": ["EMI_i", "EMI_r", "EMI"],
+        "MTI": ["MTI_i", "MTI_r", "MTI"],
+        "EVI_norm": ["EVI_norm_i", "EVI_norm_r", "EVI_norm"],
+        "S": ["S_i", "S_r", "referent_salience", "salience"],
+    }
+
+    def find_col(names: List[str]) -> str:
+        for name in names:
+            if name in df.columns:
+                return name
+        raise KeyError(f"Missing required column; expected one of: {names}")
+
+    idi_col = find_col(col_map_candidates["IDI"])
+    emi_col = find_col(col_map_candidates["EMI"])
+    mti_col = find_col(col_map_candidates["MTI"])
+    evi_col = find_col(col_map_candidates["EVI_norm"])
+    s_col = find_col(col_map_candidates["S"])
+
+    for col in [idi_col, emi_col, mti_col, evi_col, s_col]:
+        df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0.0)
+
+    df["discursive_energy"] = df[idi_col] + df[emi_col] + df[mti_col]
+    df["IP_context"] = df[evi_col] * (1.0 + df["discursive_energy"])
+    df.loc[df[evi_col] == 0.0, "IP_context"] = 0.0
+    df["IP_context_abs"] = df["IP_context"].abs()
+    df["IP_old_context"] = df["discursive_energy"] * df[evi_col]
+    df["aggregation_weight"] = df[s_col].clip(lower=0.0, upper=1.0)
+    df.loc[df["aggregation_weight"] == 0.0, "IP_context"] = df.loc[df["aggregation_weight"] == 0.0, "IP_context"].fillna(0.0)
+    df["IP_formula_version"] = "EVI_norm_times_1_plus_energy_weighted_by_salience"
+    return df
+
+
+def weighted_aggregate_ip(df: pd.DataFrame) -> dict:
+    df = compute_context_ip(df)
+    valid = df[df["aggregation_weight"] > 0].copy()
+    if valid.empty or float(valid["aggregation_weight"].sum()) == 0.0:
+        return {
+            "IP_final": 0.0,
+            "IP_abs_final": 0.0,
+            "mean_IP_unweighted": 0.0,
+            "contexts_analyzed": 0,
+            "contexts_excluded": int(len(df)),
+            "warning": "No substantive referent contexts after salience filtering",
+        }
+    w = valid["aggregation_weight"]
+    ip = valid["IP_context"]
+    return {
+        "IP_final": float((ip * w).sum() / w.sum()),
+        "IP_abs_final": float((ip.abs() * w).sum() / w.sum()),
+        "mean_IP_unweighted": float(ip.mean()),
+        "contexts_analyzed": int(len(valid)),
+        "contexts_excluded": int((df["aggregation_weight"] == 0).sum()),
+        "warning": None,
+    }
+
+
+def aggregate_outputs(df: pd.DataFrame, exclude_technical_mentions: bool = True) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+    df_all = compute_context_ip(df.copy())
+    if exclude_technical_mentions and "is_technical_mention" in df_all.columns:
+        df_all["aggregation_weight"] = df_all["aggregation_weight"].where(df_all["is_technical_mention"] != True, 0.0)
+        technical_excluded_global = int(df_all["is_technical_mention"].fillna(False).astype(bool).sum())
+    else:
+        technical_excluded_global = 0
+
     def aggregate_group(keys: List[str]) -> pd.DataFrame:
         grouped = []
-        for key_vals, g in df.groupby(keys, dropna=False):
-            if not isinstance(key_vals, tuple):
-                key_vals = (key_vals,)
+        all_keys = df_all[keys].drop_duplicates()
+        for _, key_row in all_keys.iterrows():
+            mask_all = pd.Series([True] * len(df_all))
+            key_vals = []
+            for k in keys:
+                kv = key_row[k]
+                key_vals.append(kv)
+                mask_all = mask_all & (df_all[k] == kv)
+            g_all = df_all[mask_all]
+            key_vals = tuple(key_vals)
             row = {k: v for k, v in zip(keys, key_vals)}
+            total_contexts = int(len(g_all))
+            technical_count = int(g_all["is_technical_mention"].fillna(False).astype(bool).sum()) if not g_all.empty else 0
+            agg = weighted_aggregate_ip(g_all)
+            valid = g_all[g_all["aggregation_weight"] > 0].copy()
+            excluded_contexts = int(agg["contexts_excluded"])
+
+            if valid.empty:
+                row.update(
+                    {
+                        "mean_IDI": 0.0,
+                        "mean_EMI": 0.0,
+                        "mean_MTI": 0.0,
+                        "mean_EVI_raw": 0.0,
+                        "mean_EVI_norm": 0.0,
+                        "mean_IP": 0.0,
+                        "mean_abs_IP": 0.0,
+                        "mean_IP_unweighted": 0.0,
+                        "positive_context_share": 0.0,
+                        "negative_context_share": 0.0,
+                        "neutral_context_share": 0.0,
+                        "central_context_share": 0.0,
+                        "background_context_share": 0.0,
+                        "mean_referent_salience": 0.0,
+                        "contexts_analyzed": int(agg["contexts_analyzed"]),
+                        "contexts_excluded": int(agg["contexts_excluded"]),
+                        "warning": str(agg["warning"] or ""),
+                        "technical_mentions_count": technical_count,
+                        "technical_mentions_excluded": technical_count if exclude_technical_mentions else 0,
+                        "number_of_contexts": total_contexts,
+                        "IP_final": 0.0,
+                        "IP_abs_final": 0.0,
+                    }
+                )
+                grouped.append(row)
+                continue
+
+            pos_share = float((valid["EVI_raw"] > 0).sum() / len(valid))
+            neg_share = float((valid["EVI_raw"] < 0).sum() / len(valid))
+            neu_share = float((valid["EVI_raw"] == 0).sum() / len(valid))
+            central_share = float((valid["referent_salience"] == 1.0).sum() / len(valid))
+            background_share = float((valid["referent_salience"] == 0.25).sum() / len(valid))
             row.update(
                 {
-                    "IDI": float(g["IDI"].mean()),
-                    "EMI": float(g["EMI"].mean()),
-                    "MTI": float(g["MTI"].mean()),
-                    "EVI": int(dominant_evi(g["EVI"])),
-                    "IP": float(g["IP"].mean()),
-                    "number_of_contexts": int(len(g)),
+                    "mean_IDI": float(valid["IDI"].mean()),
+                    "mean_EMI": float(valid["EMI"].mean()),
+                    "mean_MTI": float(valid["MTI"].mean()),
+                    "mean_EVI_raw": float(valid["EVI_raw"].mean()),
+                    "mean_EVI_norm": float(valid["EVI_norm"].mean()),
+                    "EVI": int(dominant_evi(valid["EVI"])),
+                    "mean_IP": float(agg["IP_final"]),
+                    "mean_abs_IP": float(agg["IP_abs_final"]),
+                    "mean_IP_unweighted": float(agg["mean_IP_unweighted"]),
+                    "positive_context_share": pos_share,
+                    "negative_context_share": neg_share,
+                    "neutral_context_share": neu_share,
+                    "central_context_share": central_share,
+                    "background_context_share": background_share,
+                    "mean_referent_salience": float(valid["referent_salience"].mean()),
+                    "contexts_analyzed": int(agg["contexts_analyzed"]),
+                    "contexts_excluded": int(agg["contexts_excluded"]),
+                    "warning": str(agg["warning"] or ""),
+                    "technical_mentions_count": technical_count,
+                    "technical_mentions_excluded": technical_count if exclude_technical_mentions else 0,
+                    "EVI": int(dominant_evi(valid["EVI"])),
+                    "IP": float(agg["IP_final"]),  # backward-compat alias
+                    "IP_final": float(agg["IP_final"]),
+                    "IP_abs_final": float(agg["IP_abs_final"]),
+                    "number_of_contexts": total_contexts,
                 }
             )
             grouped.append(row)
@@ -543,58 +1311,97 @@ def aggregate_outputs(df: pd.DataFrame) -> Tuple[pd.DataFrame, pd.DataFrame, pd.
     by_outlet = aggregate_group(["outlet_name", "media_country", "ref_country"])
     by_media_ref = aggregate_group(["media_country", "ref_country"])
 
+    df_effective = df_all[df_all["aggregation_weight"] > 0].copy()
     art_counts = (
-        df.groupby(["media_country", "ref_country"])["doc_id"]
+        df_effective.groupby(["media_country", "ref_country"])["doc_id"]
         .nunique()
         .reset_index(name="number_of_articles")
     )
     by_media_ref = by_media_ref.merge(art_counts, on=["media_country", "ref_country"], how="left")
+    by_media_ref["number_of_articles"] = by_media_ref["number_of_articles"].fillna(0).astype(int)
+    by_outlet_articles = df_effective.groupby(["outlet_name", "media_country", "ref_country"])["doc_id"].nunique().reset_index(name="number_of_articles")
+    by_outlet = by_outlet.merge(by_outlet_articles, on=["outlet_name", "media_country", "ref_country"], how="left")
+    by_outlet["number_of_articles"] = by_outlet["number_of_articles"].fillna(0).astype(int)
+    by_article["number_of_articles"] = 1
 
     return by_article, by_outlet, by_media_ref, build_summary_matrix(by_media_ref)
 
 
 def build_summary_matrix(by_media_ref: pd.DataFrame) -> pd.DataFrame:
-    # Wide matrix with row=media country and columns country_metric.
-    metrics = ["IDI", "EMI", "MTI", "EVI", "IP", "number_of_contexts", "number_of_articles"]
-    rows = []
-    for media in ["Malaysia", "Indonesia"]:
-        row = {"media_country": media}
-        sub = by_media_ref[by_media_ref["media_country"].str.lower() == media.lower()]
-        for ref in REF_COUNTRIES:
-            s = sub[sub["ref_country"] == ref]
-            if s.empty:
-                for m in metrics:
-                    row[f"{ref}_{m}"] = 0
-            else:
-                for m in metrics:
-                    row[f"{ref}_{m}"] = float(s.iloc[0][m]) if m in s.columns else 0
-        rows.append(row)
-    return pd.DataFrame(rows)
+    cols = [
+        "media_country",
+        "ref_country",
+        "mean_IDI",
+        "mean_EMI",
+        "mean_MTI",
+        "mean_EVI_raw",
+        "mean_EVI_norm",
+        "IP_final",
+        "mean_abs_IP",
+        "mean_IP_unweighted",
+        "positive_context_share",
+        "negative_context_share",
+        "neutral_context_share",
+        "central_context_share",
+        "background_context_share",
+        "technical_mentions_excluded",
+        "contexts_analyzed",
+        "contexts_excluded",
+        "warning",
+        "number_of_contexts",
+        "number_of_articles",
+    ]
+    out = by_media_ref.copy()
+    if "IP_final" not in out.columns and "mean_IP" in out.columns:
+        out["IP_final"] = out["mean_IP"]
+    for c in cols:
+        if c not in out.columns:
+            out[c] = 0
+    return out[cols].sort_values(["media_country", "ref_country"]).reset_index(drop=True)
 
 
 def build_flagged_cases(df: pd.DataFrame) -> pd.DataFrame:
     flagged = []
     for _, r in df.iterrows():
-        reasons = []
+        reasons = set()
         notes = str(r.get("notes", ""))
         if notes:
-            reasons.extend([x.strip() for x in notes.split(";") if x.strip()])
+            reasons.update([x.strip() for x in notes.split(";") if x.strip()])
+        if bool(r.get("is_technical_mention", False)):
+            reasons.add("technical_mentions_detected")
         if bool(r.get("multi_country_context", False)):
-            reasons.append("multi_country_context")
+            reasons.add("multi_country_contexts")
+        if float(r.get("IDI", 0)) >= 0.12 and int(r.get("EVI_raw", 0)) == 0:
+            reasons.add("high_IDI_neutral_EVI")
+        if float(r.get("EMI", 0)) >= 0.12 and int(r.get("EVI_raw", 0)) == 0:
+            reasons.add("high_EMI_neutral_EVI")
+        if int(r.get("positive_score", 0)) > 0 and int(r.get("negative_score", 0)) > 0:
+            reasons.add("ambivalent_contexts")
+        if abs(int(r.get("EVI_raw", 0))) >= 7 and not (str(r.get("positive_evidence_terms", "")).strip() or str(r.get("negative_evidence_terms", "")).strip()):
+            reasons.add("high_EVI_low_evidence")
+        if int(r.get("N_content", 0)) < 8:
+            reasons.add("low_N_content")
         if float(r.get("IP", 0)) < -6 or float(r.get("IP", 0)) > 6:
-            reasons.append("ip_out_of_expected_range")
-        if int(r.get("EVI", 0)) not in EVI_ALLOWED:
-            reasons.append("invalid_evi")
-        if float(r.get("IDI", 0)) < 0 or float(r.get("IDI", 0)) > 1:
-            reasons.append("invalid_idi")
-        if float(r.get("EMI", 0)) < 0 or float(r.get("EMI", 0)) > 1:
-            reasons.append("invalid_emi")
-        if float(r.get("MTI", 0)) < 0 or float(r.get("MTI", 0)) > 1:
-            reasons.append("invalid_mti")
+            reasons.add("ip_out_of_expected_range")
+        if not (-10 <= int(r.get("EVI_raw", 0)) <= 10):
+            reasons.add("invalid_evi_raw")
+        if abs(float(r.get("EVI_norm", 0)) - float(int(r.get("EVI_raw", 0)) / 5.0)) > 1e-9:
+            reasons.add("invalid_evi_norm")
+        sal = float(r.get("referent_salience", -1))
+        if not (0.0 <= sal <= 1.0):
+            reasons.add("invalid_referent_salience")
+        if sal == 0.0 and not bool(r.get("is_technical_mention", False)):
+            reasons.add("salience_zero_not_technical")
+        if sal == 0.0 and float(r.get("aggregation_weight", -1)) != 0.0:
+            reasons.add("salience_zero_weight_mismatch")
+        if float(r.get("EVI_norm", 0.0)) == 0.0 and abs(float(r.get("IP_context", 0.0))) > 1e-9:
+            reasons.add("evi_zero_ip_nonzero")
         if reasons:
-            out = r.to_dict()
-            out["flag_reasons"] = "; ".join(sorted(set(reasons)))
-            flagged.append(out)
+            base = r.to_dict()
+            for rr in sorted(reasons):
+                out = dict(base)
+                out["flag_case_type"] = rr
+                flagged.append(out)
     return pd.DataFrame(flagged)
 
 
@@ -617,6 +1424,8 @@ def save_outputs(
     with pd.ExcelWriter(output_dir / "summary_matrix.xlsx", engine="openpyxl") as xw:
         summary_matrix.to_excel(xw, index=False, sheet_name="summary_matrix")
         by_media_ref.to_excel(xw, index=False, sheet_name="long_table")
+        contexts_full.to_excel(xw, index=False, sheet_name="contexts_full")
+        flagged.to_excel(xw, index=False, sheet_name="flagged_cases")
 
 
 def parse_args() -> argparse.Namespace:
@@ -626,12 +1435,22 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--dict-dir", default="referent_dicts", help="Directory for editable marker dictionaries")
     p.add_argument(
         "--evi-mode",
-        default="manual",
-        choices=["manual", "suggested"],
-        help="manual: prefer evi_manual.csv; suggested: auto EVI proposal",
+        default="fine",
+        choices=["coarse", "fine", "suggested", "manual"],
+        help="coarse: legacy -2..2; fine/suggested: rubric EVI_raw -10..10; manual: from evi_manual.csv",
     )
-    p.add_argument("--evi-manual", default="", help="Optional CSV with context_id,ref_country,EVI,explanation")
+    p.add_argument(
+        "--evi-manual",
+        default="",
+        help="Optional CSV with context_id,ref_country,EVI_raw,referent_salience,evi_explanation",
+    )
     p.add_argument("--metaphor-review", default="", help="Optional CSV with context_id,ref_country,marker,is_metaphor")
+    p.add_argument(
+        "--exclude-technical-mentions",
+        default="true",
+        choices=["true", "false"],
+        help="When true, technical mentions (salience=0) are excluded from aggregation.",
+    )
     return p.parse_args()
 
 
@@ -663,13 +1482,20 @@ def main() -> None:
 
     # Mandatory QA constraints
     scored.loc[(scored["N_content"] <= 0), ["IDI", "EMI", "MTI", "IP"]] = 0.0
-    scored.loc[(~scored["EVI"].isin(EVI_ALLOWED)), "EVI"] = 0
-    scored.loc[(scored["EVI"] == 0), "IP"] = 0.0
+    scored.loc[(~scored["EVI"].isin(EVI_COARSE_ALLOWED)), "EVI"] = 0
+    scored.loc[(~scored["EVI_raw"].between(-10, 10)), ["EVI_raw", "EVI_norm", "IP"]] = [0, 0.0, 0.0]
+    scored.loc[(~scored["referent_salience"].between(0.0, 1.0)), ["referent_salience", "IP"]] = [0.0, 0.0]
+    scored.loc[(scored["referent_salience"] == 0), "is_technical_mention"] = True
+    scored.loc[(scored["referent_salience"] == 0), ["IP", "aggregation_weight"]] = [0.0, 0.0]
+    scored.loc[(scored["EVI_raw"] == 0), "IP"] = 0.0
     for c in ["IDI", "EMI", "MTI"]:
         scored[c] = scored[c].clip(lower=0.0, upper=1.0)
-    scored["IP"] = scored["IP"].clip(lower=-6.0, upper=6.0)
+    scored["EVI_norm"] = scored["EVI_raw"] / 5.0
+    scored = compute_context_ip(scored)
+    scored["IP"] = scored["IP_context"]
 
-    by_article, by_outlet, by_media_ref, matrix = aggregate_outputs(scored)
+    exclude_technical = str(args.exclude_technical_mentions).lower() == "true"
+    by_article, by_outlet, by_media_ref, matrix = aggregate_outputs(scored, exclude_technical_mentions=exclude_technical)
     flagged = build_flagged_cases(scored)
     save_outputs(scored, by_article, by_outlet, by_media_ref, matrix, flagged, output_dir)
 
