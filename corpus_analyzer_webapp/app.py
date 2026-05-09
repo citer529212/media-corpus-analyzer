@@ -5,6 +5,7 @@ import csv
 import html
 import hashlib
 import io
+import json
 import re
 import sys
 import tempfile
@@ -29,7 +30,7 @@ try:
 except Exception:
     referent_core = None
 
-APP_BUILD = "2026-05-08-16:40"
+APP_BUILD = "2026-05-08-18:35"
 
 REFERENT_CATEGORY_KEYWORDS: Dict[str, Dict[str, List[str]]] = {
     "China": {
@@ -85,6 +86,13 @@ def guess_source(filename: str) -> str:
 
 def source_from_raw(raw: str) -> str:
     m = re.search(r"^\s*Source:\s*(.+?)\s*$", raw, flags=re.IGNORECASE | re.MULTILINE)
+    if m and m.group(1).strip():
+        return m.group(1).strip()
+    return ""
+
+
+def media_country_from_raw(raw: str) -> str:
+    m = re.search(r"^\s*MediaCountry:\s*(.+?)\s*$", raw, flags=re.IGNORECASE | re.MULTILINE)
     if m and m.group(1).strip():
         return m.group(1).strip()
     return ""
@@ -148,6 +156,83 @@ def extract_raw_by_extension(name: str, data: bytes) -> str:
     return ""
 
 
+def _pick_col(columns: List[str], candidates: List[str]) -> Optional[str]:
+    low = {c.casefold(): c for c in columns}
+    for cand in candidates:
+        if cand.casefold() in low:
+            return low[cand.casefold()]
+    for c in columns:
+        cl = c.casefold()
+        if any(k in cl for k in candidates):
+            return c
+    return None
+
+
+def extract_rows_from_table_bytes(name: str, data: bytes) -> List[Tuple[str, str]]:
+    ext = Path(name).suffix.casefold()
+    try:
+        if ext == ".csv":
+            try:
+                df = pd.read_csv(io.BytesIO(data))
+            except Exception:
+                df = pd.read_csv(io.BytesIO(data), sep=None, engine="python")
+        elif ext in {".xlsx", ".xls"}:
+            df = pd.read_excel(io.BytesIO(data))
+        elif ext == ".json":
+            obj = json.loads(decode_text_bytes(data))
+            if isinstance(obj, list):
+                df = pd.DataFrame(obj)
+            elif isinstance(obj, dict):
+                df = pd.DataFrame(obj.get("rows", obj))
+            else:
+                return []
+        else:
+            return []
+    except Exception:
+        return []
+
+    if df.empty:
+        return []
+    df = df.fillna("")
+    cols = [str(c) for c in df.columns.tolist()]
+    text_col = _pick_col(cols, ["text", "content", "body", "article", "full_text", "текст", "материал"])
+    if not text_col:
+        return []
+    title_col = _pick_col(cols, ["title", "headline", "заголовок"])
+    source_col = _pick_col(cols, ["source", "outlet_name", "media", "publisher", "издание", "источник"])
+    date_col = _pick_col(cols, ["date", "published_at", "datetime", "дата", "year", "год"])
+    media_country_col = _pick_col(cols, ["media_country", "region", "страна_сми", "country"])
+
+    out: List[Tuple[str, str]] = []
+    for i, row in df.iterrows():
+        text = str(row.get(text_col, "")).strip()
+        if not text:
+            continue
+        title = str(row.get(title_col, "")).strip() if title_col else f"Row {i+1}"
+        source = str(row.get(source_col, "")).strip() if source_col else "Table upload"
+        date = str(row.get(date_col, "")).strip() if date_col else ""
+        media_country = str(row.get(media_country_col, "")).strip() if media_country_col else ""
+        blob = (
+            f"Title: {title or f'Row {i+1}'}\n"
+            f"Date: {date}\n"
+            f"Source: {source}\n"
+            f"MediaCountry: {media_country}\n\n"
+            f"{text}"
+        )
+        out.append((f"{name}__row_{i+1:06d}.txt", blob))
+    return out
+
+
+def extract_file_items_by_extension(name: str, data: bytes) -> List[Tuple[str, str]]:
+    low = name.casefold()
+    if low.endswith((".csv", ".xlsx", ".xls", ".json")):
+        return extract_rows_from_table_bytes(name, data)
+    raw = extract_raw_by_extension(name, data)
+    if not raw.strip():
+        return []
+    return [(name, raw)]
+
+
 def read_zip_corpus_files(zip_bytes: bytes) -> List[Tuple[str, str]]:
     out = []
     with zipfile.ZipFile(io.BytesIO(zip_bytes), "r") as zf:
@@ -155,12 +240,9 @@ def read_zip_corpus_files(zip_bytes: bytes) -> List[Tuple[str, str]]:
             if info.is_dir():
                 continue
             name = info.filename
-            if not name.casefold().endswith((".txt", ".md", ".text", ".docx", ".pdf")):
+            if not name.casefold().endswith((".txt", ".md", ".text", ".docx", ".pdf", ".csv", ".xlsx", ".xls", ".json")):
                 continue
-            raw = extract_raw_by_extension(name, zf.read(info))
-            if not raw.strip():
-                continue
-            out.append((name, raw))
+            out.extend(extract_file_items_by_extension(name, zf.read(info)))
     return out
 
 
@@ -168,10 +250,7 @@ def read_uploaded_corpus_files(files) -> List[Tuple[str, str]]:
     out = []
     for f in files or []:
         name = f.name
-        raw = extract_raw_by_extension(name, f.getvalue())
-        if not raw.strip():
-            continue
-        out.append((name, raw))
+        out.extend(extract_file_items_by_extension(name, f.getvalue()))
     return out
 
 
@@ -229,7 +308,7 @@ def build_referent_input_df(file_items: List[Tuple[str, str]], min_year: int, ma
         if year < min_year or year > max_year:
             continue
         source = source_from_raw(raw) or guess_source(filename)
-        media_country = map_source_to_media_country(source)
+        media_country = media_country_from_raw(raw) or map_source_to_media_country(source)
         date_guess = str(year)
         m = re.search(r"\b(20\d{2}-\d{2}-\d{2})\b", raw[:500])
         if m:
@@ -252,6 +331,7 @@ def run_referent_analysis(
     input_df: pd.DataFrame,
     out_dir: Path,
     evi_mode: str,
+    exclude_technical_mentions: bool,
     evi_manual_path: Optional[Path] = None,
     metaphor_review_path: Optional[Path] = None,
 ):
@@ -277,13 +357,20 @@ def run_referent_analysis(
     scored = referent_core.add_multicountry_flags(scored)
     scored = scored[scored["ref_country"].isin(referent_core.REF_COUNTRIES)].copy()
     scored.loc[(scored["N_content"] <= 0), ["IDI", "EMI", "MTI", "IP"]] = 0.0
-    scored.loc[(~scored["EVI"].isin(referent_core.EVI_ALLOWED)), "EVI"] = 0
-    scored.loc[(scored["EVI"] == 0), "IP"] = 0.0
+    scored.loc[(~scored["EVI"].isin(referent_core.EVI_COARSE_ALLOWED)), "EVI"] = 0
+    scored.loc[(~scored["EVI_raw"].between(-10, 10)), ["EVI_raw", "EVI_norm", "IP"]] = [0, 0.0, 0.0]
+    scored.loc[(scored["referent_salience"] == 0), "IP"] = 0.0
+    scored.loc[(scored["EVI_raw"] == 0), "IP"] = 0.0
     for col in ["IDI", "EMI", "MTI"]:
         scored[col] = scored[col].clip(lower=0.0, upper=1.0)
-    scored["IP"] = scored["IP"].clip(lower=-6.0, upper=6.0)
+    scored["EVI_norm"] = scored["EVI_raw"] / 5.0
+    scored = referent_core.compute_context_ip(scored)
+    scored["IP"] = scored["IP_context"]
 
-    by_article, by_outlet, by_media_ref, matrix = referent_core.aggregate_outputs(scored)
+    by_article, by_outlet, by_media_ref, matrix = referent_core.aggregate_outputs(
+        scored,
+        exclude_technical_mentions=exclude_technical_mentions,
+    )
     flagged = referent_core.build_flagged_cases(scored)
     referent_core.save_outputs(scored, by_article, by_outlet, by_media_ref, matrix, flagged, out_dir)
 
@@ -365,7 +452,93 @@ def _render_proof_contexts(df: pd.DataFrame, marker_col: str, title: str, limit:
         )
 
 
-def show_referent_dashboard(out_dir: Path, default_ref: str, default_category: str) -> None:
+def _sign_label(v: float) -> str:
+    if v > 0:
+        return "положительный"
+    if v < 0:
+        return "отрицательный"
+    return "нейтральный"
+
+
+def _evi_mode_ru(mode: str) -> str:
+    m = (mode or "").strip().lower()
+    mapping = {
+        "fine": "Точный режим: оценка от -10 до +10 (самый детальный).",
+        "coarse": "Крупный режим: оценка только -2, -1, 0, +1, +2.",
+        "suggested": "Автоподсказка: система предлагает оценку по правилам.",
+        "manual": "Ручная разметка: оценка берется из вашего CSV.",
+    }
+    return mapping.get(m, m)
+
+
+def _collect_terms(series: pd.Series) -> List[str]:
+    terms: List[str] = []
+    for val in series.fillna("").astype(str).tolist():
+        for t in _split_marker_cell(val):
+            if t:
+                terms.append(t.casefold())
+    return terms
+
+
+def _dominant_frames_and_strategies(df: pd.DataFrame) -> Tuple[pd.DataFrame, pd.DataFrame]:
+    terms = []
+    for col in ["found_ideol_markers", "evi_pos_markers", "evi_neg_markers", "found_metaphor_markers"]:
+        if col in df.columns:
+            terms.extend(_collect_terms(df[col]))
+    bag = pd.Series(terms).value_counts() if terms else pd.Series(dtype=int)
+
+    frame_rules = {
+        "Суверенитет и легитимность": ["sovereignty", "суверенитет", "legitimate", "responsible actor", "defender"],
+        "Угроза и секьюритизация": ["threat", "aggression", "security", "угроза", "агресс", "конфликт"],
+        "Партнерство и развитие": ["cooperation", "development", "partnership", "growth", "cooperat", "развитие"],
+        "Геополитическое соперничество": ["hegemony", "authoritarian", "санкц", "sanction", "nato", "military"],
+    }
+    strategy_rules = {
+        "Легитимация": ["legitimate", "responsible", "stability", "protects", "defends", "cooperation"],
+        "Делегитимация": ["violates", "aggressor", "threat", "authoritarian", "диктат", "угроза"],
+        "Секьюритизация": ["security", "threat", "military", "defense", "sanction", "конфликт"],
+        "Эмоционализация": ["fear", "anger", "catastrophe", "heroic", "panic", "outrage"],
+        "Метафоризация": ["battle", "frontline", "wave", "chessboard", "storm", "path"],
+    }
+
+    frame_rows = []
+    for label, keys in frame_rules.items():
+        score = 0
+        examples = []
+        for term, cnt in bag.items():
+            if any(k in term for k in keys):
+                score += int(cnt)
+                if len(examples) < 5:
+                    examples.append(term)
+        if score > 0:
+            frame_rows.append({"frame": label, "score": score, "examples": ", ".join(examples)})
+    frame_df = pd.DataFrame(frame_rows).sort_values("score", ascending=False) if frame_rows else pd.DataFrame(columns=["frame", "score", "examples"])
+
+    strategy_rows = []
+    for label, keys in strategy_rules.items():
+        score = 0
+        examples = []
+        for term, cnt in bag.items():
+            if any(k in term for k in keys):
+                score += int(cnt)
+                if len(examples) < 5:
+                    examples.append(term)
+        if score > 0:
+            strategy_rows.append({"strategy": label, "score": score, "examples": ", ".join(examples)})
+    strategy_df = pd.DataFrame(strategy_rows).sort_values("score", ascending=False) if strategy_rows else pd.DataFrame(columns=["strategy", "score", "examples"])
+
+    return frame_df, strategy_df
+
+
+def show_referent_dashboard(
+    out_dir: Path,
+    default_ref: str,
+    default_category: str,
+    evi_mode: str,
+    exclude_technical_mentions: bool,
+    show_evi_rubric_details: bool,
+    show_salience_diagnostics: bool,
+) -> None:
     p_ctx = out_dir / "contexts_full.csv"
     if not p_ctx.exists():
         st.error("Файл contexts_full.csv не найден.")
@@ -402,13 +575,25 @@ def show_referent_dashboard(out_dir: Path, default_ref: str, default_category: s
     c2.metric("Статьи", int(df_ref["doc_id"].nunique()))
     c3.metric("Источники", int(df_ref["outlet_name"].nunique()))
 
-    n_content_sum = max(float(df_ref["N_content"].sum()), 1.0)
-    idi = float(df_ref["N_ideol"].sum() / n_content_sum)
-    emi = float((((df_ref["N_e_w"] / 3.0) + (2.0 * df_ref["N_e_m"] / 3.0) + df_ref["N_e_s"]).sum()) / n_content_sum)
-    mti = float(df_ref["N_met"].sum() / n_content_sum)
-    evi = int(_dominant_discrete_evi(df_ref["EVI"]))
-    ip_formula = float((idi + emi + mti) * evi)
-    ip_observed = float(df_ref["IP"].mean())
+    df_ref = referent_core.compute_context_ip(df_ref)
+    agg = referent_core.weighted_aggregate_ip(df_ref)
+    valid = df_ref[df_ref["aggregation_weight"] > 0].copy()
+
+    n_content_sum = max(float(valid["N_content"].sum()), 1.0) if not valid.empty else 1.0
+    idi = float(valid["N_ideol"].sum() / n_content_sum) if not valid.empty else 0.0
+    emi = float((((valid["N_e_w"] / 3.0) + (2.0 * valid["N_e_m"] / 3.0) + valid["N_e_s"]).sum()) / n_content_sum) if not valid.empty else 0.0
+    mti = float(valid["N_met"].sum() / n_content_sum) if not valid.empty else 0.0
+    evi_raw = float(valid["EVI_raw"].mean()) if "EVI_raw" in valid.columns and not valid.empty else 0.0
+    evi_norm = float(valid["EVI_norm"].mean()) if "EVI_norm" in valid.columns and not valid.empty else 0.0
+    salience_mean = float(valid["referent_salience"].mean()) if "referent_salience" in valid.columns and not valid.empty else 0.0
+    evi_coarse = int(_dominant_discrete_evi(valid["EVI"])) if "EVI" in valid.columns and not valid.empty else 0
+    ip_formula = float(agg["IP_final"])
+    ip_abs_formula = float(agg["IP_abs_final"])
+    ip_unweighted = float(agg["mean_IP_unweighted"])
+    contexts_analyzed = int(agg["contexts_analyzed"])
+    contexts_excluded = int(agg["contexts_excluded"])
+    technical_mentions_excluded = int((df_ref["aggregation_weight"] == 0).sum())
+    warning_msg = agg["warning"]
 
     def density_level(v: float) -> str:
         if v < 0.03:
@@ -441,70 +626,178 @@ def show_referent_dashboard(out_dir: Path, default_ref: str, default_category: s
         return "сильное воздействие"
 
     st.markdown("### Индикаторы и доказательства")
+    st.caption(
+        f"Режим EVI: `{evi_mode}` — {_evi_mode_ru(evi_mode)} "
+        f"Технические упоминания {'исключены' if exclude_technical_mentions else 'учтены'} в итоговых цифрах."
+    )
+    tabs = st.tabs(
+        [
+            "1) IDI",
+            "2) EMI",
+            "3) MTI",
+            "4) EVI",
+            "5) IP",
+        ]
+    )
 
-    st.markdown("**1) Идеологизированность (IDI)**")
-    st.caption("Кратко: доля идеологических маркеров среди знаменательных слов контекста.")
-    st.code("IDI = N_ideol / N_content", language="text")
-    st.code(f"IDI = {int(df_ref['N_ideol'].sum())} / {int(n_content_sum)} = {idi:.3f}", language="text")
-    st.metric("IDI", f"{idi:.3f}")
-    st.info(f"Интерпретация: {density_level(idi)} уровень идеологической маркированности (шкала долей 0..1).")
-    fig_idi = px.histogram(df_ref, x="IDI", nbins=20, template="plotly_dark", title="Распределение IDI по контекстам")
-    st.plotly_chart(fig_idi, use_container_width=True)
-    _render_proof_contexts(df_ref, "found_ideol_markers", "Пруфы IDI: контексты с идеологическими маркерами")
+    with tabs[0]:
+        st.markdown("**Идеологизированность (IDI)**")
+        st.caption("Доля идеологических маркеров среди знаменательных слов контекста.")
+        st.metric("IDI", f"{idi:.3f}")
+        st.info(f"Уровень: {density_level(idi)}. Чем выше IDI, тем сильнее текст рамочно направляет интерпретацию.")
+        with st.expander("Формула и объяснение", expanded=False):
+            st.code("IDI = N_ideol / N_content", language="text")
+            st.code(f"IDI = {int(df_ref['N_ideol'].sum())} / {int(n_content_sum)} = {idi:.3f}", language="text")
+            st.write("`N_ideol` — число идеологических маркеров, `N_content` — знаменательные слова.")
+        cc1, cc2 = st.columns(2)
+        with cc1:
+            st.plotly_chart(px.histogram(df_ref, x="IDI", nbins=20, template="plotly_dark", title="Распределение IDI"), use_container_width=True)
+        with cc2:
+            idi_by_outlet = df_ref.groupby("outlet_name", as_index=False)["IDI"].mean().sort_values("IDI", ascending=False)
+            st.plotly_chart(px.bar(idi_by_outlet, x="outlet_name", y="IDI", template="plotly_dark", title="IDI по источникам"), use_container_width=True)
+        with st.expander("Примеры из корпуса (развернуть)", expanded=False):
+            _render_proof_contexts(df_ref, "found_ideol_markers", "Контексты с идеологическими маркерами")
 
-    st.markdown("**2) Эмоциональность (EMI)**")
-    st.caption("Кратко: взвешенная доля эмоциональных маркеров (слабые/средние/сильные).")
-    st.code("EMI = (1/3*N_e_w + 2/3*N_e_m + 1*N_e_s) / N_content", language="text")
-    weighted_emotion_sum = float(((df_ref["N_e_w"] / 3.0) + (2.0 * df_ref["N_e_m"] / 3.0) + df_ref["N_e_s"]).sum())
-    st.code(f"EMI = {weighted_emotion_sum:.2f} / {int(n_content_sum)} = {emi:.3f}", language="text")
-    st.metric("EMI", f"{emi:.3f}")
-    st.info(f"Интерпретация: {density_level(emi)} уровень эмоционального давления.")
-    fig_emi = px.histogram(df_ref, x="EMI", nbins=20, template="plotly_dark", title="Распределение EMI по контекстам")
-    st.plotly_chart(fig_emi, use_container_width=True)
-    _render_proof_contexts(df_ref, "found_emotional_markers", "Пруфы EMI: контексты с эмоциональными маркерами")
+    with tabs[1]:
+        weighted_emotion_sum = float(((df_ref["N_e_w"] / 3.0) + (2.0 * df_ref["N_e_m"] / 3.0) + df_ref["N_e_s"]).sum())
+        st.markdown("**Эмоциональность (EMI)**")
+        st.caption("Взвешенная доля эмоциональных маркеров (слабые/средние/сильные).")
+        st.metric("EMI", f"{emi:.3f}")
+        st.info(f"Уровень: {density_level(emi)}. Чем выше EMI, тем сильнее эмоциональное давление текста.")
+        with st.expander("Формула и объяснение", expanded=False):
+            st.code("EMI = (1/3*N_e_w + 2/3*N_e_m + 1*N_e_s) / N_content", language="text")
+            st.code(f"EMI = {weighted_emotion_sum:.2f} / {int(n_content_sum)} = {emi:.3f}", language="text")
+            st.write("Сильные маркеры вносят наибольший вклад, слабые — наименьший.")
+        cc1, cc2 = st.columns(2)
+        with cc1:
+            st.plotly_chart(px.histogram(df_ref, x="EMI", nbins=20, template="plotly_dark", title="Распределение EMI"), use_container_width=True)
+        with cc2:
+            emo_break = pd.DataFrame(
+                [{"layer": "weak", "count": int(df_ref["N_e_w"].sum())}, {"layer": "medium", "count": int(df_ref["N_e_m"].sum())}, {"layer": "strong", "count": int(df_ref["N_e_s"].sum())}]
+            )
+            st.plotly_chart(px.bar(emo_break, x="layer", y="count", template="plotly_dark", title="Структура эмоциональных маркеров"), use_container_width=True)
+        with st.expander("Примеры из корпуса (развернуть)", expanded=False):
+            _render_proof_contexts(df_ref, "found_emotional_markers", "Контексты с эмоциональными маркерами")
 
-    st.markdown("**3) Метафоричность (MTI)**")
-    st.caption("Кратко: доля метафорических единиц в знаменательных словах контекста.")
-    st.code("MTI = N_met / N_content", language="text")
-    st.code(f"MTI = {int(df_ref['N_met'].sum())} / {int(n_content_sum)} = {mti:.3f}", language="text")
-    st.metric("MTI", f"{mti:.3f}")
-    st.info(f"Интерпретация: {density_level(mti)} уровень образной (метафорической) подачи.")
-    fig_mti = px.histogram(df_ref, x="MTI", nbins=20, template="plotly_dark", title="Распределение MTI по контекстам")
-    st.plotly_chart(fig_mti, use_container_width=True)
-    _render_proof_contexts(df_ref, "found_metaphor_markers", "Пруфы MTI: контексты с метафорическими маркерами")
+    with tabs[2]:
+        st.markdown("**Метафоричность (MTI)**")
+        st.caption("Доля метафорических единиц среди знаменательных слов.")
+        st.metric("MTI", f"{mti:.3f}")
+        st.info(f"Уровень: {density_level(mti)}. Чем выше MTI, тем сильнее образная подача политической реальности.")
+        with st.expander("Формула и объяснение", expanded=False):
+            st.code("MTI = N_met / N_content", language="text")
+            st.code(f"MTI = {int(df_ref['N_met'].sum())} / {int(n_content_sum)} = {mti:.3f}", language="text")
+            st.write("Метафоры создают когнитивные рамки восприятия политических событий.")
+        cc1, cc2 = st.columns(2)
+        with cc1:
+            st.plotly_chart(px.histogram(df_ref, x="MTI", nbins=20, template="plotly_dark", title="Распределение MTI"), use_container_width=True)
+        with cc2:
+            mti_year = df_ref.groupby("date", as_index=False)["MTI"].mean().head(60)
+            st.plotly_chart(px.line(mti_year, x="date", y="MTI", template="plotly_dark", title="Динамика MTI (по дате)"), use_container_width=True)
+        with st.expander("Примеры из корпуса (развернуть)", expanded=False):
+            _render_proof_contexts(df_ref, "found_metaphor_markers", "Контексты с метафорическими маркерами")
 
-    st.markdown("**4) Оценочность по референту (EVI)**")
-    st.caption("Кратко: оценка именно выбранного референта по шкале -2..+2, а не текста в целом.")
-    st.code("EVI ∈ {-2, -1, 0, +1, +2}", language="text")
-    st.code(f"EVI = {evi} (доминирующее дискретное значение)", language="text")
-    st.metric("EVI", str(evi))
-    st.info(f"Интерпретация: {evi_level(evi)} отношение к референту.")
-    evi_dist = df_ref.groupby("EVI", as_index=False).size().rename(columns={"size": "contexts"}).sort_values("EVI")
-    fig_evi = px.bar(evi_dist, x="EVI", y="contexts", template="plotly_dark", title="Распределение EVI")
-    st.plotly_chart(fig_evi, use_container_width=True)
-    st.markdown("**Как получен EVI: пояснения и маркеры**")
-    cols = [c for c in ["context_id", "matched_keywords", "EVI", "evi_pos_hits", "evi_neg_hits", "explanation", "notes"] if c in df_ref.columns]
-    st.dataframe(df_ref[cols].head(30), use_container_width=True)
-    if "evi_pos_markers" in df_ref.columns and "evi_neg_markers" in df_ref.columns:
-        evi_proof = df_ref.copy()
-        evi_proof["evi_markers"] = (
-            evi_proof["matched_keywords"].fillna("").astype(str)
-            + "; "
-            + evi_proof["evi_pos_markers"].fillna("").astype(str)
-            + "; "
-            + evi_proof["evi_neg_markers"].fillna("").astype(str)
+    with tabs[3]:
+        st.markdown("**Оценочный вектор (EVI_r)**")
+        st.caption("EVI_raw от -10 до +10, нормирование: EVI_norm = EVI_raw / 5.")
+        col_a, col_b, col_c = st.columns(3)
+        col_a.metric("EVI_raw (mean)", f"{evi_raw:.3f}")
+        col_b.metric("EVI_norm (mean)", f"{evi_norm:.3f}")
+        col_c.metric("EVI coarse", f"{evi_coarse}")
+        st.info(f"Интерпретация: {evi_level(evi_norm)} отношение к референту.")
+        with st.expander("Формула и объяснение", expanded=False):
+            st.code("EVI_raw = P_r - N_r", language="text")
+            st.code("EVI_norm = EVI_raw / 5", language="text")
+            st.code(f"EVI_raw(mean) = {evi_raw:.3f}; EVI_norm(mean) = {evi_norm:.3f}", language="text")
+            st.write("`P_r` — позитивные сигналы, `N_r` — негативные сигналы относительно выбранного референта.")
+        cc1, cc2 = st.columns(2)
+        with cc1:
+            evi_dist = df_ref.groupby("EVI_raw", as_index=False).size().rename(columns={"size": "contexts"}).sort_values("EVI_raw")
+            st.plotly_chart(px.bar(evi_dist, x="EVI_raw", y="contexts", template="plotly_dark", title="Распределение EVI_raw"), use_container_width=True)
+        with cc2:
+            score_df = df_ref[["positive_score", "negative_score"]].mean().reset_index()
+            score_df.columns = ["component", "mean_score"]
+            st.plotly_chart(px.bar(score_df, x="component", y="mean_score", template="plotly_dark", title="Средний вклад P_r и N_r"), use_container_width=True)
+        with st.expander("Примеры из корпуса и пояснения (развернуть)", expanded=False):
+            cols = [
+                c
+                for c in [
+                    "context_id",
+                    "matched_keywords",
+                    "positive_score",
+                    "negative_score",
+                    "EVI_raw",
+                    "EVI_norm",
+                    "evi_explanation",
+                    "positive_evidence_terms",
+                    "negative_evidence_terms",
+                    "notes",
+                ]
+                if c in df_ref.columns
+            ]
+            st.dataframe(df_ref[cols].head(40), use_container_width=True)
+            if "evi_pos_markers" in df_ref.columns and "evi_neg_markers" in df_ref.columns:
+                evi_proof = df_ref.copy()
+                evi_proof["evi_markers"] = (
+                    evi_proof["matched_keywords"].fillna("").astype(str)
+                    + "; "
+                    + evi_proof["evi_pos_markers"].fillna("").astype(str)
+                    + "; "
+                    + evi_proof["evi_neg_markers"].fillna("").astype(str)
+                )
+                _render_proof_contexts(evi_proof, "evi_markers", "Контексты с оценочными маркерами")
+            if show_evi_rubric_details:
+                rubric_cols = [c for c in ["context_id", "evi_evidence", "evi_pos_hits", "evi_neg_hits"] if c in df_ref.columns]
+                if rubric_cols:
+                    st.dataframe(df_ref[rubric_cols].head(30), use_container_width=True)
+
+    with tabs[4]:
+        st.markdown("**Воздействующий потенциал (IP_r)**")
+        st.caption("Главный итог: показывает направление (плюс/минус) и силу влияния медиаобраза страны.")
+        col_a, col_b, col_c = st.columns(3)
+        col_a.metric("Итоговый индекс имиджа (IP_final)", f"{ip_formula:.6f}")
+        col_b.metric("Сила воздействия без знака (IP_abs_final)", f"{ip_abs_formula:.6f}")
+        col_c.metric("Средний индекс без весов", f"{ip_unweighted:.6f}")
+        st.metric("Итоговый знак имиджа", _sign_label(ip_formula))
+        st.info(
+            f"Как читать: сейчас это **{ip_level(ip_formula)}**. "
+            f"`IP_final` отвечает за направление (положительный/отрицательный), "
+            f"`IP_abs_final` — за силу воздействия (насколько ярко выражен образ)."
         )
-        _render_proof_contexts(evi_proof, "evi_markers", "Пруфы EVI: референт + оценочные маркеры в контексте")
+        with st.expander("Пояснение простыми словами", expanded=True):
+            st.markdown(
+                "- `Итоговый индекс имиджа (IP_final)`: главный результат. "
+                "Плюс = скорее позитивный образ, минус = скорее негативный.\n"
+                "- `Сила воздействия без знака (IP_abs_final)`: насколько сильное воздействие, "
+                "даже если в корпусе есть и плюс, и минус.\n"
+                "- `Средний индекс без весов`: техническая справка для сравнения с взвешенной оценкой.\n"
+                "- `Итоговый знак имиджа`: быстрый ответ, какой образ доминирует."
+            )
+        with st.expander("Формула и объяснение", expanded=False):
+            st.code("IP_i = EVI_norm_i × (1 + IDI_i + EMI_i + MTI_i)", language="text")
+            st.code("IP_final = Σ(S_i × IP_i) / ΣS_i", language="text")
+            st.code("IP_old_context (diagnostic) = (IDI_i + EMI_i + MTI_i) × EVI_norm_i", language="text")
+            st.write(
+                "`S_i` — вес значимости контекста для образа страны. "
+                "Технические упоминания (например, просто локация в подписи) дают нулевой вес и не искажают итог."
+            )
+            st.write(f"contexts_analyzed={contexts_analyzed}, contexts_excluded={contexts_excluded}, technical_mentions_excluded={technical_mentions_excluded}")
+            if warning_msg:
+                st.warning(str(warning_msg))
+        cc1, cc2 = st.columns(2)
+        with cc1:
+            st.plotly_chart(px.histogram(df_ref, x="IP_context", nbins=20, template="plotly_dark", title="Распределение IP_context"), use_container_width=True)
+        with cc2:
+            ip_year = df_ref.groupby("date", as_index=False)["IP_context"].mean().head(60)
+            st.plotly_chart(px.line(ip_year, x="date", y="IP_context", template="plotly_dark", title="Динамика IP_context"), use_container_width=True)
+        with st.expander("Примеры из корпуса (развернуть)", expanded=False):
+            _render_proof_contexts(df_ref, "matched_keywords", "Контексты для расчета IP")
 
-    st.markdown("**5) Воздействующий потенциал (IP)**")
-    st.caption("Кратко: итоговое воздействие как произведение трех описательных параметров на оценочность.")
-    st.code("IP = (IDI + EMI + MTI) × EVI", language="text")
-    st.code(f"IP = ({idi:.3f} + {emi:.3f} + {mti:.3f}) × {evi} = {ip_formula:.3f}", language="text")
-    st.metric("IP (по формуле)", f"{ip_formula:.3f}")
-    st.metric("IP (среднее по контекстам)", f"{ip_observed:.3f}")
-    st.info(f"Интерпретация: {ip_level(ip_formula)}; знак IP показывает направление (минус/плюс).")
-    fig_ip = px.histogram(df_ref, x="IP", nbins=20, template="plotly_dark", title="Распределение IP по контекстам")
-    st.plotly_chart(fig_ip, use_container_width=True)
+    if show_salience_diagnostics:
+        with st.expander("Диагностика референтной значимости (S_r)", expanded=False):
+            sal_cols = [c for c in ["context_id", "referent_salience", "salience_label", "is_technical_mention", "technical_mention_reason", "salience_explanation"] if c in df_ref.columns]
+            if sal_cols:
+                st.dataframe(df_ref[sal_cols].head(40), use_container_width=True)
 
     st.markdown("### Анализ по категориям ключевых слов")
     cat_rows = []
@@ -519,8 +812,13 @@ def show_referent_dashboard(out_dir: Path, default_ref: str, default_category: s
                     "IDI": r["IDI"],
                     "EMI": r["EMI"],
                     "MTI": r["MTI"],
-                    "EVI": r["EVI"],
-                    "IP": r["IP"],
+                    "EVI_raw": r.get("EVI_raw", 0),
+                    "EVI_norm": r.get("EVI_norm", 0),
+                    "S_r": r.get("referent_salience", 1),
+                    "IP_context": r.get("IP_context", 0),
+                    "IP_context_abs": r.get("IP_context_abs", 0),
+                    "aggregation_weight": r.get("aggregation_weight", 0),
+                    "IP_old_context": r.get("IP_old_context", 0),
                 }
             )
     cat_df = pd.DataFrame(cat_rows)
@@ -532,17 +830,91 @@ def show_referent_dashboard(out_dir: Path, default_ref: str, default_category: s
                 IDI=("IDI", "mean"),
                 EMI=("EMI", "mean"),
                 MTI=("MTI", "mean"),
-                IP=("IP", "mean"),
+                EVI_raw=("EVI_raw", "mean"),
+                EVI_norm=("EVI_norm", "mean"),
+                S_r=("S_r", "mean"),
+                IP_context=("IP_context", "mean"),
+                IP_context_abs=("IP_context_abs", "mean"),
+                aggregation_weight=("aggregation_weight", "mean"),
+                IP_old_context=("IP_old_context", "mean"),
             )
             .sort_values("contexts", ascending=False)
         )
-        evi_by_cat = []
-        for cat in cat_agg["category"].tolist():
-            evi_by_cat.append(_dominant_discrete_evi(cat_df[cat_df["category"] == cat]["EVI"]))
-        cat_agg["EVI"] = evi_by_cat
         st.dataframe(cat_agg, use_container_width=True)
-        fig_cat = px.bar(cat_agg, x="category", y="IP", color="contexts", template="plotly_dark", title="IP по категориям ключевых слов")
+        fig_cat = px.bar(cat_agg, x="category", y="IP_context", color="contexts", template="plotly_dark", title="IP_context по категориям ключевых слов")
         st.plotly_chart(fig_cat, use_container_width=True)
+
+    st.markdown("### Итоговая интерпретация")
+    st.info(
+        f"Формируемый имидж референта: **{_sign_label(ip_formula)}** "
+        f"(IP_final={ip_formula:.4f}, IP_abs_final={ip_abs_formula:.4f})."
+    )
+    with st.expander("Формулы и как читать итог", expanded=False):
+        st.code("IDI = N_ideol / N_content", language="text")
+        st.code("EMI = (1/3*N_e_w + 2/3*N_e_m + N_e_s) / N_content", language="text")
+        st.code("MTI = N_met / N_content", language="text")
+        st.code("EVI_raw = P_r - N_r;  EVI_norm = EVI_raw / 5", language="text")
+        st.code("IP_i = EVI_norm_i × (1 + IDI_i + EMI_i + MTI_i)", language="text")
+        st.code("IP_final = Σ(S_i × IP_i) / ΣS_i", language="text")
+        st.write("Плюс IP = позитивный образ, минус IP = негативный образ, модуль IP = сила воздействия.")
+
+    frame_df, strategy_df = _dominant_frames_and_strategies(df_ref)
+    st.markdown("### Доминирующие фреймы и дискурсивные стратегии")
+    f1, f2 = st.columns(2)
+    with f1:
+        st.markdown("**Фреймы**")
+        if frame_df.empty:
+            st.caption("Выраженные фреймы не выявлены.")
+        else:
+            st.dataframe(frame_df.head(8), use_container_width=True)
+            st.plotly_chart(px.bar(frame_df.head(8), x="frame", y="score", template="plotly_dark", title="Топ фреймов"), use_container_width=True)
+    with f2:
+        st.markdown("**Стратегии**")
+        if strategy_df.empty:
+            st.caption("Выраженные стратегии не выявлены.")
+        else:
+            st.dataframe(strategy_df.head(8), use_container_width=True)
+            st.plotly_chart(px.bar(strategy_df.head(8), x="strategy", y="score", template="plotly_dark", title="Топ стратегий"), use_container_width=True)
+
+    st.markdown("### Контексты и объяснения")
+    ctx_cols = [
+        c
+        for c in [
+            "context_id",
+            "doc_id",
+            "ref_country",
+            "matched_keywords",
+            "referent_salience",
+            "salience_label",
+            "positive_score",
+            "negative_score",
+            "EVI_raw",
+            "EVI_norm",
+            "discursive_energy",
+            "IP_context",
+            "IP_context_abs",
+            "aggregation_weight",
+            "IP_old_context",
+            "IP_formula_version",
+            "evi_explanation",
+        ]
+        if c in df_ref.columns
+    ]
+    st.dataframe(df_ref[ctx_cols].head(100), use_container_width=True)
+    st.markdown("**Highlighted contexts (пруфы по каждому контексту)**")
+    for _, r in df_ref.head(20).iterrows():
+        terms = _split_marker_cell(str(r.get("matched_keywords", "")))
+        terms += _split_marker_cell(str(r.get("positive_evidence_terms", "")))
+        terms += _split_marker_cell(str(r.get("negative_evidence_terms", "")))
+        terms = [t for t in sorted(set(terms)) if t]
+        st.caption(
+            f"{r.get('context_id','')} | ref={r.get('ref_country','')} | "
+            f"S_r={r.get('referent_salience','')} | EVI_raw={r.get('EVI_raw','')} | IP_i={r.get('IP_context','')}"
+        )
+        st.markdown(
+            f"<div style='padding:10px;border:1px solid #334155;border-radius:8px;line-height:1.6'>{_highlight_terms_html(str(r.get('context_text','')), terms)}</div>",
+            unsafe_allow_html=True,
+        )
 
 
 def zip_dir_bytes(dir_path: Path) -> bytes:
@@ -1123,9 +1495,9 @@ def main() -> None:
         if analysis_mode == "Референтный (China/USA/Russia)":
             referent_evi_mode = st.selectbox(
                 "EVI режим (референтный анализ)",
-                options=["suggested", "manual"],
+                options=["fine", "coarse", "suggested", "manual"],
                 index=0,
-                help="suggested: авто-подсказка EVI; manual: оценка из evi_manual.csv, иначе EVI=0.",
+                help="fine: EVI_raw -10..10; coarse: legacy -2..2 с маппингом; suggested: авто-rubric; manual: из evi_manual.csv",
             )
             referent_target = st.selectbox(
                 "Целевой референт (витрина)",
@@ -1138,8 +1510,18 @@ def main() -> None:
                 options=["all", "Leadership", "Economy", "Security", "Culture", "other"],
                 index=0,
             )
-            st.caption("Режим ручной EVI: загрузите evi_manual.csv ниже в основном окне.")
+            exclude_technical_mentions = st.toggle(
+                "Исключать технические упоминания из итогов",
+                value=True,
+                help="Если включено, контексты с S_r=0 не входят в итоговые агрегированные метрики.",
+            )
+            show_evi_rubric_details = st.toggle("Показывать детали расчета EVI", value=False)
+            show_salience_diagnostics = st.toggle("Показывать диагностику значимости (S_r)", value=True)
+            st.caption("Для manual режима загрузите evi_manual.csv ниже в основном окне.")
         else:
+            exclude_technical_mentions = True
+            show_evi_rubric_details = False
+            show_salience_diagnostics = False
             indicator_tab = st.selectbox(
                 "Вкладка индикатора",
                 options=["IDI", "EMI", "EVI", "MTI", "IP"],
@@ -1164,8 +1546,8 @@ def main() -> None:
         zip_upload = st.file_uploader("ZIP с корпусом (.zip)", type=["zip"], accept_multiple_files=False)
     with col2:
         txt_uploads = st.file_uploader(
-            "Или отдельные файлы (.txt/.md/.docx/.pdf)",
-            type=["txt", "md", "text", "docx", "pdf"],
+            "Или отдельные файлы (.txt/.md/.docx/.pdf/.csv/.xlsx/.json)",
+            type=["txt", "md", "text", "docx", "pdf", "csv", "xlsx", "xls", "json"],
             accept_multiple_files=True,
         )
 
@@ -1176,7 +1558,7 @@ def main() -> None:
         rc1, rc2 = st.columns(2)
         with rc1:
             referent_evi_manual_upload = st.file_uploader(
-                "evi_manual.csv (опционально, для manual режима)",
+                "evi_manual.csv (manual: context_id, ref_country, EVI_raw, referent_salience, evi_explanation)",
                 type=["csv"],
                 accept_multiple_files=False,
                 key="evi_manual_csv",
@@ -1247,6 +1629,7 @@ def main() -> None:
                         input_df=input_df,
                         out_dir=out_dir,
                         evi_mode=referent_evi_mode,
+                        exclude_technical_mentions=exclude_technical_mentions,
                         evi_manual_path=evi_manual_path,
                         metaphor_review_path=metaphor_review_path,
                     )
@@ -1259,6 +1642,10 @@ def main() -> None:
                     out_dir=out_dir,
                     default_ref=referent_target,
                     default_category=referent_category_default,
+                    evi_mode=referent_evi_mode,
+                    exclude_technical_mentions=exclude_technical_mentions,
+                    show_evi_rubric_details=show_evi_rubric_details,
+                    show_salience_diagnostics=show_salience_diagnostics,
                 )
 
                 with st.expander("Технические таблицы (референтный режим)"):
