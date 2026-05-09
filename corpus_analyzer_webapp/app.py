@@ -355,9 +355,11 @@ def run_referent_analysis(
         metaphor_review_path=metaphor_review_path,
     )
     scored = referent_core.add_multicountry_flags(scored)
-    scored = scored[scored["ref_country"].isin(referent_core.REF_COUNTRIES)].copy()
+    ref_countries_allowed = set(getattr(referent_core, "REF_COUNTRIES", ["China", "USA", "Russia"]))
+    evi_coarse_allowed = set(getattr(referent_core, "EVI_COARSE_ALLOWED", {-2, -1, 0, 1, 2}))
+    scored = scored[scored["ref_country"].isin(ref_countries_allowed)].copy()
     scored.loc[(scored["N_content"] <= 0), ["IDI", "EMI", "MTI", "IP"]] = 0.0
-    scored.loc[(~scored["EVI"].isin(referent_core.EVI_COARSE_ALLOWED)), "EVI"] = 0
+    scored.loc[(~scored["EVI"].isin(evi_coarse_allowed)), "EVI"] = 0
     scored.loc[(~scored["EVI_raw"].between(-10, 10)), ["EVI_raw", "EVI_norm", "IP"]] = [0, 0.0, 0.0]
     scored.loc[(scored["referent_salience"] == 0), "IP"] = 0.0
     scored.loc[(scored["EVI_raw"] == 0), "IP"] = 0.0
