@@ -14,7 +14,6 @@ from typing import Any, Dict, Iterable, List, Optional, Tuple
 import pandas as pd
 
 import media_analyzer_referent as referent_core
-from analysis_core import context_extraction
 from calibration.calibration_export import export_all
 from calibration.calibration_interpreter import interpret_indicator
 from calibration.calibration_lexicon_expander import extract_candidate_terms, ensure_lexicon_files
@@ -110,7 +109,7 @@ class CalibrationBuilder:
         self.user_agent = user_agent
         self.default_delay = max(0.2, float(default_delay))
 
-        context_extraction.ensure_default_dictionaries(self.dict_dir)
+        referent_core.ensure_default_dictionaries(self.dict_dir)
         ensure_lexicon_files(self.lexicons_dir)
 
     @staticmethod
@@ -382,11 +381,11 @@ class CalibrationBuilder:
                 "language": texts_df.get("language", ""),
             }
         )
-        docs = context_extraction.ensure_required_fields(docs)
+        docs = referent_core.ensure_required_fields(docs)
 
-        ref_keywords = context_extraction.load_ref_keywords(self.dict_dir)
-        ref_patterns = context_extraction.compile_keyword_patterns(ref_keywords)
-        contexts = context_extraction.extract_context_rows(docs, ref_patterns)
+        ref_keywords = referent_core.load_ref_keywords(self.dict_dir)
+        ref_patterns = referent_core.compile_keyword_patterns(ref_keywords)
+        contexts = referent_core.extract_context_rows(docs, ref_patterns)
 
         # fallback: if no contexts, keep empty with ids for diagnostics
         if contexts.empty:

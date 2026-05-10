@@ -6,7 +6,36 @@ from typing import Dict, Iterable, List
 
 import pandas as pd
 
-from analysis_core.lexicon_io import append_rows, load_csv, save_csv
+def load_csv(path: Path) -> pd.DataFrame:
+    if not path.exists():
+        return pd.DataFrame()
+    try:
+        return pd.read_csv(path).fillna("")
+    except Exception:
+        return pd.DataFrame()
+
+
+def save_csv(path: Path, df: pd.DataFrame) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    df.to_csv(path, index=False)
+
+
+def append_rows(path: Path, rows: List[Dict[str, object]]) -> None:
+    if not rows:
+        return
+    add_df = pd.DataFrame(rows)
+    cur_df = load_csv(path)
+    if cur_df.empty:
+        merged = add_df
+    else:
+        for col in cur_df.columns:
+            if col not in add_df.columns:
+                add_df[col] = ""
+        for col in add_df.columns:
+            if col not in cur_df.columns:
+                cur_df[col] = ""
+        merged = pd.concat([cur_df[cur_df.columns], add_df[cur_df.columns]], ignore_index=True)
+    save_csv(path, merged.fillna(""))
 
 IDEOLOGY_SEEDS = {
     "sovereignty",
