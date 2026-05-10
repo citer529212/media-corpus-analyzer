@@ -12,6 +12,17 @@ except Exception:  # pragma: no cover
 from calibration.calibration_lexicon_expander import approve_candidate, reject_candidate
 
 
+def _safe_read_csv(path: Path) -> pd.DataFrame:
+    if not path.exists():
+        return pd.DataFrame()
+    try:
+        return pd.read_csv(path)
+    except pd.errors.EmptyDataError:
+        return pd.DataFrame()
+    except Exception:
+        return pd.DataFrame()
+
+
 def render_sidebar_controls() -> Dict[str, object]:
     if st is None:
         return {}
@@ -95,12 +106,12 @@ def render_main_tabs(calibration_dir: Path, lexicons_dir: Path | None = None) ->
     p_flags = calibration_dir / "calibration_quality_flags.csv"
     p_report = calibration_dir / "calibration_report.md"
 
-    texts = pd.read_csv(p_texts) if p_texts.exists() else pd.DataFrame()
-    ctx = pd.read_csv(p_ctx) if p_ctx.exists() else pd.DataFrame()
-    dist = pd.read_csv(p_dist) if p_dist.exists() else pd.DataFrame()
-    cand = pd.read_csv(p_cand) if p_cand.exists() else pd.DataFrame()
-    ver = pd.read_csv(p_ver) if p_ver.exists() else pd.DataFrame()
-    flags = pd.read_csv(p_flags) if p_flags.exists() else pd.DataFrame()
+    texts = _safe_read_csv(p_texts)
+    ctx = _safe_read_csv(p_ctx)
+    dist = _safe_read_csv(p_dist)
+    cand = _safe_read_csv(p_cand)
+    ver = _safe_read_csv(p_ver)
+    flags = _safe_read_csv(p_flags)
 
     with tabs[0]:
         c1, c2, c3 = st.columns(3)
