@@ -2780,7 +2780,16 @@ def main() -> None:
                         p = out_dir / preview_name
                         if p.exists():
                             st.markdown(f"**{preview_name}**")
-                            st.dataframe(pd.read_csv(p).head(20), use_container_width=True)
+                            try:
+                                df_preview = pd.read_csv(p)
+                                if df_preview.empty:
+                                    st.info("Файл существует, но таблица пока пустая.")
+                                else:
+                                    st.dataframe(df_preview.head(20), use_container_width=True)
+                            except pd.errors.EmptyDataError:
+                                st.warning("Файл CSV пустой (0 строк данных).")
+                            except Exception as e:
+                                st.warning(f"Не удалось прочитать CSV: {e}")
                     p_dist = out_dir / "distribution_stats.xlsx"
                     if p_dist.exists():
                         st.markdown("**distribution_stats.xlsx**")
