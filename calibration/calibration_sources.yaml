@@ -1,0 +1,72 @@
+sources:
+  - source_name: "Manual Neutral News Set"
+    mode: "local"
+    language: "en"
+    calibration_type: "neutral_news"
+    expected_indicator_focus: "neutral_baseline"
+    path: "data/calibration/neutral_news/"
+    enabled: true
+
+  - source_name: "Manual Standard Political News Set"
+    mode: "local"
+    language: "en"
+    calibration_type: "standard_political_news"
+    expected_indicator_focus: "mixed"
+    path: "data/calibration/standard_political_news/"
+    enabled: true
+
+  - source_name: "Manual Analytical Article Set"
+    mode: "local"
+    language: "en"
+    calibration_type: "analytical_article"
+    expected_indicator_focus: "IDI"
+    path: "data/calibration/analytical_article/"
+    enabled: true
+
+  - source_name: "Manual Crisis Report Set"
+    mode: "local"
+    language: "en"
+    calibration_type: "crisis_report"
+    expected_indicator_focus: "EMI"
+    path: "data/calibration/crisis_report/"
+    enabled: true
+
+  - source_name: "Manual Opinion Editorial Set"
+    mode: "local"
+    language: "en"
+    calibration_type: "opinion_editorial"
+    expected_indicator_focus: "MTI"
+    path: "data/calibration/opinion_editorial/"
+    enabled: true
+
+  - source_name: "Manual Ideological Mobilization Set"
+    mode: "local"
+    language: "en"
+    calibration_type: "ideological_mobilization"
+    expected_indicator_focus: "IDI"
+    path: "data/calibration/ideological_mobilization/"
+    enabled: true
+
+  - source_name: "Manual Propaganda-like Set"
+    mode: "local"
+    language: "en"
+    calibration_type: "propaganda_like_text"
+    expected_indicator_focus: "IP"
+    path: "data/calibration/propaganda_like_text/"
+    enabled: true
+
+  - source_name: "Manual Highly Emotional Set"
+    mode: "local"
+    language: "en"
+    calibration_type: "highly_emotional_text"
+    expected_indicator_focus: "EMI"
+    path: "data/calibration/highly_emotional_text/"
+    enabled: true
+
+  - source_name: "Manual Highly Metaphorical Set"
+    mode: "local"
+    language: "en"
+    calibration_type: "highly_metaphorical_text"
+    expected_indicator_focus: "MTI"
+    path: "data/calibration/highly_metaphorical_text/"
+    enabled: true

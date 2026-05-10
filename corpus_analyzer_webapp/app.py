@@ -20,6 +20,7 @@ import plotly.graph_objects as go
 import streamlit as st
 from docx import Document
 from pypdf import PdfReader
+from corpus_analyzer_webapp.formula_traces import build_context_formula_traces, traces_to_dataframe
 
 # Reuse your strict analyzer core
 ROOT_DIR = Path(__file__).resolve().parents[1]
@@ -28,7 +29,7 @@ if str(ROOT_DIR) not in sys.path:
 import corpus_analysis_strict_method as core
 try:
     import media_analyzer_referent as referent_core
-except Exception as _calibration_import_exc:
+except Exception as _referent_import_exc:
     referent_core = None
 try:
     from calibration.calibration_builder import CalibrationBuilder
@@ -37,7 +38,7 @@ try:
     from calibration.calibration_ui import render_main_tabs as render_calibration_panel
     from calibration.calibration_ui import render_sidebar_controls as render_calibration_sidebar
     CALIBRATION_IMPORT_ERROR = ""
-except Exception:
+except Exception as _calibration_import_exc:
     CalibrationBuilder = None
     apply_verified_terms_to_lexicons = None
     calibration_add_percentiles = None
@@ -49,6 +50,25 @@ APP_BUILD = "2026-05-10-01:46"
 APP_DIR = Path(__file__).resolve().parent
 DEFAULT_CALIBRATION_TEXTS_PATH = APP_DIR / "default_calibration_texts.csv"
 DEFAULT_CALIBRATION_CONTEXTS_PATH = APP_DIR / "default_calibration_contexts.csv"
+
+PROGRESS_STAGES = {
+    "init": (3, "Инициализация анализа: проверка входных данных, параметров и выбранных референтов."),
+    "load": (8, "Загрузка корпуса: чтение файлов, проверка колонок, извлечение метаданных."),
+    "clean": (13, "Предобработка: очистка текста, удаление пустых записей, нормализация пробелов и служебных символов."),
+    "segment": (20, "Сегментация: разбиение текстов на предложения."),
+    "find_refs": (30, "Поиск референтов: обнаружение упоминаний China / USA / Russia и связанных номинаций."),
+    "extract_ctx": (40, "Извлечение контекстов: формирование расширенных фрагментов вокруг референта."),
+    "salience": (48, "Проверка значимости: отделение технических, фоновых и центральных упоминаний."),
+    "ling": (56, "Лингвистическая обработка: токенизация, лемматизация, подсчет знаменательных слов."),
+    "idi": (64, "Расчет IDI: идеологические маркеры и идеологическая плотность."),
+    "emi": (72, "Расчет EMI: эмоциональные маркеры и учет интенсивности."),
+    "mti": (80, "Расчет MTI: метафорические маркеры и метафорическая плотность."),
+    "evi": (88, "Расчет EVI: позитивный/негативный оценочный потенциал от -10 до +10."),
+    "ip": (93, "Расчет IP: воздействующий потенциал каждого контекста."),
+    "calib": (96, "Калибровка: сопоставление с calibration corpus и расчет процентилей."),
+    "agg": (98, "Сводные результаты: агрегация по статьям, изданиям, странам СМИ и референтам."),
+    "final": (100, "Готово: формирование таблиц, графиков, пояснений и файлов экспорта."),
+}
 
 REFERENT_CATEGORY_KEYWORDS: Dict[str, Dict[str, List[str]]] = {
     "China": {
@@ -347,17 +367,59 @@ def build_referent_input_df(file_items: List[Tuple[str, str]], min_year: int, ma
 
 def _empirical_level(percentile: float) -> str:
     p = float(percentile)
+    if p <= 10:
+        return "minimal"
     if p <= 20:
         return "very_low"
-    if p <= 40:
+    if p <= 35:
         return "low"
-    if p <= 60:
+    if p <= 50:
+        return "moderately_low"
+    if p <= 65:
         return "medium"
     if p <= 80:
         return "elevated"
-    if p <= 95:
+    if p <= 90:
         return "high"
+    if p <= 97:
+        return "very_high"
     return "extreme"
+
+
+def _interpret_evi(evi: float) -> str:
+    v = float(evi)
+    if v <= -10:
+        return "Предельно негативная репрезентация."
+    if v <= -8:
+        return "Очень сильная делегитимация."
+    if v <= -6:
+        return "Выраженно негативная оценка."
+    if v <= -4:
+        return "Умеренно негативная оценка."
+    if v < 0:
+        return "Слабая негативная окраска."
+    if v == 0:
+        return "Нейтральная/информационная подача."
+    if v <= 3:
+        return "Слабая позитивная окраска."
+    if v <= 5:
+        return "Умеренно позитивная оценка."
+    if v <= 7:
+        return "Выраженно позитивная оценка."
+    if v <= 9:
+        return "Очень сильная легитимация."
+    return "Предельно позитивная репрезентация."
+
+
+def _interpret_ip(ip_final: float, ip_abs_final: float, near_zero_threshold: float = 0.05) -> str:
+    ip_final = float(ip_final)
+    ip_abs_final = float(ip_abs_final)
+    if abs(ip_final) < near_zero_threshold and ip_abs_final < near_zero_threshold:
+        return "Образ преимущественно нейтрален или слабо оценочно оформлен."
+    if abs(ip_final) < near_zero_threshold and ip_abs_final >= near_zero_threshold:
+        return "Среднее направление близко к нейтральному, но есть поляризация оценок."
+    direction = "Преобладает позитивная направленность образа." if ip_final > 0 else "Преобладает негативная направленность образа."
+    return f"{direction} Сила воздействия определяется по |IP|."
 
 
 def _assign_percentiles(df: pd.DataFrame, col: str, out_col: str, basis_mode: str) -> pd.DataFrame:
@@ -471,7 +533,7 @@ def _compute_calibration_report(cal_df: pd.DataFrame, dict_dir: Path, ip_formula
         pos_lex = len(re.findall(r"\b(partner|cooperation|support|stability|development|trust|constructive)\b", txt, flags=re.IGNORECASE))
         neg_lex = len(re.findall(r"\b(threat|aggression|pressure|crisis|interference|coercion|conflict)\b", txt, flags=re.IGNORECASE))
         evi_raw = int(max(-10, min(10, pos_lex - neg_lex)))
-        evi_norm = evi_raw / 5.0
+        evi_norm = evi_raw / 10.0
         energy = idi + emi + mti
         if ip_formula_mode.startswith("updated"):
             ip_i = evi_norm * (1.0 + energy)
@@ -529,6 +591,8 @@ def run_referent_analysis(
 ):
     if referent_core is None:
         raise RuntimeError("referent analyzer module is unavailable")
+    if str(evi_mode).strip().lower() == "calibration-assisted":
+        evi_mode = "suggested"
 
     dict_dir = out_dir / "referent_dicts"
     referent_core.ensure_default_dictionaries(dict_dir)
@@ -548,28 +612,38 @@ def run_referent_analysis(
     )
     scored = referent_core.add_multicountry_flags(scored)
     ref_countries_allowed = set(getattr(referent_core, "REF_COUNTRIES", ["China", "USA", "Russia"]))
-    evi_coarse_allowed = set(getattr(referent_core, "EVI_COARSE_ALLOWED", {-2, -1, 0, 1, 2}))
     scored = scored[scored["ref_country"].isin(ref_countries_allowed)].copy()
     # Backward compatibility with older referent modules / column schemas.
     if "EVI" not in scored.columns:
-        scored["EVI"] = 0
+        scored["EVI"] = 0.0
     if "EVI_raw" not in scored.columns:
-        scored["EVI_raw"] = pd.to_numeric(scored["EVI"], errors="coerce").fillna(0).astype(int) * 5
+        scored["EVI_raw"] = pd.to_numeric(scored["EVI"], errors="coerce").fillna(0.0)
     if "EVI_norm" not in scored.columns:
-        scored["EVI_norm"] = pd.to_numeric(scored["EVI_raw"], errors="coerce").fillna(0.0) / 5.0
+        scored["EVI_norm"] = pd.to_numeric(scored["EVI_raw"], errors="coerce").fillna(0.0) / 10.0
     if "IP" not in scored.columns:
         scored["IP"] = 0.0
     for col in ["IDI", "EMI", "MTI", "N_content", "referent_salience"]:
         if col not in scored.columns:
             scored[col] = 0.0 if col != "N_content" else 0
+    legacy_norm_mask = (
+        (pd.to_numeric(scored["EVI_norm"], errors="coerce").fillna(0.0) - (pd.to_numeric(scored["EVI_raw"], errors="coerce").fillna(0.0) / 5.0)).abs()
+        < 1e-9
+    ) & (
+        (pd.to_numeric(scored["EVI_norm"], errors="coerce").fillna(0.0) - (pd.to_numeric(scored["EVI_raw"], errors="coerce").fillna(0.0) / 10.0)).abs()
+        > 1e-9
+    )
+    if legacy_norm_mask.any():
+        scored["migration_warning"] = "Detected legacy EVI_norm. Recalculated using EVI_norm = EVI / 10."
+    else:
+        scored["migration_warning"] = ""
     scored.loc[(scored["N_content"] <= 0), ["IDI", "EMI", "MTI", "IP"]] = 0.0
-    scored.loc[(~scored["EVI"].isin(evi_coarse_allowed)), "EVI"] = 0
+    scored["EVI"] = pd.to_numeric(scored["EVI"], errors="coerce").fillna(0.0)
     scored.loc[(~scored["EVI_raw"].between(-10, 10)), ["EVI_raw", "EVI_norm", "IP"]] = [0, 0.0, 0.0]
     scored.loc[(scored["referent_salience"] == 0), "IP"] = 0.0
     scored.loc[(scored["EVI_raw"] == 0), "IP"] = 0.0
     for col in ["IDI", "EMI", "MTI"]:
         scored[col] = scored[col].clip(lower=0.0, upper=1.0)
-    scored["EVI_norm"] = scored["EVI_raw"] / 5.0
+    scored["EVI_norm"] = scored["EVI_raw"] / 10.0
     scored["Discursive_energy"] = scored["IDI"] + scored["EMI"] + scored["MTI"]
     if str(ip_formula_mode).startswith("legacy"):
         scored["IP_i"] = scored["EVI_norm"] * scored["Discursive_energy"]
@@ -600,6 +674,9 @@ def run_referent_analysis(
     scored["IDI_percent_value"] = scored["IDI_raw"] * 100.0
     scored["EMI_percent_value"] = scored["EMI_raw"] * 100.0
     scored["MTI_percent_value"] = scored["MTI_raw"] * 100.0
+    scored["IDI_percent"] = scored["IDI_percent_value"]
+    scored["EMI_percent"] = scored["EMI_percent_value"]
+    scored["MTI_percent"] = scored["MTI_percent_value"]
     scored["EVI_explanation"] = scored.get("evi_explanation", "")
     scored["lexicon_version_used"] = str(lexicon_version)
 
@@ -698,6 +775,24 @@ def run_referent_analysis(
     if "IP_abs_level_empirical" not in scored.columns and "IP_abs_empirical_level" in scored.columns:
         scored["IP_abs_level_empirical"] = scored["IP_abs_empirical_level"]
 
+    scored["percentile_explanation"] = scored.apply(
+        lambda r: (
+            f"IDI pctl={float(r.get('IDI_percentile', 0)):.1f}, "
+            f"EMI pctl={float(r.get('EMI_percentile', 0)):.1f}, "
+            f"MTI pctl={float(r.get('MTI_percentile', 0)):.1f}, "
+            f"IP_abs pctl={float(r.get('IP_abs_percentile', 0)):.1f}"
+        ),
+        axis=1,
+    )
+    scored["interpretation_summary"] = scored.apply(
+        lambda r: (
+            f"EVI={float(r.get('EVI_raw', 0)):.1f}, "
+            f"IP_i={float(r.get('IP_i', 0)):.6f}, "
+            f"S_r={float(r.get('referent_salience', 0)):.2f}"
+        ),
+        axis=1,
+    )
+
     # Round storage precision (do not visually collapse later)
     for c in ["IDI_raw", "EMI_raw", "MTI_raw", "IP_i", "IP_abs_i", "IP_context", "IP_context_abs", "EVI_norm", "Discursive_energy"]:
         scored[c] = pd.to_numeric(scored[c], errors="coerce").fillna(0.0).round(8)
@@ -791,6 +886,7 @@ def run_referent_analysis(
         matrix["mean_IP"] = matrix["IP_final"]
     if "IP_abs_final" in matrix.columns:
         matrix["mean_abs_IP"] = matrix["IP_abs_final"]
+    matrix["mean_EVI"] = matrix.get("mean_EVI_raw", 0.0)
     matrix["interpretation_summary"] = matrix.apply(
         lambda r: (
             f"IDI pctl={float(r.get('mean_IDI_percentile', 0.0)):.1f}; "
@@ -818,11 +914,25 @@ def run_referent_analysis(
 
     # Exports
     out_dir.mkdir(parents=True, exist_ok=True)
+    all_traces = []
+    trace_id_by_context: Dict[str, str] = {}
+    for _, row in scored.iterrows():
+        traces = build_context_formula_traces(row)
+        if traces:
+            trace_id_by_context[str(row.get("context_id", ""))] = traces[-1].trace_id
+            all_traces.extend(traces)
+    traces_df = traces_to_dataframe(all_traces)
+    if "context_id" in scored.columns:
+        scored["formula_trace_id"] = scored["context_id"].astype(str).map(trace_id_by_context).fillna("")
+
     scored.to_csv(out_dir / "contexts_full.csv", index=False)
     by_article.to_csv(out_dir / "aggregated_by_article.csv", index=False)
     by_outlet.to_csv(out_dir / "aggregated_by_outlet.csv", index=False)
     by_media_ref.to_csv(out_dir / "aggregated_by_media_country_and_ref_country.csv", index=False)
     flagged.to_csv(out_dir / "flagged_cases.csv", index=False)
+    if not traces_df.empty:
+        traces_df.to_json(out_dir / "formula_traces.json", orient="records", force_ascii=False, indent=2)
+        traces_df.to_excel(out_dir / "formula_traces.xlsx", index=False)
 
     dist_idi = _distribution_stats(scored, "IDI_raw", percentile_basis)
     dist_emi = _distribution_stats(scored, "EMI_raw", percentile_basis)
@@ -855,10 +965,48 @@ def run_referent_analysis(
     if not calibration_report.empty:
         calibration_report.to_excel(out_dir / "calibration_report.xlsx", index=False)
 
+    report_lines = [
+        "# analysis_report",
+        "",
+        "## Corpus overview",
+        f"- documents: {len(docs)}",
+        f"- contexts: {len(scored)}",
+        f"- technical_excluded: {int((scored['aggregation_weight'] == 0).sum()) if 'aggregation_weight' in scored.columns else 0}",
+        "",
+        "## Reference country overview",
+    ]
+    for ref in ["China", "USA", "Russia"]:
+        part = scored[scored["ref_country"] == ref]
+        if part.empty:
+            continue
+        report_lines.append(
+            f"- {ref}: contexts={len(part)}, mean_EVI={float(part['EVI_raw'].mean()):.2f}, mean_IP={float(part['IP_i'].mean()):.6f}"
+        )
+    report_lines.extend(
+        [
+            "",
+            "## Main formulas",
+            "- IDI = N_ideol / N_content",
+            "- EMI = (1/3*N_e_w + 2/3*N_e_m + N_e_s) / N_content",
+            "- MTI = N_met / N_content",
+            "- EVI = P_r - N_r",
+            "- EVI_norm = EVI / 10",
+            "- IP_i = EVI_norm × (1 + IDI + EMI + MTI)",
+            "- IP_final = Σ(S_i × IP_i) / ΣS_i",
+            "",
+        ]
+    )
+    if not traces_df.empty:
+        report_lines.append("## Formula examples")
+        for _, tr in traces_df.head(12).iterrows():
+            report_lines.append(f"- [{tr['context_id']}] {tr['formula_name']}: {tr['formula_substitution']}")
+    (out_dir / "analysis_report.md").write_text("\n".join(report_lines), encoding="utf-8")
+
     return {
         "docs": len(docs),
         "contexts": len(scored),
         "flagged": len(flagged),
+        "technical_excluded": int((scored["aggregation_weight"] == 0).sum()) if "aggregation_weight" in scored.columns else 0,
         "calibration_types": int(calibration_report["calibration_type"].nunique()) if not calibration_report.empty else 0,
     }
 
@@ -948,10 +1096,11 @@ def _sign_label(v: float) -> str:
 def _evi_mode_ru(mode: str) -> str:
     m = (mode or "").strip().lower()
     mapping = {
-        "fine": "Точный режим: оценка от -10 до +10 (самый детальный).",
-        "coarse": "Крупный режим: оценка только -2, -1, 0, +1, +2.",
+        "fine": "Точный режим: оценка от -10 до +10.",
         "suggested": "Автоподсказка: система предлагает оценку по правилам.",
         "manual": "Ручная разметка: оценка берется из вашего CSV.",
+        "calibration-assisted": "Калибровочный режим: оценка с опорой на калибровочный корпус.",
+        "coarse": "Legacy режим (скрыт): укрупненная оценка -2..+2.",
     }
     return mapping.get(m, m)
 
@@ -1121,9 +1270,11 @@ def show_referent_dashboard(
     if "negative_score" not in df_ref.columns:
         df_ref["negative_score"] = 0
     if "EVI_raw" not in df_ref.columns:
-        df_ref["EVI_raw"] = pd.to_numeric(df_ref["EVI"], errors="coerce").fillna(0).astype(int) * 5
+        df_ref["EVI_raw"] = pd.to_numeric(df_ref["EVI"], errors="coerce").fillna(0.0)
+    if "EVI" not in df_ref.columns:
+        df_ref["EVI"] = pd.to_numeric(df_ref["EVI_raw"], errors="coerce").fillna(0.0)
     if "EVI_norm" not in df_ref.columns:
-        df_ref["EVI_norm"] = pd.to_numeric(df_ref["EVI_raw"], errors="coerce").fillna(0.0) / 5.0
+        df_ref["EVI_norm"] = pd.to_numeric(df_ref["EVI_raw"], errors="coerce").fillna(0.0) / 10.0
 
     st.subheader(f"Анализ референта: {ref_country}")
     if "lexicon_version_used" in df_ref.columns:
@@ -1178,7 +1329,6 @@ def show_referent_dashboard(
     mti = float(n_met_sum / n_content_sum)
     evi_raw = float(metric_df["EVI_raw"].mean()) if "EVI_raw" in metric_df.columns and not metric_df.empty else 0.0
     evi_norm = float(metric_df["EVI_norm"].mean()) if "EVI_norm" in metric_df.columns and not metric_df.empty else 0.0
-    evi_coarse = int(_dominant_discrete_evi(metric_df["EVI"])) if "EVI" in metric_df.columns and not metric_df.empty else 0
     ip_formula = float(agg["IP_final"])
     ip_abs_formula = float(agg["IP_abs_final"])
     contexts_analyzed = int(agg["contexts_analyzed"])
@@ -1201,13 +1351,13 @@ def show_referent_dashboard(
         return "очень высокий"
 
     def evi_level(v: float) -> str:
-        if v <= -1.5:
+        if v <= -0.8:
             return "резко негативный"
-        if v < -0.5:
+        if v < -0.3:
             return "негативный"
-        if v < 0.5:
+        if v < 0.3:
             return "нейтральный"
-        if v < 1.5:
+        if v < 0.8:
             return "позитивный"
         return "резко позитивный"
 
@@ -1224,12 +1374,75 @@ def show_referent_dashboard(
     zero_evi_share = float((metric_df["EVI_raw"] == 0).mean()) if not metric_df.empty else 1.0
     zero_weight_share = float((df_ref["aggregation_weight"] == 0).mean()) if not df_ref.empty else 1.0
 
+    top1, top2, top3 = st.columns(3)
+    top1.metric("Контекстов найдено", int(len(df_ref)))
+    top2.metric("Технических исключено", int((df_ref["aggregation_weight"] == 0).sum()))
+    top3.metric("Средний EVI", f"{evi_raw:.2f}")
+    top4, top5, top6 = st.columns(3)
+    top4.metric("Средний IP", f"{ip_formula:.4f}")
+    top5.metric("Средний |IP|", f"{ip_abs_formula:.4f}")
+    top6.metric("Интерпретация образа", _sign_label(ip_formula))
+    top7, top8, top9 = st.columns(3)
+    top7.metric("IDI percentile", f"{float(metric_df['IDI_percentile'].mean()):.1f}" if "IDI_percentile" in metric_df.columns and not metric_df.empty else "н/д")
+    top8.metric("EMI percentile", f"{float(metric_df['EMI_percentile'].mean()):.1f}" if "EMI_percentile" in metric_df.columns and not metric_df.empty else "н/д")
+    top9.metric("MTI percentile", f"{float(metric_df['MTI_percentile'].mean()):.1f}" if "MTI_percentile" in metric_df.columns and not metric_df.empty else "н/д")
+    st.info(_interpret_ip(ip_formula, ip_abs_formula))
+    if idi < 0.01 and "IDI_percentile" in metric_df.columns and float(metric_df["IDI_percentile"].mean()) > 80:
+        st.warning("IDI raw маленький, но процентиль высокий: значение низкое в абсолюте, но выше большинства контекстов в базе.")
+    if emi < 0.01 and "EMI_percentile" in metric_df.columns and float(metric_df["EMI_percentile"].mean()) > 80:
+        st.warning("EMI raw маленький, но процентиль высокий: эмоциональная насыщенность выше эмпирической нормы.")
+    if abs(ip_formula) < 0.05 and ip_abs_formula > 0.2:
+        st.warning("Обнаружена поляризация: средний вектор близок к 0, но сила воздействия заметна.")
+
     st.markdown("### Индикаторы и доказательства")
     st.caption(
         f"Режим EVI: `{evi_mode}` — {_evi_mode_ru(evi_mode)} "
         f"Технические упоминания {'исключены' if exclude_technical_mentions else 'учтены'} в итоговых цифрах. "
         f"База процентилей: {_percentile_basis_internal_to_ru(percentile_basis)}."
     )
+    with st.expander("Методика простыми словами", expanded=False):
+        st.markdown(
+            "1. Анализируется не весь текст, а контексты вокруг конкретного референта (China/USA/Russia).\n"
+            "2. В одной статье могут быть разные оценки разных стран, поэтому контексты считаются отдельно.\n"
+            "3. `IDI` — идеологические рамки; `EMI` — эмоциональная насыщенность; `MTI` — метафоричность.\n"
+            "4. `EVI` — направление оценки от -10 до +10.\n"
+            "5. `IP` — итог воздействия: `IP_i = EVI_norm × (1 + IDI + EMI + MTI)`.\n"
+            "6. `S_r` — значимость упоминания; технические mention имеют вес 0.\n"
+            "7. Калибровочный корпус нужен для эмпирической интерпретации через процентили."
+        )
+    with st.expander("Как читать процентили?", expanded=False):
+        st.write(
+            "Процентиль показывает положение значения относительно калибровочного корпуса. "
+            "Например, 82-й процентиль означает, что результат выше или равен примерно 82% эталонных контекстов."
+        )
+        st.write(
+            "Raw value — математическое значение индекса; Percent value — то же значение в процентах; "
+            "Percentile — положение относительно корпуса; Empirical level — словесная интерпретация."
+        )
+        st.markdown(
+            "- 0–10: минимальный\n"
+            "- 11–20: очень низкий\n"
+            "- 21–35: низкий\n"
+            "- 36–50: пониженный\n"
+            "- 51–65: средний\n"
+            "- 66–80: повышенный\n"
+            "- 81–90: высокий\n"
+            "- 91–97: очень высокий\n"
+            "- 98–100: экстремальный"
+        )
+    with st.expander("Калибровочный корпус: зачем он нужен?", expanded=False):
+        st.write(
+            "Калибровочный корпус — это набор эталонных текстов разных типов. "
+            "Он помогает интерпретировать малые плотностные значения IDI/EMI/MTI относительно реальной медианормы."
+        )
+        st.write(
+            "Калибровка не заменяет формулы: формулы дают raw values, а калибровка показывает, "
+            "насколько эти значения высоки или низки эмпирически."
+        )
+    if not show_empirical_percentiles:
+        st.warning("Калибровочный корпус не загружен или отключен: показываются только raw значения без эмпирических уровней.")
+    if len(df_ref) < 50:
+        st.warning("В выборке менее 50 контекстов: процентили и уровни интерпретируйте предварительно.")
     tabs = st.tabs(
         [
             "1) IDI",
@@ -1310,22 +1523,23 @@ def show_referent_dashboard(
 
     with tabs[3]:
         st.markdown("**Оценочный вектор (EVI_r)**")
-        st.caption("EVI_raw от -10 до +10, нормирование: EVI_norm = EVI_raw / 5.")
+        st.caption("EVI от -10 до +10, нормирование: EVI_norm = EVI / 10.")
         col_a, col_b, col_c = st.columns(3)
-        col_a.metric("EVI_raw (среднее)", f"{evi_raw:.1f}")
+        col_a.metric("EVI (среднее)", f"{evi_raw:.1f}")
         col_b.metric("EVI_norm (среднее)", f"{evi_norm:.4f}")
-        col_c.metric("EVI coarse (справочно)", f"{evi_coarse}")
+        col_c.metric("EVI диапазон", "[-10; +10]")
         st.info(f"Интерпретация: {evi_level(evi_norm)} отношение к референту.")
         with st.expander("Формула и объяснение", expanded=False):
-            st.code("EVI_raw = P_r - N_r", language="text")
-            st.code("EVI_norm = EVI_raw / 5", language="text")
-            st.code(f"EVI_raw(mean) = {evi_raw:.3f}; EVI_norm(mean) = {evi_norm:.3f}", language="text")
+            st.code("EVI = P_r - N_r", language="text")
+            st.code("EVI_norm = EVI / 10", language="text")
+            st.code(f"EVI(mean) = {evi_raw:.3f}; EVI_norm(mean) = {evi_norm:.3f}", language="text")
+            st.info(_interpret_evi(evi_raw))
             st.write("`P_r` — позитивные сигналы, `N_r` — негативные сигналы относительно выбранного референта.")
         with st.expander("Подробнее: графики и доказательства", expanded=False):
             cc1, cc2 = st.columns(2)
             with cc1:
-                evi_dist = df_ref.groupby("EVI_raw", as_index=False).size().rename(columns={"size": "contexts"}).sort_values("EVI_raw")
-                st.plotly_chart(px.bar(evi_dist, x="EVI_raw", y="contexts", template="plotly_dark", title="Распределение EVI_raw"), use_container_width=True)
+                evi_dist = df_ref.groupby("EVI", as_index=False).size().rename(columns={"size": "contexts"}).sort_values("EVI")
+                st.plotly_chart(px.bar(evi_dist, x="EVI", y="contexts", template="plotly_dark", title="Распределение EVI"), use_container_width=True)
             with cc2:
                 score_df = df_ref[["positive_score", "negative_score"]].mean().reset_index()
                 score_df.columns = ["component", "mean_score"]
@@ -1337,7 +1551,7 @@ def show_referent_dashboard(
                     "matched_keywords",
                     "positive_score",
                     "negative_score",
-                    "EVI_raw",
+                    "EVI",
                     "EVI_norm",
                     "evi_explanation",
                     "positive_evidence_terms",
@@ -1387,7 +1601,7 @@ def show_referent_dashboard(
         if abs(ip_formula) < 1e-12:
             reasons = []
             if zero_evi_share > 0.8:
-                reasons.append("у большинства контекстов оценка EVI близка к нейтральной (EVI_raw = 0)")
+                reasons.append("у большинства контекстов оценка EVI близка к нейтральной (EVI = 0)")
             if zero_weight_share > 0.8:
                 reasons.append("большая доля контекстов исключена весом S_r (технические/фоновые упоминания)")
             if contexts_analyzed == 0:
@@ -1407,6 +1621,12 @@ def show_referent_dashboard(
         with st.expander("Формула и объяснение", expanded=False):
             st.code("IP_i = EVI_norm_i × (1 + IDI_i + EMI_i + MTI_i)", language="text")
             st.code("IP_final = Σ(S_i × IP_i) / ΣS_i", language="text")
+            if not metric_df.empty and "aggregation_weight" in metric_df.columns and "IP_i" in metric_df.columns:
+                w_sum = float(metric_df["aggregation_weight"].sum())
+                num = float((metric_df["aggregation_weight"] * metric_df["IP_i"]).sum())
+                num_abs = float((metric_df["aggregation_weight"] * metric_df["IP_abs_i"]).sum()) if "IP_abs_i" in metric_df.columns else 0.0
+                st.code(f"IP_final = {num:.6f} / {w_sum:.6f} = {ip_formula:.6f}", language="text")
+                st.code(f"IP_abs_final = {num_abs:.6f} / {w_sum:.6f} = {ip_abs_formula:.6f}", language="text")
             st.write(
                 "`S_i` — вес значимости контекста для образа страны. "
                 "Технические упоминания (например, просто локация в подписи) дают нулевой вес и не искажают итог."
@@ -1452,7 +1672,7 @@ def show_referent_dashboard(
                         "IDI": r["IDI"],
                         "EMI": r["EMI"],
                         "MTI": r["MTI"],
-                        "EVI_raw": r.get("EVI_raw", 0),
+                        "EVI": r.get("EVI", r.get("EVI_raw", 0)),
                         "EVI_norm": r.get("EVI_norm", 0),
                         "S_r": r.get("referent_salience", 1),
                         "IP_context": r.get("IP_context", 0),
@@ -1469,7 +1689,7 @@ def show_referent_dashboard(
                     IDI=("IDI", "mean"),
                     EMI=("EMI", "mean"),
                     MTI=("MTI", "mean"),
-                    EVI_raw=("EVI_raw", "mean"),
+                    EVI=("EVI", "mean"),
                     EVI_norm=("EVI_norm", "mean"),
                     S_r=("S_r", "mean"),
                     IP_context=("IP_context", "mean"),
@@ -1486,7 +1706,7 @@ def show_referent_dashboard(
             st.code("IDI = N_ideol / N_content", language="text")
             st.code("EMI = (1/3*N_e_w + 2/3*N_e_m + N_e_s) / N_content", language="text")
             st.code("MTI = N_met / N_content", language="text")
-            st.code("EVI_raw = P_r - N_r;  EVI_norm = EVI_raw / 5", language="text")
+            st.code("EVI = P_r - N_r;  EVI_norm = EVI / 10", language="text")
             st.code("IP_i = EVI_norm_i × (1 + IDI_i + EMI_i + MTI_i)", language="text")
             st.code("IP_final = Σ(S_i × IP_i) / ΣS_i", language="text")
             st.write("Плюс IP = позитивный образ, минус IP = негативный образ, модуль IP = сила воздействия.")
@@ -1530,7 +1750,7 @@ def show_referent_dashboard(
                 "salience_label",
                 "positive_score",
                 "negative_score",
-                "EVI_raw",
+                "EVI",
                 "EVI_norm",
                 "discursive_energy",
                 "IP_context",
@@ -1550,12 +1770,34 @@ def show_referent_dashboard(
             terms = [t for t in sorted(set(terms)) if t]
             st.caption(
                 f"{r.get('context_id','')} | ref={r.get('ref_country','')} | "
-                f"S_r={r.get('referent_salience','')} | EVI_raw={r.get('EVI_raw','')} | IP_i={r.get('IP_context','')}"
+                f"S_r={r.get('referent_salience','')} | EVI={r.get('EVI', r.get('EVI_raw',''))} | IP_i={r.get('IP_context','')}"
             )
             st.markdown(
                 f"<div style='padding:10px;border:1px solid #334155;border-radius:8px;line-height:1.6'>{_highlight_terms_html(str(r.get('context_text','')), terms)}</div>",
                 unsafe_allow_html=True,
             )
+
+        with st.expander("Показать расчет формул по реальным контекстам", expanded=False):
+            trace_rows = []
+            for _, rr in df_ref.head(8).iterrows():
+                for tr in build_context_formula_traces(rr):
+                    trace_rows.append(tr.to_dict())
+            if trace_rows:
+                trace_df = pd.DataFrame(trace_rows)
+                st.dataframe(
+                    trace_df[
+                        [
+                            "context_id",
+                            "formula_name",
+                            "formula_symbolic",
+                            "formula_substitution",
+                            "result_raw",
+                            "result_percent",
+                            "interpretation_short",
+                        ]
+                    ],
+                    use_container_width=True,
+                )
 
 
 def zip_dir_bytes(dir_path: Path) -> bytes:
@@ -2136,17 +2378,16 @@ def main() -> None:
 
         if analysis_mode == "Референтный (China/USA/Russia)":
             evi_mode_labels = {
-                "fine": "fine — точная шкала (-10..+10)",
-                "coarse": "coarse — укрупненная шкала (-2..+2)",
-                "suggested": "suggested — автоподсказка",
+                "suggested": "suggested — автоподсказка (-10..+10)",
                 "manual": "manual — из вашего CSV",
+                "calibration-assisted": "calibration-assisted — с опорой на calibration corpus",
             }
             referent_evi_mode = st.selectbox(
                 "EVI режим (референтный анализ)",
-                options=["fine", "coarse", "suggested", "manual"],
+                options=["suggested", "manual", "calibration-assisted"],
                 index=0,
                 format_func=lambda v: evi_mode_labels.get(v, v),
-                help="fine: EVI_raw -10..10; coarse: legacy -2..2 с маппингом; suggested: авто-rubric; manual: из evi_manual.csv",
+                help="Основная шкала EVI: от -10 до +10. Coarse оставлен только как legacy в коде.",
             )
             referent_target = st.selectbox(
                 "Целевой референт (витрина)",
@@ -2266,7 +2507,7 @@ def main() -> None:
         rc1, rc2, rc3 = st.columns(3)
         with rc1:
             referent_evi_manual_upload = st.file_uploader(
-                "evi_manual.csv (manual: context_id, ref_country, EVI_raw, referent_salience, evi_explanation)",
+                "evi_manual.csv (manual: context_id, ref_country, EVI, referent_salience, evi_explanation)",
                 type=["csv"],
                 accept_multiple_files=False,
                 key="evi_manual_csv",
@@ -2311,9 +2552,28 @@ def main() -> None:
 
     if run_btn or cal_action_requested:
         prog_box = st.empty()
-        prog_bar = st.progress(0, text="Подготовка анализа: 0%")
+        prog_bar = st.progress(0, text="Инициализация анализа...")
         prog_box.markdown("**Статус анализа корпуса:** 0%")
+
+        progress_state = {"docs": 0, "contexts": 0, "technical": 0, "ref": "all"}
+
+        def set_stage(stage_key: str, **kwargs) -> None:
+            if stage_key not in PROGRESS_STAGES:
+                return
+            progress_state.update(kwargs)
+            pct, text = PROGRESS_STAGES[stage_key]
+            details = (
+                f"Документы: {int(progress_state.get('docs', 0))} | "
+                f"Контексты: {int(progress_state.get('contexts', 0))} | "
+                f"Technical excluded: {int(progress_state.get('technical', 0))} | "
+                f"Ref: {progress_state.get('ref', 'all')}"
+            )
+            prog_bar.progress(int(pct), text=text)
+            prog_box.markdown(f"**Статус анализа корпуса:** {pct}%  \n{text}  \n{details}")
+
+        set_stage("init")
         file_items = []
+        set_stage("load")
         if zip_upload is not None:
             file_items.extend(read_zip_corpus_files(zip_upload.getvalue()))
         file_items.extend(read_uploaded_corpus_files(txt_uploads))
@@ -2328,8 +2588,7 @@ def main() -> None:
             fingerprint = f"{n}|{len(t)}|{content_md5}"
             uniq[fingerprint] = (n, t)
         file_items = list(uniq.values())
-        prog_bar.progress(20, text="Файлы загружены и подготовлены: 20%")
-        prog_box.markdown("**Статус анализа корпуса:** 20%")
+        set_stage("clean", docs=len(file_items))
 
         if run_btn and not file_items:
             st.error("Не найдено входных текстов. Загрузите ZIP/файлы или вставьте текст вручную.")
@@ -2338,8 +2597,7 @@ def main() -> None:
         with tempfile.TemporaryDirectory(prefix="sea_media_analysis_") as tmp:
             out_dir = Path(tmp) / "analysis_output"
             out_dir.mkdir(parents=True, exist_ok=True)
-            prog_bar.progress(35, text="Предобработка корпуса: 35%")
-            prog_box.markdown("**Статус анализа корпуса:** 35%")
+            set_stage("segment", docs=len(file_items))
 
             calibration_texts_df = pd.DataFrame()
             calibration_contexts_df = pd.DataFrame()
@@ -2441,6 +2699,7 @@ def main() -> None:
                 if input_df.empty:
                     st.error("После фильтрации по годам не осталось документов для референтного анализа.")
                     return
+                set_stage("find_refs", docs=len(input_df))
                 evi_manual_path = None
                 metaphor_review_path = None
                 if referent_evi_manual_upload is not None:
@@ -2456,12 +2715,19 @@ def main() -> None:
                 elif DEFAULT_CALIBRATION_TEXTS_PATH.exists():
                     calibration_path = DEFAULT_CALIBRATION_TEXTS_PATH
                 try:
-                    prog_bar.progress(55, text="Референтный анализ выполняется: 55%")
-                    prog_box.markdown("**Статус анализа корпуса:** 55%")
+                    set_stage("extract_ctx", docs=len(input_df), ref=referent_target)
+                    evi_mode_for_core = "suggested" if referent_evi_mode == "calibration-assisted" else referent_evi_mode
+                    set_stage("salience", docs=len(input_df), ref=referent_target)
+                    set_stage("ling", docs=len(input_df), ref=referent_target)
+                    set_stage("idi", docs=len(input_df), ref=referent_target)
+                    set_stage("emi", docs=len(input_df), ref=referent_target)
+                    set_stage("mti", docs=len(input_df), ref=referent_target)
+                    set_stage("evi", docs=len(input_df), ref=referent_target)
+                    set_stage("ip", docs=len(input_df), ref=referent_target)
                     stats = run_referent_analysis(
                         input_df=input_df,
                         out_dir=out_dir,
-                        evi_mode=referent_evi_mode,
+                        evi_mode=evi_mode_for_core,
                         exclude_technical_mentions=exclude_technical_mentions,
                         evi_manual_path=evi_manual_path,
                         metaphor_review_path=metaphor_review_path,
@@ -2480,8 +2746,8 @@ def main() -> None:
                     return
 
                 st.success(f"Готово. Документов: {stats['docs']}, контекстов: {stats['contexts']}, flagged: {stats['flagged']}")
-                prog_bar.progress(85, text="Формирование визуализаций: 85%")
-                prog_box.markdown("**Статус анализа корпуса:** 85%")
+                set_stage("calib", docs=stats["docs"], contexts=stats["contexts"], technical=stats.get("technical_excluded", 0), ref=referent_target)
+                set_stage("agg", docs=stats["docs"], contexts=stats["contexts"], technical=stats.get("technical_excluded", 0), ref=referent_target)
                 show_referent_dashboard(
                     out_dir=out_dir,
                     default_ref=referent_target,
@@ -2523,8 +2789,12 @@ def main() -> None:
                     return
 
                 try:
-                    prog_bar.progress(55, text="Корпусный анализ выполняется: 55%")
-                    prog_box.markdown("**Статус анализа корпуса:** 55%")
+                    set_stage("ling", docs=len(docs))
+                    set_stage("idi", docs=len(docs))
+                    set_stage("emi", docs=len(docs))
+                    set_stage("mti", docs=len(docs))
+                    set_stage("evi", docs=len(docs))
+                    set_stage("ip", docs=len(docs))
                     dedup_stats, analyzed_docs, analyzed_doc_objs = run_analysis(
                         docs=docs,
                         out_dir=out_dir,
@@ -2543,8 +2813,7 @@ def main() -> None:
                     return
 
                 st.success(f"Готово. Проанализировано документов: {analyzed_docs}")
-                prog_bar.progress(85, text="Формирование визуализаций: 85%")
-                prog_box.markdown("**Статус анализа корпуса:** 85%")
+                set_stage("agg", docs=analyzed_docs)
                 if analysis_mode == "Расширенный (корпусный)":
                     st.json(dedup_stats)
 
@@ -2575,16 +2844,14 @@ def main() -> None:
 
             else:
                 # calibration-only workflow
-                prog_bar.progress(100, text="Калибровка завершена: 100%")
-                prog_box.markdown("**Статус калибровки:** 100%")
+                set_stage("final")
                 st.success("Калибровочный корпус обновлён.")
                 if render_calibration_panel is not None:
                     render_calibration_panel(calibration_dir, ROOT_DIR / "lexicons")
 
             if run_btn:
                 out_zip = zip_dir_bytes(out_dir)
-                prog_bar.progress(100, text="Анализ завершён: 100%")
-                prog_box.markdown("**Статус анализа корпуса:** 100%")
+                set_stage("final")
                 st.download_button(
                     label="Скачать результаты анализа (ZIP)",
                     data=out_zip,

@@ -23,7 +23,7 @@ import pandas as pd
 
 REQUIRED_FIELDS = ["doc_id", "media_country", "outlet_name", "date", "title", "text"]
 REF_COUNTRIES = ["China", "USA", "Russia"]
-EVI_COARSE_ALLOWED = {-2, -1, 0, 1, 2}
+EVI_COARSE_ALLOWED = {-2, -1, 0, 1, 2}  # legacy
 SALIENCE_ALLOWED = {0.0, 0.25, 0.5, 1.0}
 
 TOKEN_RE = re.compile(r"[A-Za-zА-Яа-яЁёІіЇїЄє'\-]+")
@@ -770,7 +770,7 @@ def calc_evi_rubric(
     positive_score = int(clamp(p1 + p2 + p3 + p4 + p5, 0, 10))
     negative_score = int(clamp(n1 + n2 + n3 + n4 + n5, 0, 10))
     evi_raw = int(clamp(positive_score - negative_score, -10, 10))
-    evi_norm = float(evi_raw / 5.0)
+    evi_norm = float(evi_raw / 10.0)
 
     pos_terms = sorted(set(p1_terms + p2_terms + p3_terms + p4_terms))
     neg_terms = sorted(set(n1_terms + n2_terms + n3_terms + n4_terms))
@@ -788,7 +788,7 @@ def calc_evi_rubric(
     else:
         pol = "neutral"
     evi_expl = (
-        f"{ref_country} receives a {pol} score: P={positive_score}, N={negative_score}, EVI_raw={evi_raw}. "
+        f"{ref_country} receives a {pol} score: P={positive_score}, N={negative_score}, EVI={evi_raw}. "
         "Score is derived from lexical, action, consequence, ideological and prominence criteria."
     )
     return {
@@ -964,7 +964,7 @@ def apply_metrics(
                     rubric_neg_frame=rubric_neg_frame,
                 )
                 rubric["evi_raw"] = int(manual_evi[key]["evi_raw"])
-                rubric["evi_norm"] = float(rubric["evi_raw"] / 5.0)
+                rubric["evi_norm"] = float(rubric["evi_raw"] / 10.0)
                 rubric["evi_explanation"] = manual_evi[key]["evi_explanation"]
                 manual_sal = manual_evi[key]["salience"]
             else:
@@ -1009,8 +1009,8 @@ def apply_metrics(
                 rubric_neg_frame=rubric_neg_frame,
             )
             rubric["evi_raw"] = int(COARSE_TO_RAW.get(coarse_evi, 0))
-            rubric["evi_norm"] = float(rubric["evi_raw"] / 5.0)
-            rubric["evi_explanation"] = f"Coarse mode: {coarse_expl}; mapped to EVI_raw={rubric['evi_raw']}"
+            rubric["evi_norm"] = float(rubric["evi_raw"] / 10.0)
+            rubric["evi_explanation"] = f"Coarse mode (legacy): {coarse_expl}; mapped to EVI={rubric['evi_raw']}"
             manual_sal = None
         else:
             rubric = calc_evi_rubric(
@@ -1047,8 +1047,8 @@ def apply_metrics(
             technical_reason = "Manual salience annotation." if is_technical else ""
 
         evi_raw = int(clamp(int(rubric["evi_raw"]), -10, 10))
-        evi_norm = float(evi_raw / 5.0)
-        evi = int(coarse_from_raw(evi_raw))
+        evi_norm = float(evi_raw / 10.0)
+        evi = float(evi_raw)
         discursive_energy = float(idi + emi + mti)
         ip_context = float(evi_norm * (1.0 + discursive_energy))
         if evi_norm == 0.0:
@@ -1081,7 +1081,7 @@ def apply_metrics(
                 "IDI": round(idi, 6),
                 "EMI": round(emi, 6),
                 "MTI": round(mti, 6),
-                "EVI": int(evi),
+                "EVI": float(evi),
                 "EVI_raw": int(evi_raw),
                 "EVI_norm": round(evi_norm, 6),
                 "positive_score": int(rubric["positive_score"]),
@@ -1139,7 +1139,7 @@ def dominant_evi(series: pd.Series) -> int:
             iv = int(round(float(v)))
         except Exception:
             continue
-        if iv in EVI_COARSE_ALLOWED:
+        if -10 <= iv <= 10:
             vals.append(iv)
     if not vals:
         return 0
@@ -1385,7 +1385,7 @@ def build_flagged_cases(df: pd.DataFrame) -> pd.DataFrame:
             reasons.add("ip_out_of_expected_range")
         if not (-10 <= int(r.get("EVI_raw", 0)) <= 10):
             reasons.add("invalid_evi_raw")
-        if abs(float(r.get("EVI_norm", 0)) - float(int(r.get("EVI_raw", 0)) / 5.0)) > 1e-9:
+        if abs(float(r.get("EVI_norm", 0)) - float(int(r.get("EVI_raw", 0)) / 10.0)) > 1e-9:
             reasons.add("invalid_evi_norm")
         sal = float(r.get("referent_salience", -1))
         if not (0.0 <= sal <= 1.0):
@@ -1437,7 +1437,7 @@ def parse_args() -> argparse.Namespace:
         "--evi-mode",
         default="fine",
         choices=["coarse", "fine", "suggested", "manual"],
-        help="coarse: legacy -2..2; fine/suggested: rubric EVI_raw -10..10; manual: from evi_manual.csv",
+        help="fine/suggested/manual use EVI scale -10..10; coarse is legacy fallback.",
     )
     p.add_argument(
         "--evi-manual",
@@ -1482,7 +1482,7 @@ def main() -> None:
 
     # Mandatory QA constraints
     scored.loc[(scored["N_content"] <= 0), ["IDI", "EMI", "MTI", "IP"]] = 0.0
-    scored.loc[(~scored["EVI"].isin(EVI_COARSE_ALLOWED)), "EVI"] = 0
+    scored.loc[(~scored["EVI_raw"].between(-10, 10)), "EVI"] = 0
     scored.loc[(~scored["EVI_raw"].between(-10, 10)), ["EVI_raw", "EVI_norm", "IP"]] = [0, 0.0, 0.0]
     scored.loc[(~scored["referent_salience"].between(0.0, 1.0)), ["referent_salience", "IP"]] = [0.0, 0.0]
     scored.loc[(scored["referent_salience"] == 0), "is_technical_mention"] = True
@@ -1490,7 +1490,7 @@ def main() -> None:
     scored.loc[(scored["EVI_raw"] == 0), "IP"] = 0.0
     for c in ["IDI", "EMI", "MTI"]:
         scored[c] = scored[c].clip(lower=0.0, upper=1.0)
-    scored["EVI_norm"] = scored["EVI_raw"] / 5.0
+    scored["EVI_norm"] = scored["EVI_raw"] / 10.0
     scored = compute_context_ip(scored)
     scored["IP"] = scored["IP_context"]
 
