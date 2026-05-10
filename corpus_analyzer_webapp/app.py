@@ -20,7 +20,10 @@ import plotly.graph_objects as go
 import streamlit as st
 from docx import Document
 from pypdf import PdfReader
-from corpus_analyzer_webapp.formula_traces import build_context_formula_traces, traces_to_dataframe
+try:
+    from corpus_analyzer_webapp.formula_traces import build_context_formula_traces, traces_to_dataframe
+except Exception:
+    from formula_traces import build_context_formula_traces, traces_to_dataframe
 
 # Reuse your strict analyzer core
 ROOT_DIR = Path(__file__).resolve().parents[1]
