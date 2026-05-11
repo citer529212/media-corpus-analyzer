@@ -1811,26 +1811,68 @@ def show_referent_dashboard(
         if not r.empty:
             rr = r.iloc[0]
             st.caption(str(rr.get("context_text", ""))[:1500])
+            mtp = out_dir / "marker_traces.csv"
+            ctx_traces = pd.DataFrame()
+            if mtp.exists():
+                try:
+                    ctx_traces = pd.read_csv(mtp).fillna("")
+                    ctx_traces = ctx_traces[ctx_traces["context_id"].astype(str) == str(pick_ctx)]
+                except Exception:
+                    ctx_traces = pd.DataFrame()
+
+            def _clean_text_value(v: object) -> str:
+                if v is None:
+                    return ""
+                sv = str(v).strip()
+                if sv == "" or sv.casefold() in {"nan", "none", "null"}:
+                    return ""
+                return sv
+
+            def _terms_from_traces(indicator: str) -> str:
+                if ctx_traces.empty or "indicator" not in ctx_traces.columns:
+                    return ""
+                sub = ctx_traces[ctx_traces["indicator"].astype(str).str.casefold() == indicator.casefold()]
+                if sub.empty:
+                    return ""
+                terms = []
+                if "term_found" in sub.columns:
+                    terms = [str(x).strip() for x in sub["term_found"].tolist() if str(x).strip()]
+                terms = sorted(set(terms))
+                return ", ".join(terms)
+
+            idi_txt = _clean_text_value(rr.get("found_ideol_markers", ""))
+            emi_txt = _clean_text_value(rr.get("found_emotional_markers", ""))
+            mti_txt = _clean_text_value(rr.get("found_metaphor_markers", ""))
+            if not idi_txt:
+                idi_txt = _terms_from_traces("IDI")
+            if not emi_txt:
+                emi_txt = _terms_from_traces("EMI")
+            if not mti_txt:
+                mti_txt = _terms_from_traces("MTI")
+
             with st.expander("Найденные IDI-маркеры", expanded=False):
-                st.write(str(rr.get("found_ideol_markers", "")) or "—")
+                st.write(idi_txt or "Маркеры не найдены в этом контексте.")
             with st.expander("Найденные EMI-маркеры", expanded=False):
-                st.write(str(rr.get("found_emotional_markers", "")) or "—")
+                st.write(emi_txt or "Маркеры не найдены в этом контексте.")
             with st.expander("Найденные MTI-маркеры", expanded=False):
-                st.write(str(rr.get("found_metaphor_markers", "")) or "—")
+                st.write(mti_txt or "Маркеры не найдены в этом контексте.")
             with st.expander("Обоснование EVI", expanded=False):
-                st.write(str(rr.get("evi_explanation", "")) or "—")
-                st.write(f"Positive terms: {rr.get('positive_evidence_terms', '')}")
-                st.write(f"Negative terms: {rr.get('negative_evidence_terms', '')}")
-                st.write(f"EVI evidence JSON: {rr.get('evi_evidence', '{}')}")
+                evi_expl = _clean_text_value(rr.get("evi_explanation", ""))
+                pos_terms = _clean_text_value(rr.get("positive_evidence_terms", ""))
+                neg_terms = _clean_text_value(rr.get("negative_evidence_terms", ""))
+                evi_ev = _clean_text_value(rr.get("evi_evidence", "{}")) or "{}"
+                st.write(evi_expl or "Явной оценочной аргументации в этом контексте не обнаружено.")
+                st.write(f"Positive terms: {pos_terms or '—'}")
+                st.write(f"Negative terms: {neg_terms or '—'}")
+                st.write(f"EVI evidence JSON: {evi_ev}")
             with st.expander("Обоснование S_r", expanded=False):
-                st.write(f"S_r = {rr.get('referent_salience', 0)}; label = {rr.get('salience_label', '')}")
-                st.write(str(rr.get("salience_explanation", "")) or str(rr.get("technical_mention_reason", "")) or "—")
+                s_label = _clean_text_value(rr.get("salience_label", ""))
+                s_exp = _clean_text_value(rr.get("salience_explanation", "")) or _clean_text_value(rr.get("technical_mention_reason", ""))
+                st.write(f"S_r = {rr.get('referent_salience', 0)}; label = {s_label or '—'}")
+                st.write(s_exp or "Подробное обоснование значимости не указано.")
             with st.expander("Все marker traces (этот context_id)", expanded=False):
-                mtp = out_dir / "marker_traces.csv"
-                if mtp.exists():
-                    mdf = pd.read_csv(mtp).fillna("")
-                    mdf = mdf[mdf["context_id"].astype(str) == str(pick_ctx)]
-                    st.dataframe(mdf, use_container_width=True)
+                if not ctx_traces.empty:
+                    st.dataframe(ctx_traces, use_container_width=True)
                 else:
                     st.caption("Файл marker_traces.csv не найден.")
 
