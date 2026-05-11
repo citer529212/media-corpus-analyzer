@@ -1,0 +1,5 @@
+frame_name,frame_type,polarity,keywords,examples,verified
+legitimate_partner,legitimation,positive,"legitimate partner;responsible actor",China as a legitimate partner,true
+aggressor_state,delegitimation,negative,"aggressor;violator of international law",Russia as aggressor,true
+defender_of_sovereignty,legitimation,positive,"defends sovereignty;national interests",USA defends sovereignty,true
+hegemonic_force,delegitimation,negative,"hegemony;coercion;pressure",hegemonic behavior,true

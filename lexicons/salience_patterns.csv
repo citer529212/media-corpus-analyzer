@@ -1,0 +1,4 @@
+pattern,pattern_type,salience_value,examples,verified
+"\\b(China|USA|Russia)\\b.*\\b(supports|threatens|violates|defends)\\b",central_actor,1.0,USA threatens sovereignty,true
+"\\b(China|USA|Russia)\\b.*\\b(meeting|discussed|agreed)\\b",secondary_actor,0.5,China discussed trade,true
+"\\b(China|USA|Russia)\\b",background,0.25,Russia was mentioned,true

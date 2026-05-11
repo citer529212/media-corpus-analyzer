@@ -681,13 +681,19 @@ def run_referent_analysis(
     if contexts.empty:
         raise RuntimeError("Не удалось извлечь референтные контексты (China/USA/Russia).")
 
-    scored = referent_core.apply_metrics(
+    scored_payload = referent_core.apply_metrics(
         contexts=contexts,
         dict_dir=dict_dir,
         evi_mode=evi_mode,
         evi_manual_path=evi_manual_path,
         metaphor_review_path=metaphor_review_path,
+        return_traces=True,
     )
+    if isinstance(scored_payload, tuple):
+        scored, marker_traces = scored_payload
+    else:
+        scored = scored_payload
+        marker_traces = pd.DataFrame()
     scored = referent_core.add_multicountry_flags(scored)
     ref_countries_allowed = set(getattr(referent_core, "REF_COUNTRIES", ["China", "USA", "Russia"]))
     scored = scored[scored["ref_country"].isin(ref_countries_allowed)].copy()
@@ -757,6 +763,8 @@ def run_referent_analysis(
     scored["MTI_percent"] = scored["MTI_percent_value"]
     scored["EVI_explanation"] = scored.get("evi_explanation", "")
     scored["lexicon_version_used"] = str(lexicon_version)
+    scored["EVI_P_score"] = pd.to_numeric(scored.get("positive_score", 0), errors="coerce").fillna(0)
+    scored["EVI_N_score"] = pd.to_numeric(scored.get("negative_score", 0), errors="coerce").fillna(0)
 
     # Aggregation weights
     if str(aggregation_mode).startswith("weighted"):
@@ -1008,6 +1016,60 @@ def run_referent_analysis(
     by_outlet.to_csv(out_dir / "aggregated_by_outlet.csv", index=False)
     by_media_ref.to_csv(out_dir / "aggregated_by_media_country_and_ref_country.csv", index=False)
     flagged.to_csv(out_dir / "flagged_cases.csv", index=False)
+    if marker_traces is None or marker_traces.empty:
+        marker_traces = pd.DataFrame(
+            columns=[
+                "marker_id", "context_id", "ref_country", "indicator", "term_found", "lemma", "dictionary_source",
+                "category", "semantic_zone_or_model", "intensity_or_strength", "matched_span", "context_text",
+                "is_context_dependent", "verification_status", "inclusion_reason", "exclusion_reason",
+            ]
+        )
+    marker_traces.to_csv(out_dir / "marker_traces.csv", index=False)
+    marker_traces.to_json(out_dir / "marker_traces.json", orient="records", force_ascii=False, indent=2)
+    marker_traces.to_excel(out_dir / "marker_traces.xlsx", index=False)
+
+    # QA: each counted marker should have at least one trace per context.
+    if not scored.empty:
+        counted = (
+            pd.to_numeric(scored.get("N_ideol", 0), errors="coerce").fillna(0)
+            + pd.to_numeric(scored.get("N_e_w", 0), errors="coerce").fillna(0)
+            + pd.to_numeric(scored.get("N_e_m", 0), errors="coerce").fillna(0)
+            + pd.to_numeric(scored.get("N_e_s", 0), errors="coerce").fillna(0)
+            + pd.to_numeric(scored.get("N_met", 0), errors="coerce").fillna(0)
+        )
+        if not marker_traces.empty:
+            trace_counts = marker_traces.groupby("context_id").size().to_dict()
+        else:
+            trace_counts = {}
+        missing_trace_mask = []
+        for i, ctx_id in enumerate(scored["context_id"].astype(str).tolist()):
+            c = float(counted.iloc[i]) if i < len(counted) else 0.0
+            t = int(trace_counts.get(ctx_id, 0))
+            missing_trace_mask.append(c > 0 and t == 0)
+        if any(missing_trace_mask):
+            bad = scored[pd.Series(missing_trace_mask, index=scored.index)].copy()
+            bad["flag_case_type"] = "missing_marker_trace_for_counted_marker"
+            flagged = pd.concat([flagged, bad], ignore_index=True)
+
+    # Lexicon quality and workflow traces.
+    if hasattr(referent_core, "validate_lexicons"):
+        qdf, qmd = referent_core.validate_lexicons(dict_dir)
+        qdf.to_csv(out_dir / "lexicon_quality_report.csv", index=False)
+        (out_dir / "lexicon_quality_report.md").write_text(qmd, encoding="utf-8")
+        chg = dict_dir / "dictionary_change_log.csv"
+        if chg.exists():
+            try:
+                pd.read_csv(chg).to_csv(out_dir / "dictionary_change_log.csv", index=False)
+            except Exception:
+                (out_dir / "dictionary_change_log.csv").write_text(chg.read_text(encoding="utf-8"), encoding="utf-8")
+        else:
+            pd.DataFrame(columns=["timestamp", "action", "term", "lemma", "dictionary", "category", "status", "details"]).to_csv(
+                out_dir / "dictionary_change_log.csv", index=False
+            )
+    else:
+        qdf = pd.DataFrame()
+        qdf.to_csv(out_dir / "lexicon_quality_report.csv", index=False)
+        (out_dir / "lexicon_quality_report.md").write_text("# lexicon_quality_report\n\n- unavailable in current core\n", encoding="utf-8")
     if not traces_df.empty:
         traces_df.to_json(out_dir / "formula_traces.json", orient="records", force_ascii=False, indent=2)
         traces_df.to_excel(out_dir / "formula_traces.xlsx", index=False)
@@ -1037,6 +1099,9 @@ def run_referent_analysis(
         by_media_ref.to_excel(xw, index=False, sheet_name="long_table")
         scored.to_excel(xw, index=False, sheet_name="contexts_full")
         flagged.to_excel(xw, index=False, sheet_name="flagged_cases")
+        marker_traces.to_excel(xw, index=False, sheet_name="marker_traces")
+        if 'qdf' in locals() and not qdf.empty:
+            qdf.to_excel(xw, index=False, sheet_name="lexicon_quality")
         if not calibration_report.empty:
             calibration_report.to_excel(xw, index=False, sheet_name="calibration_report")
 
@@ -1071,6 +1136,11 @@ def run_referent_analysis(
             "- EVI_norm = EVI / 10",
             "- IP_i = EVI_norm × (1 + IDI + EMI + MTI)",
             "- IP_final = Σ(S_i × IP_i) / ΣS_i",
+            "",
+            "## Marker basis and lexicon methodology",
+            "- NLP libraries are used only for technical preprocessing (sentence split, tokenization, normalization).",
+            "- Scientific marker classification is defined by lexicons and rubric rules.",
+            "- Marker traces are exported to marker_traces.csv/json/xlsx for verification.",
             "",
         ]
     )
@@ -1117,6 +1187,63 @@ def _build_referent_view_df(contexts_df: pd.DataFrame) -> pd.DataFrame:
         axis=1,
     )
     return df
+
+
+def _safe_read_table(path: Path) -> pd.DataFrame:
+    if not path.exists():
+        return pd.DataFrame()
+    try:
+        if path.suffix.lower() == ".csv":
+            return pd.read_csv(path).fillna("")
+        if path.suffix.lower() in {".xlsx", ".xls"}:
+            return pd.read_excel(path).fillna("")
+    except Exception:
+        return pd.DataFrame()
+    return pd.DataFrame()
+
+
+def _render_marker_base_panel(dict_dir: Path) -> None:
+    st.markdown("### Маркерная база")
+    st.caption("NLP-библиотеки используются только для технической обработки текста. Научная классификация маркеров задается словарями, рубрикаторами и контекстными правилами.")
+    tabs = st.tabs(
+        [
+            "1. Что такое маркер?",
+            "2. Словари или библиотеки?",
+            "3. IDI markers",
+            "4. EMI markers",
+            "5. MTI markers",
+            "6. EVI rubric",
+            "7. S_r patterns",
+            "8. Candidate terms",
+            "9. Verified terms",
+            "10. Change log",
+        ]
+    )
+    with tabs[0]:
+        st.info("Маркер — это языковая единица/формула, которая в конкретном референтном контексте участвует в формировании имиджа государства.")
+    with tabs[1]:
+        st.write("Словари = научная модель; NLP-библиотеки = только технический слой (tokenize, sentence split, POS/лемматизация).")
+    with tabs[2]:
+        st.dataframe(_safe_read_table(dict_dir / "ideological_markers.csv").head(300), use_container_width=True)
+    with tabs[3]:
+        st.dataframe(_safe_read_table(dict_dir / "emotional_markers.csv").head(300), use_container_width=True)
+    with tabs[4]:
+        st.dataframe(_safe_read_table(dict_dir / "metaphor_markers.csv").head(300), use_container_width=True)
+    with tabs[5]:
+        st.dataframe(_safe_read_table(dict_dir / "evi_lexicon.csv").head(300), use_container_width=True)
+        st.dataframe(_safe_read_table(dict_dir / "actor_actions.csv").head(200), use_container_width=True)
+        st.dataframe(_safe_read_table(dict_dir / "consequence_markers.csv").head(200), use_container_width=True)
+        st.dataframe(_safe_read_table(dict_dir / "ideological_frames.csv").head(200), use_container_width=True)
+    with tabs[6]:
+        st.dataframe(_safe_read_table(dict_dir / "salience_patterns.csv").head(300), use_container_width=True)
+        st.dataframe(_safe_read_table(dict_dir / "technical_mention_patterns.csv").head(300), use_container_width=True)
+    with tabs[7]:
+        st.dataframe(_safe_read_table(dict_dir / "candidate_terms.csv").head(500), use_container_width=True)
+    with tabs[8]:
+        st.dataframe(_safe_read_table(dict_dir / "verified_terms.csv").head(500), use_container_width=True)
+        st.dataframe(_safe_read_table(dict_dir / "rejected_terms.csv").head(500), use_container_width=True)
+    with tabs[9]:
+        st.dataframe(_safe_read_table(dict_dir / "dictionary_change_log.csv").head(500), use_container_width=True)
 
 
 def _dominant_discrete_evi(values: pd.Series) -> int:
@@ -1673,6 +1800,44 @@ def show_referent_dashboard(
                 file_name=f"mini_referent_{safe_term}.csv",
                 mime="text/csv",
             )
+
+    st.markdown("### 5) Контексты и маркерные обоснования")
+    view_cols = [c for c in ["context_id", "outlet_name", "date", "matched_keywords", "IDI", "EMI", "MTI", "EVI_raw", "referent_salience", "IP_i"] if c in df_ref.columns]
+    st.dataframe(df_ref[view_cols].head(200), use_container_width=True)
+    context_ids = df_ref["context_id"].astype(str).tolist()
+    if context_ids:
+        pick_ctx = st.selectbox("Выберите context_id для детального маркерного просмотра", context_ids, index=0, key="ctx_marker_pick")
+        r = df_ref[df_ref["context_id"].astype(str) == str(pick_ctx)].head(1)
+        if not r.empty:
+            rr = r.iloc[0]
+            st.caption(str(rr.get("context_text", ""))[:1500])
+            with st.expander("Найденные IDI-маркеры", expanded=False):
+                st.write(str(rr.get("found_ideol_markers", "")) or "—")
+            with st.expander("Найденные EMI-маркеры", expanded=False):
+                st.write(str(rr.get("found_emotional_markers", "")) or "—")
+            with st.expander("Найденные MTI-маркеры", expanded=False):
+                st.write(str(rr.get("found_metaphor_markers", "")) or "—")
+            with st.expander("Обоснование EVI", expanded=False):
+                st.write(str(rr.get("evi_explanation", "")) or "—")
+                st.write(f"Positive terms: {rr.get('positive_evidence_terms', '')}")
+                st.write(f"Negative terms: {rr.get('negative_evidence_terms', '')}")
+                st.write(f"EVI evidence JSON: {rr.get('evi_evidence', '{}')}")
+            with st.expander("Обоснование S_r", expanded=False):
+                st.write(f"S_r = {rr.get('referent_salience', 0)}; label = {rr.get('salience_label', '')}")
+                st.write(str(rr.get("salience_explanation", "")) or str(rr.get("technical_mention_reason", "")) or "—")
+            with st.expander("Все marker traces (этот context_id)", expanded=False):
+                mtp = out_dir / "marker_traces.csv"
+                if mtp.exists():
+                    mdf = pd.read_csv(mtp).fillna("")
+                    mdf = mdf[mdf["context_id"].astype(str) == str(pick_ctx)]
+                    st.dataframe(mdf, use_container_width=True)
+                else:
+                    st.caption("Файл marker_traces.csv не найден.")
+
+    marker_dict_dir = out_dir / "referent_dicts"
+    if not marker_dict_dir.exists():
+        marker_dict_dir = ROOT_DIR / "lexicons"
+    _render_marker_base_panel(marker_dict_dir)
 
 
 

@@ -1,0 +1,5 @@
+pattern,technical_type,salience_value,examples,verified
+"^reporting by .+ in washington\\.?$",byline,0.0,Reporting by John in Washington.,true
+"^by .+ in beijing\\.?$",byline,0.0,by Author in Beijing.,true
+"^reuters in moscow\\.?$",dateline,0.0,Reuters in Moscow.,true
+"\\bphoto by\\b",credit,0.0,Photo by AP.,true

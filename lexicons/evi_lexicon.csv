@@ -1,0 +1,5 @@
+term,lemma,language,evaluation_type,polarity,strength,category,context_dependent,examples,exclude_patterns,source,verified
+partner,partner,en,direct_lexis,positive,medium,lex,false,reliable partner,,seed,true
+aggressor,aggressor,en,direct_lexis,negative,strong,frame,false,as an aggressor,,seed,true
+stabilitas,stabilitas,id,direct_lexis,positive,medium,consequence,false,mendorong stabilitas,,seed,true
+давление,давление,ru,direct_lexis,negative,medium,lex,false,политическое давление,,seed,true

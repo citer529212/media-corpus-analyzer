@@ -1,0 +1,8 @@
+term,lemma,language,emotion_type,intensity_level,weight,polarity_hint,context_dependent,examples,exclude_patterns,source,verified
+concern,concern,en,concern,weak,0.333333,negative,false,raised concerns,,seed,true
+threat,threat,en,threat,medium,0.666667,negative,false,security threat,,seed,true
+catastrophe,catastrophe,en,fear,strong,1.0,negative,false,political catastrophe,,seed,true
+dukungan,dukung,id,trust,weak,0.333333,positive,false,mendapat dukungan,,seed,true
+ancaman,ancam,id,threat,medium,0.666667,negative,false,ancaman regional,,seed,true
+угроза,угроза,ru,threat,medium,0.666667,negative,false,создает угрозу,,seed,true
+гордость,гордость,ru,pride,weak,0.333333,positive,true,национальная гордость,,seed,context_dependent

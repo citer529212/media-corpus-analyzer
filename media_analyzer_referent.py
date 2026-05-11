@@ -14,11 +14,23 @@ from __future__ import annotations
 import argparse
 import json
 import re
+import uuid
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, Iterable, List, Optional, Set, Tuple
 
 import pandas as pd
+from analysis_core import preprocessing as prep
+from analysis_core.lexicon_expansion import (
+    approve_candidate as lex_approve_candidate,
+    ensure_lexicon_workflow_files,
+    extract_candidate_terms as lex_extract_candidate_terms,
+    mark_context_dependent as lex_mark_context_dependent,
+    reject_candidate as lex_reject_candidate,
+    score_candidate_term as lex_score_candidate_term,
+    suggest_dictionary as lex_suggest_dictionary,
+    write_dictionary_change_log as lex_write_dictionary_change_log,
+)
 
 
 REQUIRED_FIELDS = ["doc_id", "media_country", "outlet_name", "date", "title", "text"]
@@ -126,6 +138,55 @@ NEUTRAL_ACTION_CUES = {
 
 COARSE_TO_RAW = {-2: -10, -1: -5, 0: 0, 1: 5, 2: 10}
 
+LEXICON_SCHEMAS: Dict[str, List[str]] = {
+    "ideological_markers.csv": [
+        "term", "lemma", "language", "category", "semantic_zone", "polarity_hint", "strength_hint",
+        "context_dependent", "examples", "exclude_patterns", "source", "verified",
+    ],
+    "emotional_markers.csv": [
+        "term", "lemma", "language", "emotion_type", "intensity_level", "weight", "polarity_hint",
+        "context_dependent", "examples", "exclude_patterns", "source", "verified",
+    ],
+    "metaphor_markers.csv": [
+        "term", "lemma", "language", "metaphor_model", "source_domain", "target_domain", "conventionality",
+        "default_strength", "context_dependent", "examples", "exclude_patterns", "source", "verified",
+    ],
+    "evi_lexicon.csv": [
+        "term", "lemma", "language", "evaluation_type", "polarity", "strength", "category", "context_dependent",
+        "examples", "exclude_patterns", "source", "verified",
+    ],
+    "actor_actions.csv": [
+        "verb_or_phrase", "lemma", "language", "action_polarity", "action_strength", "typical_subject",
+        "typical_object", "examples", "verified",
+    ],
+    "consequence_markers.csv": [
+        "term_or_phrase", "language", "consequence_polarity", "consequence_domain", "strength", "examples", "verified",
+    ],
+    "ideological_frames.csv": [
+        "frame_name", "frame_type", "polarity", "keywords", "examples", "verified",
+    ],
+    "salience_patterns.csv": [
+        "pattern", "pattern_type", "salience_value", "examples", "verified",
+    ],
+    "technical_mention_patterns.csv": [
+        "pattern", "technical_type", "salience_value", "examples", "verified",
+    ],
+    "candidate_terms.csv": [
+        "candidate_id", "candidate_term", "lemma", "language", "proposed_dictionary", "proposed_category",
+        "frequency", "contexts_count", "example_contexts", "cooccurring_ref_countries", "polarity_hint",
+        "confidence_score", "status",
+    ],
+    "verified_terms.csv": [
+        "candidate_id", "term", "lemma", "language", "dictionary", "category", "approved_at", "notes",
+    ],
+    "rejected_terms.csv": [
+        "candidate_id", "term", "lemma", "language", "proposed_dictionary", "reason", "rejected_at",
+    ],
+    "dictionary_change_log.csv": [
+        "timestamp", "action", "term", "lemma", "dictionary", "category", "status", "details",
+    ],
+}
+
 DEFAULT_IDEO_MARKERS = [
     # EN
     "democracy", "sovereignty", "freedom", "authoritarianism", "communism", "imperialism", "colonialism",
@@ -203,6 +264,51 @@ def _project_lexicons_dir() -> Path:
     return Path(__file__).resolve().parent / "lexicons"
 
 
+def _ensure_table_columns(path: Path, columns: List[str]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    if not path.exists():
+        pd.DataFrame(columns=columns).to_csv(path, index=False)
+        return
+    try:
+        df = pd.read_csv(path).fillna("")
+    except Exception:
+        pd.DataFrame(columns=columns).to_csv(path, index=False)
+        return
+    changed = False
+    for c in columns:
+        if c not in df.columns:
+            df[c] = ""
+            changed = True
+    if changed:
+        df = df[columns + [c for c in df.columns if c not in columns]]
+        df.to_csv(path, index=False)
+
+
+def ensure_project_lexicon_schema(lex_dir: Optional[Path] = None) -> Path:
+    base = lex_dir or _project_lexicons_dir()
+    base.mkdir(parents=True, exist_ok=True)
+    for name, cols in LEXICON_SCHEMAS.items():
+        _ensure_table_columns(base / name, cols)
+    meta = base / "lexicon_metadata.json"
+    if not meta.exists():
+        meta.write_text(
+            json.dumps(
+                {
+                    "version": "1.0.0",
+                    "description": "Marker dictionaries and rubric rules for referent-focused discourse analysis.",
+                    "languages": ["en", "id", "ms", "ru", "mixed"],
+                    "referents": REF_COUNTRIES,
+                    "note": "NLP libraries are preprocessing tools; scientific marker categories come from lexicons.",
+                },
+                ensure_ascii=False,
+                indent=2,
+            ),
+            encoding="utf-8",
+        )
+    ensure_lexicon_workflow_files(base)
+    return base
+
+
 def _load_project_lexicon_overrides() -> Dict[str, object]:
     out: Dict[str, object] = {
         "ideological": [],
@@ -216,7 +322,7 @@ def _load_project_lexicon_overrides() -> Dict[str, object]:
         "rubric_neg_consequence": [],
         "technical_patterns": [],
     }
-    lex_dir = _project_lexicons_dir()
+    lex_dir = ensure_project_lexicon_schema(_project_lexicons_dir())
     if not lex_dir.exists():
         return out
 
@@ -364,12 +470,35 @@ class ContextRow:
     next_sentence: str
 
 
+@dataclass
+class MarkerTrace:
+    marker_id: str
+    context_id: str
+    ref_country: str
+    indicator: str
+    term_found: str
+    lemma: str
+    dictionary_source: str
+    category: str
+    semantic_zone_or_model: str
+    intensity_or_strength: str
+    matched_span: str
+    context_text: str
+    is_context_dependent: bool
+    verification_status: str
+    inclusion_reason: str
+    exclusion_reason: str
+
+    def to_dict(self) -> Dict[str, object]:
+        return self.__dict__.copy()
+
+
 def normalize_token(s: str) -> str:
     return s.casefold().strip("-'_ ")
 
 
 def tokenize(text: str) -> List[str]:
-    return [normalize_token(t) for t in TOKEN_RE.findall(text) if normalize_token(t)]
+    return prep.tokenize(text)
 
 
 def is_content_token(tok: str) -> bool:
@@ -414,58 +543,103 @@ def ensure_required_fields(df: pd.DataFrame) -> pd.DataFrame:
 
 def ensure_default_dictionaries(dict_dir: Path) -> None:
     dict_dir.mkdir(parents=True, exist_ok=True)
+    project_lex = ensure_project_lexicon_schema(_project_lexicons_dir())
+    ensure_project_lexicon_schema(dict_dir)
     lex_overrides = _load_project_lexicon_overrides()
 
-    # Ideological markers: create or merge.
+    # Mirror full schema tables into working dictionary dir when empty.
+    for fname in LEXICON_SCHEMAS.keys():
+        src = project_lex / fname
+        dst = dict_dir / fname
+        if src.exists() and (not dst.exists() or dst.stat().st_size <= 8):
+            dst.write_text(src.read_text(encoding="utf-8"), encoding="utf-8")
+
+    # Backward compatibility aliases.
+    p_meta = dict_dir / "metaphor_markers.csv"
+    p_meta_legacy = dict_dir / "metaphor_candidates.csv"
+    if p_meta.exists() and not p_meta_legacy.exists():
+        p_meta_legacy.write_text(p_meta.read_text(encoding="utf-8"), encoding="utf-8")
+
+    # Ensure essential defaults are present in working dicts.
     p_ideo = dict_dir / "ideological_markers.csv"
-    existing_ideo: List[str] = []
-    if p_ideo.exists():
-        try:
-            df0 = pd.read_csv(p_ideo).fillna("")
-            existing_ideo = _read_terms_column(df0, ["marker", "term", "lemma"])
-        except Exception:
-            existing_ideo = []
-    ideol_merged = _dedupe_keep_order(existing_ideo + DEFAULT_IDEO_MARKERS + list(lex_overrides.get("ideological", [])))
-    pd.DataFrame({"marker": ideol_merged}).to_csv(p_ideo, index=False)
+    d_ideo = pd.read_csv(p_ideo).fillna("")
+    col_ideo = "term" if "term" in d_ideo.columns else ("marker" if "marker" in d_ideo.columns else None)
+    if col_ideo is None:
+        d_ideo["term"] = ""
+        col_ideo = "term"
+    known = set(d_ideo[col_ideo].astype(str).str.casefold().tolist())
+    for t in DEFAULT_IDEO_MARKERS + list(lex_overrides.get("ideological", [])):
+        if str(t).casefold() in known:
+            continue
+        row = {c: "" for c in d_ideo.columns}
+        row[col_ideo] = t
+        if "lemma" in row:
+            row["lemma"] = t
+        if "verified" in row:
+            row["verified"] = True
+        if "source" in row:
+            row["source"] = "seed"
+        d_ideo = pd.concat([d_ideo, pd.DataFrame([row])], ignore_index=True)
+        known.add(str(t).casefold())
+    d_ideo.to_csv(p_ideo, index=False)
 
-    # Emotional markers: create or merge with intensity.
     p_emot = dict_dir / "emotional_markers.csv"
-    emo_map: Dict[Tuple[str, str], bool] = {}
-    if p_emot.exists():
-        try:
-            dfe = pd.read_csv(p_emot).fillna("")
-            term_col = "marker" if "marker" in dfe.columns else ("term" if "term" in dfe.columns else None)
-            int_col = "intensity" if "intensity" in dfe.columns else ("intensity_level" if "intensity_level" in dfe.columns else None)
-            if term_col and int_col:
-                for _, r in dfe.iterrows():
-                    term = str(r.get(term_col, "")).strip()
-                    intensity = str(r.get(int_col, "")).strip().lower()
-                    if term and intensity in {"weak", "medium", "strong"}:
-                        emo_map[(term.casefold(), intensity)] = True
-        except Exception:
-            pass
+    d_emot = pd.read_csv(p_emot).fillna("")
+    term_col = "term" if "term" in d_emot.columns else ("marker" if "marker" in d_emot.columns else None)
+    int_col = "intensity_level" if "intensity_level" in d_emot.columns else ("intensity" if "intensity" in d_emot.columns else None)
+    if term_col is None:
+        d_emot["term"] = ""
+        term_col = "term"
+    if int_col is None:
+        d_emot["intensity_level"] = ""
+        int_col = "intensity_level"
+    seen = set((str(r.get(term_col, "")).casefold(), str(r.get(int_col, "")).casefold()) for _, r in d_emot.iterrows())
     for term, intensity in DEFAULT_EMOT_ROWS:
-        emo_map[(term.casefold(), intensity)] = True
-    emo_override = lex_overrides.get("emotional", {})
-    if isinstance(emo_override, dict):
-        for intensity in ["weak", "medium", "strong"]:
-            for term in emo_override.get(intensity, []):
-                emo_map[(str(term).casefold(), intensity)] = True
-    emo_rows = [{"marker": t, "intensity": i} for (t, i) in sorted(emo_map.keys(), key=lambda x: (x[1], x[0]))]
-    pd.DataFrame(emo_rows).to_csv(p_emot, index=False)
+        key = (str(term).casefold(), str(intensity).casefold())
+        if key in seen:
+            continue
+        row = {c: "" for c in d_emot.columns}
+        row[term_col] = term
+        row[int_col] = intensity
+        if "weight" in row:
+            row["weight"] = 1.0 if intensity == "strong" else (2.0 / 3.0 if intensity == "medium" else 1.0 / 3.0)
+        if "lemma" in row:
+            row["lemma"] = term
+        if "verified" in row:
+            row["verified"] = True
+        if "source" in row:
+            row["source"] = "seed"
+        d_emot = pd.concat([d_emot, pd.DataFrame([row])], ignore_index=True)
+        seen.add(key)
+    d_emot.to_csv(p_emot, index=False)
 
-    # Metaphor markers: create or merge.
-    p_meta = dict_dir / "metaphor_candidates.csv"
-    meta_terms: List[str] = []
-    if p_meta.exists():
-        try:
-            dfm = pd.read_csv(p_meta).fillna("")
-            meta_terms = _read_terms_column(dfm, ["marker", "term", "lemma"])
-        except Exception:
-            meta_terms = []
-    default_meta_terms = [x[0] for x in DEFAULT_META_ROWS]
-    merged_meta = _dedupe_keep_order(meta_terms + default_meta_terms + list(lex_overrides.get("metaphor", [])))
-    pd.DataFrame({"marker": merged_meta}).to_csv(p_meta, index=False)
+    d_meta = pd.read_csv(p_meta).fillna("")
+    tcol = "term" if "term" in d_meta.columns else ("marker" if "marker" in d_meta.columns else None)
+    if tcol is None:
+        d_meta["term"] = ""
+        tcol = "term"
+    known_meta = set(d_meta[tcol].astype(str).str.casefold().tolist())
+    for t, mmodel in DEFAULT_META_ROWS:
+        if str(t).casefold() in known_meta:
+            continue
+        row = {c: "" for c in d_meta.columns}
+        row[tcol] = t
+        if "lemma" in row:
+            row["lemma"] = t
+        if "metaphor_model" in row:
+            row["metaphor_model"] = mmodel
+        if "context_dependent" in row:
+            row["context_dependent"] = True
+        if "verified" in row:
+            row["verified"] = "context_dependent"
+        if "source" in row:
+            row["source"] = "seed"
+        d_meta = pd.concat([d_meta, pd.DataFrame([row])], ignore_index=True)
+        known_meta.add(str(t).casefold())
+    d_meta.to_csv(p_meta, index=False)
+    d_meta.to_csv(p_meta_legacy, index=False)
+
+    ensure_lexicon_workflow_files(dict_dir)
 
 
 def load_ref_keywords(dict_dir: Path) -> Dict[str, List[str]]:
@@ -492,14 +666,14 @@ def load_ref_keywords(dict_dir: Path) -> Dict[str, List[str]]:
 
 def load_ideological_markers(dict_dir: Path) -> List[str]:
     df = pd.read_csv(dict_dir / "ideological_markers.csv").fillna("")
-    return _read_terms_column(df, ["marker", "term", "lemma"])
+    return _read_terms_column(df, ["term", "marker", "lemma"])
 
 
 def load_emotional_markers(dict_dir: Path) -> Dict[str, List[str]]:
     df = pd.read_csv(dict_dir / "emotional_markers.csv").fillna("")
     out = {"weak": [], "medium": [], "strong": []}
-    term_col = "marker" if "marker" in df.columns else ("term" if "term" in df.columns else None)
-    int_col = "intensity" if "intensity" in df.columns else ("intensity_level" if "intensity_level" in df.columns else None)
+    term_col = "term" if "term" in df.columns else ("marker" if "marker" in df.columns else None)
+    int_col = "intensity_level" if "intensity_level" in df.columns else ("intensity" if "intensity" in df.columns else None)
     if not term_col or not int_col:
         return out
     for _, r in df.iterrows():
@@ -513,8 +687,13 @@ def load_emotional_markers(dict_dir: Path) -> Dict[str, List[str]]:
 
 
 def load_metaphor_candidates(dict_dir: Path) -> List[str]:
-    df = pd.read_csv(dict_dir / "metaphor_candidates.csv").fillna("")
-    return _read_terms_column(df, ["marker", "term", "lemma"])
+    p_main = dict_dir / "metaphor_markers.csv"
+    p_legacy = dict_dir / "metaphor_candidates.csv"
+    p = p_main if p_main.exists() else p_legacy
+    if not p.exists():
+        return []
+    df = pd.read_csv(p).fillna("")
+    return _read_terms_column(df, ["term", "marker", "lemma"])
 
 
 def compile_keyword_patterns(ref_keywords: Dict[str, List[str]]) -> Dict[str, List[Tuple[str, re.Pattern[str]]]]:
@@ -529,10 +708,7 @@ def compile_keyword_patterns(ref_keywords: Dict[str, List[str]]) -> Dict[str, Li
 
 
 def split_sentences(text: str) -> List[str]:
-    if not text.strip():
-        return []
-    sents = [s.strip() for s in SENT_SPLIT_RE.split(text) if s.strip()]
-    return sents
+    return prep.sentence_split(text)
 
 
 def merge_windows(indices: List[int]) -> List[Tuple[int, int]]:
@@ -634,8 +810,7 @@ def count_marker_hits(text: str, markers: Iterable[str]) -> Tuple[int, List[str]
 
 
 def compute_n_content(text: str) -> int:
-    toks = tokenize(text)
-    return sum(1 for t in toks if is_content_token(t))
+    return int(prep.count_content_words(text))
 
 
 def clamp(v: float, lo: float, hi: float) -> float:
@@ -848,13 +1023,86 @@ def suggest_evi_coarse(
     return 2, f"Strong positive cues: pos={pos_hits}, neg={neg_hits}"
 
 
+def _truthy(v: object) -> bool:
+    s = str(v).strip().casefold()
+    return s in {"1", "true", "yes", "y", "verified"}
+
+
+def _first_matched_span(text: str, term: str) -> str:
+    try:
+        m = re.search(rf"\b{re.escape(term)}\b", text, flags=re.IGNORECASE)
+        if not m:
+            return ""
+        lo = max(0, m.start() - 25)
+        hi = min(len(text), m.end() + 25)
+        return text[lo:hi]
+    except Exception:
+        return ""
+
+
+def _term_meta_map(path: Path, term_candidates: List[str], fields: List[str]) -> Dict[str, Dict[str, str]]:
+    out: Dict[str, Dict[str, str]] = {}
+    if not path.exists():
+        return out
+    try:
+        df = pd.read_csv(path).fillna("")
+    except Exception:
+        return out
+    tcol = None
+    for c in term_candidates:
+        if c in df.columns:
+            tcol = c
+            break
+    if not tcol:
+        return out
+    for _, r in df.iterrows():
+        t = str(r.get(tcol, "")).strip()
+        if not t:
+            continue
+        out[t.casefold()] = {f: str(r.get(f, "")).strip() for f in fields}
+    return out
+
+
+def _build_marker_trace(
+    context_id: str,
+    ref_country: str,
+    indicator: str,
+    term: str,
+    context_text: str,
+    dictionary_source: str,
+    meta: Optional[Dict[str, str]] = None,
+    inclusion_reason: str = "",
+    exclusion_reason: str = "",
+) -> MarkerTrace:
+    meta = meta or {}
+    return MarkerTrace(
+        marker_id=f"m_{context_id}_{uuid.uuid4().hex[:10]}",
+        context_id=context_id,
+        ref_country=ref_country,
+        indicator=indicator,
+        term_found=term,
+        lemma=meta.get("lemma", term),
+        dictionary_source=dictionary_source,
+        category=meta.get("category", ""),
+        semantic_zone_or_model=meta.get("semantic_zone", meta.get("metaphor_model", meta.get("emotion_type", ""))),
+        intensity_or_strength=meta.get("intensity_level", meta.get("strength", meta.get("default_strength", ""))),
+        matched_span=_first_matched_span(context_text, term),
+        context_text=context_text,
+        is_context_dependent=_truthy(meta.get("context_dependent", "")),
+        verification_status=str(meta.get("verified", "")),
+        inclusion_reason=inclusion_reason,
+        exclusion_reason=exclusion_reason,
+    )
+
+
 def apply_metrics(
     contexts: pd.DataFrame,
     dict_dir: Path,
     evi_mode: str,
     evi_manual_path: Path | None,
     metaphor_review_path: Path | None,
-) -> pd.DataFrame:
+    return_traces: bool = False,
+) -> pd.DataFrame | Tuple[pd.DataFrame, pd.DataFrame]:
     ideol_markers = load_ideological_markers(dict_dir)
     emot_markers = load_emotional_markers(dict_dir)
     metaphors = load_metaphor_candidates(dict_dir)
@@ -875,6 +1123,27 @@ def apply_metrics(
     rubric_neg_consequence = set(RUBRIC_NEG_CONSEQUENCE) | set(lex_overrides.get("rubric_neg_consequence", []))
     rubric_pos_frame = set(RUBRIC_POS_FRAME)
     rubric_neg_frame = set(RUBRIC_NEG_FRAME)
+
+    ideol_meta = _term_meta_map(
+        dict_dir / "ideological_markers.csv",
+        ["term", "marker", "lemma"],
+        ["lemma", "category", "semantic_zone", "strength_hint", "context_dependent", "verified"],
+    )
+    emo_meta = _term_meta_map(
+        dict_dir / "emotional_markers.csv",
+        ["term", "marker", "lemma"],
+        ["lemma", "emotion_type", "intensity_level", "weight", "context_dependent", "verified"],
+    )
+    meta_meta = _term_meta_map(
+        dict_dir / "metaphor_markers.csv",
+        ["term", "marker", "lemma"],
+        ["lemma", "metaphor_model", "default_strength", "context_dependent", "verified"],
+    )
+    evi_meta = _term_meta_map(
+        dict_dir / "evi_lexicon.csv",
+        ["term", "marker", "lemma"],
+        ["lemma", "category", "strength", "context_dependent", "verified", "polarity"],
+    )
 
     manual_evi = {}
     if evi_manual_path and evi_manual_path.exists():
@@ -911,6 +1180,7 @@ def apply_metrics(
             metaphor_review[key] = is_met
 
     out_rows = []
+    marker_traces: List[MarkerTrace] = []
     for _, row in contexts.iterrows():
         context_id = str(row["context_id"])
         ref_country = str(row["ref_country"])
@@ -923,18 +1193,112 @@ def apply_metrics(
         n_m, found_m = count_marker_hits(ctx, emot_markers["medium"])
         n_s, found_s = count_marker_hits(ctx, emot_markers["strong"])
         n_met_candidates, found_met_candidates = count_marker_hits(ctx, metaphors)
+        context_marker_ids: List[str] = []
+
+        for t in found_ideol:
+            tr = _build_marker_trace(
+                context_id=context_id,
+                ref_country=ref_country,
+                indicator="IDI",
+                term=t,
+                context_text=ctx,
+                dictionary_source="ideological_markers.csv",
+                meta=ideol_meta.get(t.casefold(), {}),
+                inclusion_reason="Matched ideological marker in referent-bound context.",
+            )
+            marker_traces.append(tr)
+            context_marker_ids.append(tr.marker_id)
+
+        for t in found_w:
+            tr = _build_marker_trace(
+                context_id=context_id,
+                ref_country=ref_country,
+                indicator="EMI",
+                term=t,
+                context_text=ctx,
+                dictionary_source="emotional_markers.csv",
+                meta=emo_meta.get(t.casefold(), {}),
+                inclusion_reason="Matched weak emotional marker (weight 1/3).",
+            )
+            marker_traces.append(tr)
+            context_marker_ids.append(tr.marker_id)
+        for t in found_m:
+            tr = _build_marker_trace(
+                context_id=context_id,
+                ref_country=ref_country,
+                indicator="EMI",
+                term=t,
+                context_text=ctx,
+                dictionary_source="emotional_markers.csv",
+                meta=emo_meta.get(t.casefold(), {}),
+                inclusion_reason="Matched medium emotional marker (weight 2/3).",
+            )
+            marker_traces.append(tr)
+            context_marker_ids.append(tr.marker_id)
+        for t in found_s:
+            tr = _build_marker_trace(
+                context_id=context_id,
+                ref_country=ref_country,
+                indicator="EMI",
+                term=t,
+                context_text=ctx,
+                dictionary_source="emotional_markers.csv",
+                meta=emo_meta.get(t.casefold(), {}),
+                inclusion_reason="Matched strong emotional marker (weight 1).",
+            )
+            marker_traces.append(tr)
+            context_marker_ids.append(tr.marker_id)
         # Semi-automatic metaphor handling
         n_met = 0
         if metaphor_review:
             for m in found_met_candidates:
                 if metaphor_review.get((context_id, ref_country, m), False):
                     n_met += 1
+                    tr = _build_marker_trace(
+                        context_id=context_id,
+                        ref_country=ref_country,
+                        indicator="MTI",
+                        term=m,
+                        context_text=ctx,
+                        dictionary_source="metaphor_markers.csv",
+                        meta=meta_meta.get(m.casefold(), {}),
+                        inclusion_reason="Confirmed metaphor in semi-automatic review.",
+                    )
+                    marker_traces.append(tr)
+                    context_marker_ids.append(tr.marker_id)
+                else:
+                    tr = _build_marker_trace(
+                        context_id=context_id,
+                        ref_country=ref_country,
+                        indicator="MTI",
+                        term=m,
+                        context_text=ctx,
+                        dictionary_source="metaphor_markers.csv",
+                        meta=meta_meta.get(m.casefold(), {}),
+                        inclusion_reason="Candidate found.",
+                        exclusion_reason="Rejected in metaphor_review.csv",
+                    )
+                    marker_traces.append(tr)
+                    context_marker_ids.append(tr.marker_id)
             if found_met_candidates and n_met == 0:
                 notes.append("metaphor_candidates_present_but_not_confirmed")
         else:
             n_met = n_met_candidates
             if n_met > 0:
                 notes.append("metaphor_needs_manual_verification")
+            for m in found_met_candidates:
+                tr = _build_marker_trace(
+                    context_id=context_id,
+                    ref_country=ref_country,
+                    indicator="MTI",
+                    term=m,
+                    context_text=ctx,
+                    dictionary_source="metaphor_markers.csv",
+                    meta=meta_meta.get(m.casefold(), {}),
+                    inclusion_reason="Auto-included metaphor candidate; manual confirmation recommended.",
+                )
+                marker_traces.append(tr)
+                context_marker_ids.append(tr.marker_id)
 
         if n_content <= 0:
             idi = emi = mti = 0.0
@@ -1046,6 +1410,48 @@ def apply_metrics(
             sal_expl = "Manual salience annotation."
             technical_reason = "Manual salience annotation." if is_technical else ""
 
+        # EVI evidence markers traces
+        for t in [x.strip() for x in str(rubric.get("positive_evidence_terms", "")).split(";") if x.strip()]:
+            tr = _build_marker_trace(
+                context_id=context_id,
+                ref_country=ref_country,
+                indicator="EVI",
+                term=t,
+                context_text=ctx,
+                dictionary_source="evi_lexicon.csv",
+                meta=evi_meta.get(t.casefold(), {}),
+                inclusion_reason="Term contributes to positive EVI score.",
+            )
+            marker_traces.append(tr)
+            context_marker_ids.append(tr.marker_id)
+        for t in [x.strip() for x in str(rubric.get("negative_evidence_terms", "")).split(";") if x.strip()]:
+            tr = _build_marker_trace(
+                context_id=context_id,
+                ref_country=ref_country,
+                indicator="EVI",
+                term=t,
+                context_text=ctx,
+                dictionary_source="evi_lexicon.csv",
+                meta=evi_meta.get(t.casefold(), {}),
+                inclusion_reason="Term contributes to negative EVI score.",
+            )
+            marker_traces.append(tr)
+            context_marker_ids.append(tr.marker_id)
+
+        if bool(salience == 0.0):
+            tr = _build_marker_trace(
+                context_id=context_id,
+                ref_country=ref_country,
+                indicator="S_r",
+                term=str(technical_reason or "technical_mention"),
+                context_text=ctx,
+                dictionary_source="technical_mention_patterns.csv",
+                meta={},
+                inclusion_reason="Context classified as technical mention.",
+            )
+            marker_traces.append(tr)
+            context_marker_ids.append(tr.marker_id)
+
         evi_raw = int(clamp(int(rubric["evi_raw"]), -10, 10))
         evi_norm = float(evi_raw / 10.0)
         evi = float(evi_raw)
@@ -1112,6 +1518,20 @@ def apply_metrics(
                 "negative_evidence_terms": str(rubric["negative_evidence_terms"]),
                 "explanation": str(rubric["evi_explanation"]),  # backward-compat
                 "notes": "; ".join(sorted(set(notes))),
+                "marker_trace_ids": "; ".join(context_marker_ids),
+                "marker_counts_by_indicator": json.dumps(
+                    {
+                        "IDI": len(found_ideol),
+                        "EMI_weak": len(found_w),
+                        "EMI_medium": len(found_m),
+                        "EMI_strong": len(found_s),
+                        "MTI": len(found_met_candidates),
+                        "EVI_pos_terms": len([x for x in str(rubric["positive_evidence_terms"]).split(";") if x.strip()]),
+                        "EVI_neg_terms": len([x for x in str(rubric["negative_evidence_terms"]).split(";") if x.strip()]),
+                        "S_r": 1 if salience == 0.0 else 0,
+                    },
+                    ensure_ascii=False,
+                ),
             }
         )
         out_rows.append(out)
@@ -1119,6 +1539,9 @@ def apply_metrics(
     out_df = compute_context_ip(out_df)
     if "IP_context" in out_df.columns:
         out_df["IP"] = out_df["IP_context"]
+    if return_traces:
+        traces_df = pd.DataFrame([t.to_dict() for t in marker_traces])
+        return out_df, traces_df
     return out_df
 
 
@@ -1390,6 +1813,8 @@ def build_flagged_cases(df: pd.DataFrame) -> pd.DataFrame:
         sal = float(r.get("referent_salience", -1))
         if not (0.0 <= sal <= 1.0):
             reasons.add("invalid_referent_salience")
+        if sal not in SALIENCE_ALLOWED:
+            reasons.add("invalid_referent_salience_set")
         if sal == 0.0 and not bool(r.get("is_technical_mention", False)):
             reasons.add("salience_zero_not_technical")
         if sal == 0.0 and float(r.get("aggregation_weight", -1)) != 0.0:
@@ -1405,6 +1830,100 @@ def build_flagged_cases(df: pd.DataFrame) -> pd.DataFrame:
     return pd.DataFrame(flagged)
 
 
+def validate_lexicons(dict_dir: Path) -> Tuple[pd.DataFrame, str]:
+    ensure_project_lexicon_schema(dict_dir)
+    issues: List[Dict[str, object]] = []
+    for fname, cols in LEXICON_SCHEMAS.items():
+        path = dict_dir / fname
+        try:
+            df = pd.read_csv(path).fillna("")
+        except Exception as exc:
+            issues.append({"file": fname, "level": "error", "issue": "read_error", "details": str(exc)})
+            continue
+        for c in cols:
+            if c not in df.columns:
+                issues.append({"file": fname, "level": "error", "issue": "missing_column", "details": c})
+        if "verified" in df.columns and not df.empty:
+            allowed_verified = {"true", "false", "context_dependent"}
+            for i, v in enumerate(df["verified"].tolist()):
+                sv = str(v).strip().casefold()
+                if sv in {"1", "yes"}:
+                    sv = "true"
+                elif sv in {"0", "no"}:
+                    sv = "false"
+                elif sv == "":
+                    issues.append({
+                        "file": fname,
+                        "level": "warning",
+                        "issue": "empty_verified",
+                        "details": f"row {i+1}: empty verified value",
+                    })
+                    continue
+                if sv not in allowed_verified:
+                    issues.append({
+                        "file": fname,
+                        "level": "error",
+                        "issue": "invalid_verified_value",
+                        "details": f"row {i+1}: {v}",
+                    })
+        if fname == "emotional_markers.csv" and not df.empty:
+            for i, r in df.iterrows():
+                lvl = str(r.get("intensity_level", "")).strip().lower()
+                w = str(r.get("weight", "")).strip()
+                if lvl not in {"weak", "medium", "strong"}:
+                    issues.append({"file": fname, "level": "error", "issue": "invalid_intensity_level", "details": f"row {i+1}: {lvl}"})
+                try:
+                    wf = float(w) if w != "" else 0.0
+                except Exception:
+                    wf = -1.0
+                expected = {"weak": 1.0 / 3.0, "medium": 2.0 / 3.0, "strong": 1.0}.get(lvl, None)
+                if expected is not None and abs(wf - expected) > 1e-3:
+                    issues.append({"file": fname, "level": "warning", "issue": "weight_mismatch", "details": f"row {i+1}: {wf} != {expected:.6f}"})
+        if fname == "technical_mention_patterns.csv" and not df.empty:
+            bad = df[pd.to_numeric(df.get("salience_value", 0), errors="coerce").fillna(-1) != 0]
+            if not bad.empty:
+                issues.append({"file": fname, "level": "error", "issue": "technical_salience_must_be_zero", "details": f"rows={len(bad)}"})
+
+    report_df = pd.DataFrame(issues, columns=["file", "level", "issue", "details"])
+    md_lines = ["# lexicon_quality_report", ""]
+    if report_df.empty:
+        md_lines.append("- status: OK")
+        md_lines.append("- notes: no schema violations detected.")
+    else:
+        md_lines.append(f"- total_issues: {len(report_df)}")
+        for _, r in report_df.iterrows():
+            md_lines.append(f"- [{r['level']}] {r['file']}: {r['issue']} ({r['details']})")
+    return report_df, "\n".join(md_lines)
+
+
+def extract_candidate_terms(calibration_contexts: pd.DataFrame, lex_dir: Path) -> pd.DataFrame:
+    return lex_extract_candidate_terms(calibration_contexts, lex_dir)
+
+
+def score_candidate_term(term: str, frequency: int = 1) -> float:
+    return lex_score_candidate_term(term, frequency)
+
+
+def suggest_dictionary(term: str) -> str:
+    return lex_suggest_dictionary(term)
+
+
+def approve_candidate(term_id: str, lex_dir: Path) -> Optional[Dict[str, object]]:
+    return lex_approve_candidate(term_id, lex_dir)
+
+
+def reject_candidate(term_id: str, lex_dir: Path, reason: str = "not_relevant") -> Optional[Dict[str, object]]:
+    return lex_reject_candidate(term_id, lex_dir, reason=reason)
+
+
+def mark_context_dependent(term_id: str, lex_dir: Path) -> None:
+    lex_mark_context_dependent(term_id, lex_dir)
+
+
+def write_dictionary_change_log(lex_dir: Path, action: str, term: str, lemma: str = "", dictionary: str = "", category: str = "", status: str = "", details: str = "") -> None:
+    lex_write_dictionary_change_log(lex_dir, action, term, lemma=lemma, dictionary=dictionary, category=category, status=status, details=details)
+
+
 def save_outputs(
     contexts_full: pd.DataFrame,
     by_article: pd.DataFrame,
@@ -1413,6 +1932,9 @@ def save_outputs(
     summary_matrix: pd.DataFrame,
     flagged: pd.DataFrame,
     output_dir: Path,
+    marker_traces: Optional[pd.DataFrame] = None,
+    lexicon_quality_report: Optional[pd.DataFrame] = None,
+    lexicon_quality_md: str = "",
 ) -> None:
     output_dir.mkdir(parents=True, exist_ok=True)
     contexts_full.to_csv(output_dir / "contexts_full.csv", index=False)
@@ -1420,12 +1942,33 @@ def save_outputs(
     by_outlet.to_csv(output_dir / "aggregated_by_outlet.csv", index=False)
     by_media_ref.to_csv(output_dir / "aggregated_by_media_country_and_ref_country.csv", index=False)
     flagged.to_csv(output_dir / "flagged_cases.csv", index=False)
+    if marker_traces is not None and not marker_traces.empty:
+        marker_traces.to_csv(output_dir / "marker_traces.csv", index=False)
+        marker_traces.to_json(output_dir / "marker_traces.json", orient="records", force_ascii=False, indent=2)
+        marker_traces.to_excel(output_dir / "marker_traces.xlsx", index=False)
+    if lexicon_quality_report is not None:
+        lexicon_quality_report.to_csv(output_dir / "lexicon_quality_report.csv", index=False)
+        (output_dir / "lexicon_quality_report.md").write_text(lexicon_quality_md or "# lexicon_quality_report\n", encoding="utf-8")
+    # Persist dictionary workflow log if available near lexicons.
+    # best effort: infer from cwd-level lexicons
+    for cand in [Path("lexicons"), output_dir / "referent_dicts"]:
+        ch = cand / "dictionary_change_log.csv"
+        if ch.exists():
+            try:
+                pd.read_csv(ch).to_csv(output_dir / "dictionary_change_log.csv", index=False)
+            except Exception:
+                (output_dir / "dictionary_change_log.csv").write_text(ch.read_text(encoding="utf-8"), encoding="utf-8")
+            break
 
     with pd.ExcelWriter(output_dir / "summary_matrix.xlsx", engine="openpyxl") as xw:
         summary_matrix.to_excel(xw, index=False, sheet_name="summary_matrix")
         by_media_ref.to_excel(xw, index=False, sheet_name="long_table")
         contexts_full.to_excel(xw, index=False, sheet_name="contexts_full")
         flagged.to_excel(xw, index=False, sheet_name="flagged_cases")
+        if marker_traces is not None and not marker_traces.empty:
+            marker_traces.to_excel(xw, index=False, sheet_name="marker_traces")
+        if lexicon_quality_report is not None and not lexicon_quality_report.empty:
+            lexicon_quality_report.to_excel(xw, index=False, sheet_name="lexicon_quality")
 
 
 def parse_args() -> argparse.Namespace:
@@ -1470,13 +2013,19 @@ def main() -> None:
     if contexts.empty:
         raise RuntimeError("No referent-bound contexts extracted. Check input fields and keyword dictionaries.")
 
-    scored = apply_metrics(
+    scored_payload = apply_metrics(
         contexts=contexts,
         dict_dir=dict_dir,
         evi_mode=args.evi_mode,
         evi_manual_path=Path(args.evi_manual) if args.evi_manual else None,
         metaphor_review_path=Path(args.metaphor_review) if args.metaphor_review else None,
+        return_traces=True,
     )
+    if isinstance(scored_payload, tuple):
+        scored, marker_traces = scored_payload
+    else:
+        scored = scored_payload
+        marker_traces = pd.DataFrame()
     scored = add_multicountry_flags(scored)
     scored = scored[scored["ref_country"].isin(REF_COUNTRIES)].copy()
 
@@ -1497,7 +2046,19 @@ def main() -> None:
     exclude_technical = str(args.exclude_technical_mentions).lower() == "true"
     by_article, by_outlet, by_media_ref, matrix = aggregate_outputs(scored, exclude_technical_mentions=exclude_technical)
     flagged = build_flagged_cases(scored)
-    save_outputs(scored, by_article, by_outlet, by_media_ref, matrix, flagged, output_dir)
+    qdf, qmd = validate_lexicons(dict_dir)
+    save_outputs(
+        scored,
+        by_article,
+        by_outlet,
+        by_media_ref,
+        matrix,
+        flagged,
+        output_dir,
+        marker_traces=marker_traces,
+        lexicon_quality_report=qdf,
+        lexicon_quality_md=qmd,
+    )
 
     print("=" * 88)
     print("REFERENT ANALYSIS COMPLETE")

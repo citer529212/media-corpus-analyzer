@@ -13,13 +13,12 @@ from calibration.calibration_lexicon_expander import approve_candidate, reject_c
 
 
 def _safe_read_csv(path: Path) -> pd.DataFrame:
+    """Read CSV defensively: empty/broken files should not crash Streamlit."""
     if not path.exists():
         return pd.DataFrame()
     try:
         return pd.read_csv(path)
-    except pd.errors.EmptyDataError:
-        return pd.DataFrame()
-    except Exception:
+    except (pd.errors.EmptyDataError, pd.errors.ParserError, UnicodeDecodeError):
         return pd.DataFrame()
 
 

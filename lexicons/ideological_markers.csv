@@ -1,0 +1,7 @@
+term,lemma,language,category,semantic_zone,polarity_hint,strength_hint,context_dependent,examples,exclude_patterns,source,verified
+sovereignty,sovereignty,en,ideologeme,sovereignty,positive,medium,false,defends sovereignty,,seed,true
+hegemony,hegemony,en,political_nomination,hegemony,negative,strong,false,regional hegemony,,seed,true
+kedaulatan,kedaulatan,id,ideologeme,sovereignty,positive,medium,false,membela kedaulatan,,seed,true
+autoritarian,authoritarian,en,political_nomination,regime_power,negative,medium,true,authoritarian regime,,seed,context_dependent
+суверенитет,суверенитет,ru,идеологема,sovereignty,positive,medium,false,защита суверенитета,,seed,true
+гегемония,гегемония,ru,политическая_номинация,hegemony,negative,strong,false,политика гегемонии,,seed,true

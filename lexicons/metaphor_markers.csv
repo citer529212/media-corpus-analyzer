@@ -1,0 +1,6 @@
+term,lemma,language,metaphor_model,source_domain,target_domain,conventionality,default_strength,context_dependent,examples,exclude_patterns,source,verified
+engine,engine,en,economy_as_machine,machine,economy,conventional,medium,true,engine of growth,,seed,context_dependent
+battle,battle,en,politics_as_war,war,politics,conventional,strong,true,battle for influence,,seed,context_dependent
+bridge,bridge,en,construction_building,construction,diplomacy,conventional,weak,true,bridge between nations,,seed,context_dependent
+двигатель,двигатель,ru,economy_as_machine,machine,economy,conventional,medium,true,двигатель роста,,seed,context_dependent
+gelombang,gelombang,id,weather_nature,weather,influence,conventional,medium,true,gelombang pengaruh,,seed,context_dependent

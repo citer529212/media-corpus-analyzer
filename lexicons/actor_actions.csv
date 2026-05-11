@@ -1,0 +1,7 @@
+verb_or_phrase,lemma,language,action_polarity,action_strength,typical_subject,typical_object,examples,verified
+supports,support,en,positive,medium,state,region,supports regional development,true
+threatens,threaten,en,negative,strong,state,sovereignty,threatens sovereignty,true
+mendukung,dukung,id,positive,medium,negara,kawasan,mendukung stabilitas,true
+menekan,tekan,id,negative,medium,negara,mitra,menekan mitra,true
+поддерживает,поддерживать,ru,positive,medium,государство,регион,поддерживает развитие,true
+угрожает,угрожать,ru,negative,strong,государство,безопасность,угрожает безопасности,true

@@ -1,0 +1,7 @@
+term_or_phrase,language,consequence_polarity,consequence_domain,strength,examples,verified
+development,en,positive,development,medium,boosts development,true
+instability,en,negative,security,medium,creates instability,true
+pertumbuhan,id,positive,economy,medium,mendorong pertumbuhan,true
+ketegangan,id,negative,security,medium,memicu ketegangan,true
+развитие,ru,positive,development,medium,ускоряет развитие,true
+кризис,ru,negative,security,strong,углубляет кризис,true

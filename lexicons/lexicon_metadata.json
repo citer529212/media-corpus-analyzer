@@ -1,0 +1,8 @@
+{
+  "version": "1.0.0",
+  "created_at": "2026-05-11",
+  "description": "Marker system lexicons for referent-focused political media discourse analysis.",
+  "languages": ["en", "id", "ms", "ru", "mixed"],
+  "referent_countries": ["China", "USA", "Russia"],
+  "notes": "NLP libraries are used only for preprocessing; marker categories are defined by lexicons and rubric rules."
+}
