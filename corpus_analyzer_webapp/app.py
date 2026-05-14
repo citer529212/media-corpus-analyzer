@@ -123,6 +123,29 @@ COUNTRY_HINTS = {
     "china": ["china", "chinese", "cina", "tiongkok", "beijing", "xi jinping"],
 }
 
+_EXCEL_ILLEGAL_RE = re.compile(r"[\x00-\x08\x0B-\x0C\x0E-\x1F]")
+_EXCEL_MAX_CELL_LEN = 32767
+
+
+def _excel_safe_text(value: object) -> object:
+    if value is None or not isinstance(value, str):
+        return value
+    cleaned = _EXCEL_ILLEGAL_RE.sub("", value)
+    # Excel/OpenXML cell text hard limit
+    if len(cleaned) > _EXCEL_MAX_CELL_LEN:
+        cleaned = cleaned[:_EXCEL_MAX_CELL_LEN]
+    return cleaned
+
+
+def _excel_safe_df(df: pd.DataFrame) -> pd.DataFrame:
+    if df is None or df.empty:
+        return df
+    out = df.copy()
+    obj_cols = [c for c in out.columns if out[c].dtype == "object"]
+    for c in obj_cols:
+        out[c] = out[c].map(_excel_safe_text)
+    return out
+
 
 def guess_source(filename: str) -> str:
     f = filename.casefold()
@@ -1026,7 +1049,7 @@ def run_referent_analysis(
         )
     marker_traces.to_csv(out_dir / "marker_traces.csv", index=False)
     marker_traces.to_json(out_dir / "marker_traces.json", orient="records", force_ascii=False, indent=2)
-    marker_traces.to_excel(out_dir / "marker_traces.xlsx", index=False)
+    _excel_safe_df(marker_traces).to_excel(out_dir / "marker_traces.xlsx", index=False)
 
     # QA: each counted marker should have at least one trace per context.
     if not scored.empty:
@@ -1072,7 +1095,7 @@ def run_referent_analysis(
         (out_dir / "lexicon_quality_report.md").write_text("# lexicon_quality_report\n\n- unavailable in current core\n", encoding="utf-8")
     if not traces_df.empty:
         traces_df.to_json(out_dir / "formula_traces.json", orient="records", force_ascii=False, indent=2)
-        traces_df.to_excel(out_dir / "formula_traces.xlsx", index=False)
+        _excel_safe_df(traces_df).to_excel(out_dir / "formula_traces.xlsx", index=False)
 
     dist_idi = _distribution_stats(scored, "IDI_raw", percentile_basis)
     dist_emi = _distribution_stats(scored, "EMI_raw", percentile_basis)
@@ -1088,25 +1111,25 @@ def run_referent_analysis(
         calibration_detailed.to_csv(out_dir / "calibration_detailed.csv", index=False)
 
     with pd.ExcelWriter(out_dir / "distribution_stats.xlsx", engine="openpyxl") as xw:
-        dist_idi.to_excel(xw, index=False, sheet_name="IDI_distribution")
-        dist_emi.to_excel(xw, index=False, sheet_name="EMI_distribution")
-        dist_mti.to_excel(xw, index=False, sheet_name="MTI_distribution")
-        dist_ip.to_excel(xw, index=False, sheet_name="IP_distribution")
-        dist_ip_abs.to_excel(xw, index=False, sheet_name="IP_abs_distribution")
+        _excel_safe_df(dist_idi).to_excel(xw, index=False, sheet_name="IDI_distribution")
+        _excel_safe_df(dist_emi).to_excel(xw, index=False, sheet_name="EMI_distribution")
+        _excel_safe_df(dist_mti).to_excel(xw, index=False, sheet_name="MTI_distribution")
+        _excel_safe_df(dist_ip).to_excel(xw, index=False, sheet_name="IP_distribution")
+        _excel_safe_df(dist_ip_abs).to_excel(xw, index=False, sheet_name="IP_abs_distribution")
 
     with pd.ExcelWriter(out_dir / "summary_matrix.xlsx", engine="openpyxl") as xw:
-        matrix.to_excel(xw, index=False, sheet_name="summary_matrix")
-        by_media_ref.to_excel(xw, index=False, sheet_name="long_table")
-        scored.to_excel(xw, index=False, sheet_name="contexts_full")
-        flagged.to_excel(xw, index=False, sheet_name="flagged_cases")
-        marker_traces.to_excel(xw, index=False, sheet_name="marker_traces")
+        _excel_safe_df(matrix).to_excel(xw, index=False, sheet_name="summary_matrix")
+        _excel_safe_df(by_media_ref).to_excel(xw, index=False, sheet_name="long_table")
+        _excel_safe_df(scored).to_excel(xw, index=False, sheet_name="contexts_full")
+        _excel_safe_df(flagged).to_excel(xw, index=False, sheet_name="flagged_cases")
+        _excel_safe_df(marker_traces).to_excel(xw, index=False, sheet_name="marker_traces")
         if 'qdf' in locals() and not qdf.empty:
-            qdf.to_excel(xw, index=False, sheet_name="lexicon_quality")
+            _excel_safe_df(qdf).to_excel(xw, index=False, sheet_name="lexicon_quality")
         if not calibration_report.empty:
-            calibration_report.to_excel(xw, index=False, sheet_name="calibration_report")
+            _excel_safe_df(calibration_report).to_excel(xw, index=False, sheet_name="calibration_report")
 
     if not calibration_report.empty:
-        calibration_report.to_excel(out_dir / "calibration_report.xlsx", index=False)
+        _excel_safe_df(calibration_report).to_excel(out_dir / "calibration_report.xlsx", index=False)
 
     report_lines = [
         "# analysis_report",
