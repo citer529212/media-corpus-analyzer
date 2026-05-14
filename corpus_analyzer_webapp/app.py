@@ -2452,8 +2452,8 @@ def run_analysis(docs: List[core.Doc], out_dir: Path, top_n: int, kwic_window: i
 
 
 def main() -> None:
-    st.set_page_config(page_title="media analizator 1.0", layout="wide")
-    st.title("media analizator 1.0")
+    st.set_page_config(page_title="media analizator 1.1", layout="wide")
+    st.title("media analizator 1.1")
     st.caption(f"Финальный референтный анализатор (China/USA/Russia). Build: {APP_BUILD}")
 
     with st.sidebar:
