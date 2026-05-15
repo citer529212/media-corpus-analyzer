@@ -101,6 +101,24 @@ REFERENT_CATEGORY_KEYWORDS: Dict[str, Dict[str, List[str]]] = {
     },
 }
 
+# Fast prefilter terms for demo runtime stability (used before heavy referent pipeline).
+QUICK_REF_TERMS: Dict[str, List[str]] = {
+    "China": [
+        "china", "chinese", "prc", "beijing", "xi jinping", "ccp", "cpc",
+        "tiongkok", "cina", "taiwan strait", "belt and road", "huawei",
+    ],
+    "USA": [
+        "usa", "u.s.", "us ", "united states", "america", "american",
+        "washington", "white house", "pentagon", "congress", "biden", "trump",
+        "amerika serikat", "amerika syarikat",
+    ],
+    "Russia": [
+        "russia", "russian", "russian federation", "moscow", "kremlin",
+        "putin", "lavrov", "medvedev", "ruble", "ukraine war",
+        "rossiya", "россия", "rusia",
+    ],
+}
+
 # Streamlit demo/beta 1.1 feature flags (stability-first)
 ENABLE_ADVANCED_CALIBRATION_UI = False
 ENABLE_LEGACY_STAGE_CHARTS = False
@@ -108,6 +126,17 @@ ENABLE_LEGACY_FIVE_INDICATOR_VIEW = False
 ENABLE_DEBUG_RAW_TABLES = False
 ENABLE_HEAVY_EXPORTS_IN_UI = False
 ENABLE_EXPERIMENTAL_MINI_REFERENT_CHARTS = False
+
+
+def _quick_prefilter_by_referent(input_df: pd.DataFrame, ref_country: str) -> pd.DataFrame:
+    if input_df.empty or "text" not in input_df.columns:
+        return input_df
+    terms = QUICK_REF_TERMS.get(str(ref_country), [])
+    if not terms:
+        return input_df
+    pattern = re.compile("|".join(re.escape(t.strip()) for t in terms if t.strip()), re.IGNORECASE)
+    mask = input_df["text"].astype(str).str.contains(pattern, na=False)
+    return input_df[mask].copy()
 
 
 SOURCE_ALIASES = {
@@ -2759,6 +2788,16 @@ def main() -> None:
                     if input_df.empty:
                         st.warning("После фильтрации по годам не осталось документов.")
                     else:
+                        prefiltered_df = _quick_prefilter_by_referent(input_df, referent_target)
+                        if prefiltered_df.empty:
+                            set_stage("find_refs", docs=len(input_df), contexts=0, ref=referent_target)
+                            st.warning(
+                                "Для выбранного референта не найдено ни одного кандидата на уровне быстрых ключевых совпадений. "
+                                "Анализ остановлен до этапа IP, чтобы избежать зависания."
+                            )
+                            st.session_state["analysis_error"] = ""
+                            return
+
                         out_root = Path(tempfile.mkdtemp(prefix="sea_media_analysis_"))
                         out_dir = out_root / "analysis_output"
                         out_dir.mkdir(parents=True, exist_ok=True)
@@ -2768,20 +2807,20 @@ def main() -> None:
                         calibration_texts_df = _safe_read_csv(DEFAULT_CALIBRATION_TEXTS_PATH) if DEFAULT_CALIBRATION_TEXTS_PATH.exists() else pd.DataFrame()
                         calibration_contexts_df = _safe_read_csv(DEFAULT_CALIBRATION_CONTEXTS_PATH) if DEFAULT_CALIBRATION_CONTEXTS_PATH.exists() else pd.DataFrame()
 
-                        set_stage("segment", docs=len(input_df), ref=referent_target)
-                        set_stage("find_refs", docs=len(input_df), ref=referent_target)
-                        set_stage("extract_ctx", docs=len(input_df), ref=referent_target)
-                        set_stage("salience", docs=len(input_df), ref=referent_target)
-                        set_stage("ling", docs=len(input_df), ref=referent_target)
-                        set_stage("idi", docs=len(input_df), ref=referent_target)
-                        set_stage("emi", docs=len(input_df), ref=referent_target)
-                        set_stage("mti", docs=len(input_df), ref=referent_target)
-                        set_stage("evi", docs=len(input_df), ref=referent_target)
-                        set_stage("ip", docs=len(input_df), ref=referent_target)
+                        set_stage("segment", docs=len(prefiltered_df), ref=referent_target)
+                        set_stage("find_refs", docs=len(prefiltered_df), ref=referent_target)
+                        set_stage("extract_ctx", docs=len(prefiltered_df), ref=referent_target)
+                        set_stage("salience", docs=len(prefiltered_df), ref=referent_target)
+                        set_stage("ling", docs=len(prefiltered_df), ref=referent_target)
+                        set_stage("idi", docs=len(prefiltered_df), ref=referent_target)
+                        set_stage("emi", docs=len(prefiltered_df), ref=referent_target)
+                        set_stage("mti", docs=len(prefiltered_df), ref=referent_target)
+                        set_stage("evi", docs=len(prefiltered_df), ref=referent_target)
+                        set_stage("ip", docs=len(prefiltered_df), ref=referent_target)
 
                         try:
                             stats = run_referent_analysis(
-                                input_df=input_df,
+                                input_df=prefiltered_df,
                                 out_dir=out_dir,
                                 evi_mode="suggested",
                                 exclude_technical_mentions=exclude_technical_mentions,
