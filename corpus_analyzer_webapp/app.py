@@ -101,6 +101,14 @@ REFERENT_CATEGORY_KEYWORDS: Dict[str, Dict[str, List[str]]] = {
     },
 }
 
+# Streamlit demo/beta 1.1 feature flags (stability-first)
+ENABLE_ADVANCED_CALIBRATION_UI = False
+ENABLE_LEGACY_STAGE_CHARTS = False
+ENABLE_LEGACY_FIVE_INDICATOR_VIEW = False
+ENABLE_DEBUG_RAW_TABLES = False
+ENABLE_HEAVY_EXPORTS_IN_UI = False
+ENABLE_EXPERIMENTAL_MINI_REFERENT_CHARTS = False
+
 
 SOURCE_ALIASES = {
     "antara": "Antara",
@@ -692,6 +700,7 @@ def run_referent_analysis(
     calibration_filter: str = "full_calibration_corpus",
     use_empirical_percentile_interpretation: bool = True,
     lexicon_version: str = "default",
+    target_ref_country: Optional[str] = None,
 ):
     if referent_core is None:
         raise RuntimeError("referent analyzer module is unavailable")
@@ -704,6 +713,8 @@ def run_referent_analysis(
     ref_keywords = referent_core.load_ref_keywords(dict_dir)
     ref_patterns = referent_core.compile_keyword_patterns(ref_keywords)
     contexts = referent_core.extract_context_rows(docs, ref_patterns)
+    if target_ref_country and "ref_country" in contexts.columns:
+        contexts = contexts[contexts["ref_country"].astype(str) == str(target_ref_country)].copy()
     if contexts.empty:
         raise RuntimeError("Не удалось извлечь референтные контексты (China/USA/Russia).")
 
@@ -723,6 +734,8 @@ def run_referent_analysis(
     scored = referent_core.add_multicountry_flags(scored)
     ref_countries_allowed = set(getattr(referent_core, "REF_COUNTRIES", ["China", "USA", "Russia"]))
     scored = scored[scored["ref_country"].isin(ref_countries_allowed)].copy()
+    if target_ref_country:
+        scored = scored[scored["ref_country"].astype(str) == str(target_ref_country)].copy()
     if scored.empty:
         raise RuntimeError("После фильтрации не осталось валидных референтных контекстов.")
     # Backward compatibility with older referent modules / column schemas.
@@ -1056,14 +1069,15 @@ def run_referent_analysis(
         )
     marker_traces.to_csv(out_dir / "marker_traces.csv", index=False)
     marker_traces.to_json(out_dir / "marker_traces.json", orient="records", force_ascii=False, indent=2)
-    marker_traces_xlsx = marker_traces.head(_XLSX_MARKER_TRACES_MAX_ROWS)
-    _excel_safe_df(marker_traces_xlsx).to_excel(out_dir / "marker_traces.xlsx", index=False)
-    if len(marker_traces) > _XLSX_MARKER_TRACES_MAX_ROWS:
-        (out_dir / "marker_traces.xlsx.note.txt").write_text(
-            f"marker_traces.xlsx truncated to {_XLSX_MARKER_TRACES_MAX_ROWS} rows for performance. "
-            f"Full data is in marker_traces.csv/json ({len(marker_traces)} rows).",
-            encoding="utf-8",
-        )
+    if ENABLE_HEAVY_EXPORTS_IN_UI:
+        marker_traces_xlsx = marker_traces.head(_XLSX_MARKER_TRACES_MAX_ROWS)
+        _excel_safe_df(marker_traces_xlsx).to_excel(out_dir / "marker_traces.xlsx", index=False)
+        if len(marker_traces) > _XLSX_MARKER_TRACES_MAX_ROWS:
+            (out_dir / "marker_traces.xlsx.note.txt").write_text(
+                f"marker_traces.xlsx truncated to {_XLSX_MARKER_TRACES_MAX_ROWS} rows for performance. "
+                f"Full data is in marker_traces.csv/json ({len(marker_traces)} rows).",
+                encoding="utf-8",
+            )
 
     # QA: each counted marker should have at least one trace per context.
     if not scored.empty:
@@ -1109,7 +1123,8 @@ def run_referent_analysis(
         (out_dir / "lexicon_quality_report.md").write_text("# lexicon_quality_report\n\n- unavailable in current core\n", encoding="utf-8")
     if not traces_df.empty:
         traces_df.to_json(out_dir / "formula_traces.json", orient="records", force_ascii=False, indent=2)
-        _excel_safe_df(traces_df).to_excel(out_dir / "formula_traces.xlsx", index=False)
+        if ENABLE_HEAVY_EXPORTS_IN_UI:
+            _excel_safe_df(traces_df).to_excel(out_dir / "formula_traces.xlsx", index=False)
     if len(scored) > _FORMULA_TRACES_MAX_CONTEXTS:
         (out_dir / "formula_traces.note.txt").write_text(
             f"Formula traces generated for first {_FORMULA_TRACES_MAX_CONTEXTS} contexts "
@@ -1130,34 +1145,35 @@ def run_referent_analysis(
         calibration_detailed, calibration_report = _compute_calibration_report(cal_df, dict_dir, ip_formula_mode)
         calibration_detailed.to_csv(out_dir / "calibration_detailed.csv", index=False)
 
-    with pd.ExcelWriter(out_dir / "distribution_stats.xlsx", engine="openpyxl") as xw:
-        _excel_safe_df(dist_idi).to_excel(xw, index=False, sheet_name="IDI_distribution")
-        _excel_safe_df(dist_emi).to_excel(xw, index=False, sheet_name="EMI_distribution")
-        _excel_safe_df(dist_mti).to_excel(xw, index=False, sheet_name="MTI_distribution")
-        _excel_safe_df(dist_ip).to_excel(xw, index=False, sheet_name="IP_distribution")
-        _excel_safe_df(dist_ip_abs).to_excel(xw, index=False, sheet_name="IP_abs_distribution")
+    if ENABLE_HEAVY_EXPORTS_IN_UI:
+        with pd.ExcelWriter(out_dir / "distribution_stats.xlsx", engine="openpyxl") as xw:
+            _excel_safe_df(dist_idi).to_excel(xw, index=False, sheet_name="IDI_distribution")
+            _excel_safe_df(dist_emi).to_excel(xw, index=False, sheet_name="EMI_distribution")
+            _excel_safe_df(dist_mti).to_excel(xw, index=False, sheet_name="MTI_distribution")
+            _excel_safe_df(dist_ip).to_excel(xw, index=False, sheet_name="IP_distribution")
+            _excel_safe_df(dist_ip_abs).to_excel(xw, index=False, sheet_name="IP_abs_distribution")
 
-    scored_xlsx = scored.head(_XLSX_CONTEXTS_MAX_ROWS)
-    marker_traces_sheet = marker_traces.head(_XLSX_MARKER_TRACES_MAX_ROWS)
-    with pd.ExcelWriter(out_dir / "summary_matrix.xlsx", engine="openpyxl") as xw:
-        _excel_safe_df(matrix).to_excel(xw, index=False, sheet_name="summary_matrix")
-        _excel_safe_df(by_media_ref).to_excel(xw, index=False, sheet_name="long_table")
-        _excel_safe_df(scored_xlsx).to_excel(xw, index=False, sheet_name="contexts_full")
-        _excel_safe_df(flagged).to_excel(xw, index=False, sheet_name="flagged_cases")
-        _excel_safe_df(marker_traces_sheet).to_excel(xw, index=False, sheet_name="marker_traces")
-        if 'qdf' in locals() and not qdf.empty:
-            _excel_safe_df(qdf).to_excel(xw, index=False, sheet_name="lexicon_quality")
+        scored_xlsx = scored.head(_XLSX_CONTEXTS_MAX_ROWS)
+        marker_traces_sheet = marker_traces.head(_XLSX_MARKER_TRACES_MAX_ROWS)
+        with pd.ExcelWriter(out_dir / "summary_matrix.xlsx", engine="openpyxl") as xw:
+            _excel_safe_df(matrix).to_excel(xw, index=False, sheet_name="summary_matrix")
+            _excel_safe_df(by_media_ref).to_excel(xw, index=False, sheet_name="long_table")
+            _excel_safe_df(scored_xlsx).to_excel(xw, index=False, sheet_name="contexts_full")
+            _excel_safe_df(flagged).to_excel(xw, index=False, sheet_name="flagged_cases")
+            _excel_safe_df(marker_traces_sheet).to_excel(xw, index=False, sheet_name="marker_traces")
+            if 'qdf' in locals() and not qdf.empty:
+                _excel_safe_df(qdf).to_excel(xw, index=False, sheet_name="lexicon_quality")
+            if not calibration_report.empty:
+                _excel_safe_df(calibration_report).to_excel(xw, index=False, sheet_name="calibration_report")
+        if len(scored) > _XLSX_CONTEXTS_MAX_ROWS:
+            (out_dir / "summary_matrix.xlsx.note.txt").write_text(
+                f"Sheet contexts_full truncated to {_XLSX_CONTEXTS_MAX_ROWS} rows for performance. "
+                f"Full data is in contexts_full.csv ({len(scored)} rows).",
+                encoding="utf-8",
+            )
+
         if not calibration_report.empty:
-            _excel_safe_df(calibration_report).to_excel(xw, index=False, sheet_name="calibration_report")
-    if len(scored) > _XLSX_CONTEXTS_MAX_ROWS:
-        (out_dir / "summary_matrix.xlsx.note.txt").write_text(
-            f"Sheet contexts_full truncated to {_XLSX_CONTEXTS_MAX_ROWS} rows for performance. "
-            f"Full data is in contexts_full.csv ({len(scored)} rows).",
-            encoding="utf-8",
-        )
-
-    if not calibration_report.empty:
-        _excel_safe_df(calibration_report).to_excel(out_dir / "calibration_report.xlsx", index=False)
+            _excel_safe_df(calibration_report).to_excel(out_dir / "calibration_report.xlsx", index=False)
 
     report_lines = [
         "# analysis_report",
@@ -2479,203 +2495,448 @@ def run_analysis(docs: List[core.Doc], out_dir: Path, top_n: int, kwic_window: i
     return dedup_stats, len(docs), docs
 
 
+@st.cache_data(show_spinner=False)
+def _cached_read_csv(path_str: str) -> pd.DataFrame:
+    return _safe_read_csv(Path(path_str))
+
+
+def _load_result_tables(out_dir: Path) -> Dict[str, pd.DataFrame]:
+    return {
+        "contexts": _cached_read_csv(str(out_dir / "contexts_full.csv")),
+        "marker_traces": _cached_read_csv(str(out_dir / "marker_traces.csv")),
+        "formula_traces": _cached_read_csv(str(out_dir / "formula_traces.csv")),
+        "summary_media_ref": _cached_read_csv(str(out_dir / "aggregated_by_media_country_and_ref_country.csv")),
+        "flagged": _cached_read_csv(str(out_dir / "flagged_cases.csv")),
+    }
+
+
+def _compute_ref_summary(df_all: pd.DataFrame, ref_country: str, exclude_technical_mentions: bool) -> Dict[str, float]:
+    df = df_all.copy()
+    if "ref_country" in df.columns:
+        df = df[df["ref_country"].astype(str) == str(ref_country)].copy()
+    if df.empty:
+        return {
+            "contexts_with_ref": 0,
+            "documents_with_ref": 0,
+            "central_contexts": 0,
+            "technical_excluded": 0,
+            "contexts_analyzed": 0,
+            "sum_salience": 0.0,
+            "IDI": 0.0,
+            "EMI": 0.0,
+            "MTI": 0.0,
+            "EVI": 0.0,
+            "EVI_norm": 0.0,
+            "IP_final": 0.0,
+            "IP_abs_final": 0.0,
+            "n_ideol": 0.0,
+            "n_content": 0.0,
+            "n_ew": 0.0,
+            "n_em": 0.0,
+            "n_es": 0.0,
+            "n_met": 0.0,
+            "weighted_emo_sum": 0.0,
+            "ip_num": 0.0,
+            "ip_den": 0.0,
+        }
+
+    for col in ["IDI", "EMI", "MTI", "EVI_raw", "EVI_norm", "IP_i", "referent_salience", "N_content", "N_ideol", "N_e_w", "N_e_m", "N_e_s", "N_met"]:
+        if col not in df.columns:
+            df[col] = 0.0
+        df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0.0)
+    if "IP_i" not in df.columns or (df["IP_i"] == 0).all():
+        df["IP_i"] = df["EVI_norm"] * (1.0 + df["IDI"] + df["EMI"] + df["MTI"])
+    df["IP_abs_i"] = df["IP_i"].abs()
+
+    df["aggregation_weight"] = df["referent_salience"].clip(lower=0.0, upper=1.0)
+    if exclude_technical_mentions and "is_technical_mention" in df.columns:
+        tech_mask = df["is_technical_mention"].fillna(False).astype(bool)
+        df.loc[tech_mask, "aggregation_weight"] = 0.0
+
+    valid = df[df["aggregation_weight"] > 0].copy()
+    metric_df = valid if not valid.empty else df
+
+    n_content = float(metric_df["N_content"].sum())
+    safe_n_content = max(n_content, 1.0)
+    n_ideol = float(metric_df["N_ideol"].sum())
+    n_ew = float(metric_df["N_e_w"].sum())
+    n_em = float(metric_df["N_e_m"].sum())
+    n_es = float(metric_df["N_e_s"].sum())
+    n_met = float(metric_df["N_met"].sum())
+    weighted_emo = float((metric_df["N_e_w"] / 3.0 + (2.0 * metric_df["N_e_m"] / 3.0) + metric_df["N_e_s"]).sum())
+
+    idi = float(n_ideol / safe_n_content)
+    emi = float(weighted_emo / safe_n_content)
+    mti = float(n_met / safe_n_content)
+    evi = float(metric_df["EVI_raw"].mean()) if not metric_df.empty else 0.0
+    evi_norm = float(metric_df["EVI_norm"].mean()) if not metric_df.empty else 0.0
+
+    w = valid["aggregation_weight"] if not valid.empty else pd.Series(dtype=float)
+    ip_num = float((valid["IP_i"] * w).sum()) if not valid.empty else 0.0
+    ip_abs_num = float((valid["IP_abs_i"] * w).sum()) if not valid.empty else 0.0
+    ip_den = float(w.sum()) if not valid.empty else 0.0
+    ip_final = float(ip_num / ip_den) if ip_den > 0 else 0.0
+    ip_abs_final = float(ip_abs_num / ip_den) if ip_den > 0 else 0.0
+
+    return {
+        "contexts_with_ref": int(len(df)),
+        "documents_with_ref": int(df["doc_id"].nunique()) if "doc_id" in df.columns else 0,
+        "central_contexts": int((df["referent_salience"] == 1.0).sum()),
+        "technical_excluded": int((df["aggregation_weight"] == 0).sum()),
+        "contexts_analyzed": int(len(valid)),
+        "sum_salience": ip_den,
+        "IDI": idi,
+        "EMI": emi,
+        "MTI": mti,
+        "EVI": evi,
+        "EVI_norm": evi_norm,
+        "IP_final": ip_final,
+        "IP_abs_final": ip_abs_final,
+        "n_ideol": n_ideol,
+        "n_content": n_content,
+        "n_ew": n_ew,
+        "n_em": n_em,
+        "n_es": n_es,
+        "n_met": n_met,
+        "weighted_emo_sum": weighted_emo,
+        "ip_num": ip_num,
+        "ip_den": ip_den,
+    }
+
+
+def _diagnostics_lite(df_ref: pd.DataFrame, summary: Dict[str, float], out_dir: Path) -> pd.DataFrame:
+    rows = []
+    contexts = int(summary.get("contexts_with_ref", 0))
+    technical = int(summary.get("technical_excluded", 0))
+
+    rows.append({"check": "contexts_found", "status": "ok" if contexts > 0 else "warn", "details": f"contexts={contexts}"})
+    rows.append(
+        {
+            "check": "technical_mentions_detected",
+            "status": "warn" if (contexts > 500 and technical == 0) else "ok",
+            "details": f"technical_excluded={technical}, contexts={contexts}",
+        }
+    )
+    cal_present = (out_dir / "calibration" / "calibration_contexts.csv").exists() or DEFAULT_CALIBRATION_CONTEXTS_PATH.exists()
+    rows.append({"check": "calibration_present", "status": "ok" if cal_present else "warn", "details": "default/local calibration file"})
+    rows.append(
+        {
+            "check": "formula_traces_present",
+            "status": "ok" if (out_dir / "formula_traces.json").exists() else "warn",
+            "details": "formula_traces.json",
+        }
+    )
+
+    if df_ref.empty:
+        rows.append({"check": "evi_range", "status": "warn", "details": "no rows"})
+        rows.append({"check": "evi_norm_match", "status": "warn", "details": "no rows"})
+        rows.append({"check": "ip_formula_match", "status": "warn", "details": "no rows"})
+    else:
+        evi_bad = int((~pd.to_numeric(df_ref.get("EVI_raw", 0), errors="coerce").fillna(0).between(-10, 10)).sum())
+        rows.append({"check": "evi_range", "status": "ok" if evi_bad == 0 else "warn", "details": f"bad_rows={evi_bad}"})
+        evi_norm = pd.to_numeric(df_ref.get("EVI_norm", 0), errors="coerce").fillna(0)
+        evi_raw = pd.to_numeric(df_ref.get("EVI_raw", 0), errors="coerce").fillna(0)
+        norm_mis = int((evi_norm - (evi_raw / 10.0)).abs().gt(1e-6).sum())
+        rows.append({"check": "evi_norm_match", "status": "ok" if norm_mis == 0 else "warn", "details": f"mismatch_rows={norm_mis}"})
+        idi = pd.to_numeric(df_ref.get("IDI", 0), errors="coerce").fillna(0)
+        emi = pd.to_numeric(df_ref.get("EMI", 0), errors="coerce").fillna(0)
+        mti = pd.to_numeric(df_ref.get("MTI", 0), errors="coerce").fillna(0)
+        ipi = pd.to_numeric(df_ref.get("IP_i", 0), errors="coerce").fillna(0)
+        ip_should = evi_norm * (1.0 + idi + emi + mti)
+        ip_mis = int((ipi - ip_should).abs().gt(1e-6).sum())
+        rows.append({"check": "ip_formula_match", "status": "ok" if ip_mis == 0 else "warn", "details": f"mismatch_rows={ip_mis}"})
+    rows.append(
+        {
+            "check": "sum_salience_nonzero",
+            "status": "ok" if float(summary.get("sum_salience", 0.0)) > 0 else "warn",
+            "details": f"sum_S={float(summary.get('sum_salience', 0.0)):.6f}",
+        }
+    )
+    return pd.DataFrame(rows)
+
+
 def main() -> None:
     st.set_page_config(page_title="media analizator 1.1", layout="wide")
     st.title("media analizator 1.1")
-    st.caption(f"Финальный референтный анализатор (China/USA/Russia). Build: {APP_BUILD}")
+    st.caption(f"Легкая Streamlit demo/beta-версия референтного анализа (China/USA/Russia). Build: {APP_BUILD}")
+
+    if "analysis_out_dir" not in st.session_state:
+        st.session_state["analysis_out_dir"] = ""
+    if "analysis_stats" not in st.session_state:
+        st.session_state["analysis_stats"] = {}
+    if "analysis_zip" not in st.session_state:
+        st.session_state["analysis_zip"] = b""
+    if "analysis_error" not in st.session_state:
+        st.session_state["analysis_error"] = ""
 
     with st.sidebar:
         st.header("Параметры")
         min_year = st.number_input("Минимальный год", min_value=2000, max_value=2100, value=2022)
         max_year = st.number_input("Максимальный год", min_value=2000, max_value=2100, value=2026)
-        st.caption("Режим анализа: только референтный")
-
-        referent_target = st.selectbox(
-            "Целевой референт",
-            options=["China", "USA", "Russia"],
-            index=0,
-        )
-        mini_referents_raw = st.text_area(
-            "Мини-референты (через запятую/новую строку)",
-            value="",
-            placeholder="китайская экономика, си цзиньпин, пекин",
-            height=120,
-        )
-
-        exclude_technical_mentions = st.toggle(
-            "Исключать технические упоминания",
-            value=True,
-            help="Контексты с S_r=0 не входят в агрегированные итоги.",
-        )
-
+        referent_target = st.selectbox("Целевой референт", options=["China", "USA", "Russia"], index=0)
+        exclude_technical_mentions = st.toggle("Исключать технические упоминания", value=True)
+        mini_referents_raw = st.text_area("Мини-референты (через запятую/новую строку)", value="", height=100)
         with st.expander("Точность и отображение", expanded=False):
             display_precision = st.selectbox("Точность raw-значений", options=[4, 6, 8], index=1)
             show_percent_values = st.toggle("Показывать значения в %", value=True)
             show_empirical_percentiles = st.toggle("Показывать процентили 0–100", value=True)
 
-    col1, col2 = st.columns(2)
-    with col1:
-        zip_upload = st.file_uploader("ZIP с корпусом (.zip)", type=["zip"], accept_multiple_files=False)
-    with col2:
-        txt_uploads = st.file_uploader(
-            "Или отдельные файлы (.txt/.md/.docx/.pdf/.csv/.xlsx/.json)",
-            type=["txt", "md", "text", "docx", "pdf", "csv", "xlsx", "xls", "json"],
-            accept_multiple_files=True,
-        )
+        if st.button("Очистить кэш / сбросить анализ"):
+            st.cache_data.clear()
+            st.cache_resource.clear()
+            for k in ["analysis_out_dir", "analysis_stats", "analysis_zip", "analysis_error"]:
+                st.session_state[k] = "" if k in {"analysis_out_dir", "analysis_error"} else (b"" if k == "analysis_zip" else {})
+            st.success("Кэш очищен, состояние анализа сброшено.")
 
-    st.markdown("### Или вставьте текст вручную")
-    manual_text = st.text_area("Текст для анализа", height=180, placeholder="Вставьте сюда любой медиатекст...")
-    m1, m2, m3 = st.columns(3)
-    with m1:
-        manual_title = st.text_input("Заголовок (опционально)", value="Manual input")
-    with m2:
-        manual_source = st.text_input("Источник (опционально)", value="Manual")
-    with m3:
-        manual_year = st.number_input("Год ручного текста", min_value=2000, max_value=2100, value=2026)
+    tab_analysis, tab_results, tab_contexts, tab_diag, tab_export = st.tabs(
+        ["Анализ", "Результаты", "Контексты", "Диагностика", "Экспорт"]
+    )
 
-    run_btn = st.button("Запустить анализ", type="primary")
-    if not run_btn:
-        return
+    with tab_analysis:
+        with st.form("analysis_form"):
+            c1, c2 = st.columns(2)
+            with c1:
+                zip_upload = st.file_uploader("ZIP с корпусом (.zip)", type=["zip"], accept_multiple_files=False)
+            with c2:
+                txt_uploads = st.file_uploader(
+                    "Или отдельные файлы (.txt/.md/.docx/.pdf/.csv/.xlsx/.json)",
+                    type=["txt", "md", "text", "docx", "pdf", "csv", "xlsx", "xls", "json"],
+                    accept_multiple_files=True,
+                )
+            st.markdown("### Или вставьте текст вручную")
+            manual_text = st.text_area("Текст для анализа", height=160)
+            m1, m2, m3 = st.columns(3)
+            with m1:
+                manual_title = st.text_input("Заголовок (опционально)", value="Manual input")
+            with m2:
+                manual_source = st.text_input("Источник (опционально)", value="Manual")
+            with m3:
+                manual_year = st.number_input("Год ручного текста", min_value=2000, max_value=2100, value=2026)
+            run_btn = st.form_submit_button("Запустить анализ", type="primary")
 
-    prog_box = st.empty()
-    prog_bar = st.progress(0, text="Инициализация анализа...")
+        if run_btn:
+            if referent_core is None:
+                st.error("Референтный backend недоступен (media_analyzer_referent.py).")
+            else:
+                prog_box = st.empty()
+                prog_bar = st.progress(0, text="Инициализация анализа...")
+                progress_state = {"docs": 0, "contexts": 0, "technical": 0, "ref": referent_target}
 
-    progress_state = {"docs": 0, "contexts": 0, "technical": 0, "ref": referent_target}
+                def set_stage(stage_key: str, **kwargs) -> None:
+                    if stage_key not in PROGRESS_STAGES:
+                        return
+                    progress_state.update(kwargs)
+                    pct, text = PROGRESS_STAGES[stage_key]
+                    details = (
+                        f"Документы: {int(progress_state.get('docs', 0))} | "
+                        f"Контексты: {int(progress_state.get('contexts', 0))} | "
+                        f"Technical excluded: {int(progress_state.get('technical', 0))} | "
+                        f"Ref: {progress_state.get('ref', 'all')}"
+                    )
+                    prog_bar.progress(int(pct), text=text)
+                    prog_box.markdown(f"**Статус анализа корпуса:** {pct}%  \n{text}  \n{details}")
 
-    def set_stage(stage_key: str, **kwargs) -> None:
-        if stage_key not in PROGRESS_STAGES:
-            return
-        progress_state.update(kwargs)
-        pct, text = PROGRESS_STAGES[stage_key]
-        details = (
-            f"Документы: {int(progress_state.get('docs', 0))} | "
-            f"Контексты: {int(progress_state.get('contexts', 0))} | "
-            f"Technical excluded: {int(progress_state.get('technical', 0))} | "
-            f"Ref: {progress_state.get('ref', 'all')}"
-        )
-        prog_bar.progress(int(pct), text=text)
-        prog_box.markdown(f"**Статус анализа корпуса:** {pct}%  \n{text}  \n{details}")
+                set_stage("init")
+                file_items: List[Tuple[str, str]] = []
+                set_stage("load")
+                if zip_upload is not None:
+                    file_items.extend(read_zip_corpus_files(zip_upload.getvalue()))
+                file_items.extend(read_uploaded_corpus_files(txt_uploads))
+                if manual_text.strip():
+                    manual_blob = f"Title: {manual_title}\nDate: {int(manual_year)}\nSource: {manual_source}\n\n{manual_text.strip()}"
+                    file_items.append((f"manual_{int(manual_year)}.txt", manual_blob))
 
-    set_stage("init")
-    file_items = []
-    set_stage("load")
-    if zip_upload is not None:
-        file_items.extend(read_zip_corpus_files(zip_upload.getvalue()))
-    file_items.extend(read_uploaded_corpus_files(txt_uploads))
-    if manual_text.strip():
-        manual_blob = f"Title: {manual_title}\nDate: {int(manual_year)}\nSource: {manual_source}\n\n{manual_text.strip()}"
-        file_items.append((f"manual_{int(manual_year)}.txt", manual_blob))
+                uniq = {}
+                for n, t in file_items:
+                    content_md5 = hashlib.md5(t.encode("utf-8", errors="ignore")).hexdigest()
+                    uniq[f"{n}|{len(t)}|{content_md5}"] = (n, t)
+                file_items = list(uniq.values())
+                set_stage("clean", docs=len(file_items), ref=referent_target)
+                if not file_items:
+                    st.warning("Не найдено входных текстов. Загрузите ZIP/файлы или вставьте текст вручную.")
+                else:
+                    input_df = build_referent_input_df(file_items, int(min_year), int(max_year))
+                    if input_df.empty:
+                        st.warning("После фильтрации по годам не осталось документов.")
+                    else:
+                        out_root = Path(tempfile.mkdtemp(prefix="sea_media_analysis_"))
+                        out_dir = out_root / "analysis_output"
+                        out_dir.mkdir(parents=True, exist_ok=True)
+                        calibration_dir = out_dir / "calibration"
+                        calibration_dir.mkdir(parents=True, exist_ok=True)
+                        _mirror_default_calibration_assets(calibration_dir)
+                        calibration_texts_df = _safe_read_csv(DEFAULT_CALIBRATION_TEXTS_PATH) if DEFAULT_CALIBRATION_TEXTS_PATH.exists() else pd.DataFrame()
+                        calibration_contexts_df = _safe_read_csv(DEFAULT_CALIBRATION_CONTEXTS_PATH) if DEFAULT_CALIBRATION_CONTEXTS_PATH.exists() else pd.DataFrame()
 
-    uniq = {}
-    for n, t in file_items:
-        content_md5 = hashlib.md5(t.encode("utf-8", errors="ignore")).hexdigest()
-        fingerprint = f"{n}|{len(t)}|{content_md5}"
-        uniq[fingerprint] = (n, t)
-    file_items = list(uniq.values())
-    set_stage("clean", docs=len(file_items), ref=referent_target)
+                        set_stage("segment", docs=len(input_df), ref=referent_target)
+                        set_stage("find_refs", docs=len(input_df), ref=referent_target)
+                        set_stage("extract_ctx", docs=len(input_df), ref=referent_target)
+                        set_stage("salience", docs=len(input_df), ref=referent_target)
+                        set_stage("ling", docs=len(input_df), ref=referent_target)
+                        set_stage("idi", docs=len(input_df), ref=referent_target)
+                        set_stage("emi", docs=len(input_df), ref=referent_target)
+                        set_stage("mti", docs=len(input_df), ref=referent_target)
+                        set_stage("evi", docs=len(input_df), ref=referent_target)
+                        set_stage("ip", docs=len(input_df), ref=referent_target)
 
-    if not file_items:
-        st.error("Не найдено входных текстов. Загрузите ZIP/файлы или вставьте текст вручную.")
-        return
+                        try:
+                            stats = run_referent_analysis(
+                                input_df=input_df,
+                                out_dir=out_dir,
+                                evi_mode="suggested",
+                                exclude_technical_mentions=exclude_technical_mentions,
+                                calibration_path=DEFAULT_CALIBRATION_TEXTS_PATH if DEFAULT_CALIBRATION_TEXTS_PATH.exists() else None,
+                                ip_formula_mode="updated: EVI_norm * (1 + IDI + EMI + MTI)",
+                                aggregation_mode="weighted by S_r",
+                                percentile_basis="full corpus",
+                                calibration_texts_df=calibration_texts_df if not calibration_texts_df.empty else None,
+                                calibration_contexts_df=calibration_contexts_df if not calibration_contexts_df.empty else None,
+                                calibration_filter="full_calibration_corpus",
+                                use_empirical_percentile_interpretation=True,
+                                lexicon_version=str(st.session_state.get("lexicon_version", "default")),
+                                target_ref_country=referent_target,
+                            )
+                        except Exception as e:
+                            st.session_state["analysis_error"] = str(e)
+                            st.error(str(e))
+                        else:
+                            st.session_state["analysis_out_dir"] = str(out_dir)
+                            st.session_state["analysis_stats"] = stats
+                            st.session_state["analysis_zip"] = zip_dir_bytes(out_dir)
+                            st.session_state["analysis_error"] = ""
+                            set_stage("calib", docs=stats["docs"], contexts=stats["contexts"], technical=stats.get("technical_excluded", 0), ref=referent_target)
+                            set_stage("agg", docs=stats["docs"], contexts=stats["contexts"], technical=stats.get("technical_excluded", 0), ref=referent_target)
+                            set_stage("final", docs=stats["docs"], contexts=stats["contexts"], technical=stats.get("technical_excluded", 0), ref=referent_target)
+                            st.success(f"Готово. Документов: {stats['docs']}, контекстов: {stats['contexts']}, flagged: {stats['flagged']}")
 
-    if referent_core is None:
-        st.error("Референтный модуль не найден. Добавьте media_analyzer_referent.py в корень проекта.")
-        return
+        if not ENABLE_ADVANCED_CALIBRATION_UI:
+            st.caption("Расширенный calibration UI отключён в Streamlit demo 1.1 и развивается в локальной версии.")
 
-    with tempfile.TemporaryDirectory(prefix="sea_media_analysis_") as tmp:
-        out_dir = Path(tmp) / "analysis_output"
-        out_dir.mkdir(parents=True, exist_ok=True)
-        set_stage("segment", docs=len(file_items), ref=referent_target)
+    out_dir_str = str(st.session_state.get("analysis_out_dir", "") or "")
+    out_dir = Path(out_dir_str) if out_dir_str else None
+    tables = _load_result_tables(out_dir) if out_dir and out_dir.exists() else {
+        "contexts": pd.DataFrame(), "marker_traces": pd.DataFrame(), "formula_traces": pd.DataFrame(), "summary_media_ref": pd.DataFrame(), "flagged": pd.DataFrame()
+    }
+    df_all = tables["contexts"].copy()
 
-        calibration_texts_df = pd.DataFrame()
-        calibration_contexts_df = pd.DataFrame()
-        calibration_dir = out_dir / "calibration"
-        calibration_dir.mkdir(parents=True, exist_ok=True)
-        _mirror_default_calibration_assets(calibration_dir)
+    with tab_results:
+        if df_all.empty:
+            st.info("Сначала запустите анализ во вкладке «Анализ».")
+        else:
+            refs = [r for r in ["China", "USA", "Russia"] if r in set(df_all.get("ref_country", pd.Series(dtype=str)).astype(str))]
+            ref_pick = st.selectbox("Референт", options=refs if refs else ["China", "USA", "Russia"], index=0, key="res_ref_pick")
+            summary = _compute_ref_summary(df_all, ref_pick, exclude_technical_mentions)
+            fmt_raw = f".{int(display_precision)}f"
+            c1, c2, c3, c4, c5 = st.columns(5)
+            c1.metric("Документов с референтом", summary["documents_with_ref"])
+            c2.metric("Контекстов с референтом", summary["contexts_with_ref"])
+            c3.metric("Центральных контекстов", summary["central_contexts"])
+            c4.metric("Technical excluded", summary["technical_excluded"])
+            c5.metric("IP_final", f"{summary['IP_final']:.6f}")
+            c6, c7, c8, c9, c10 = st.columns(5)
+            c6.metric("IDI", f"{summary['IDI']:{fmt_raw}}")
+            c7.metric("EMI", f"{summary['EMI']:{fmt_raw}}")
+            c8.metric("MTI", f"{summary['MTI']:{fmt_raw}}")
+            c9.metric("EVI", f"{summary['EVI']:.2f}")
+            c10.metric("EVI_norm", f"{summary['EVI_norm']:.4f}")
+            c11, c12 = st.columns(2)
+            c11.metric("IP_abs_final", f"{summary['IP_abs_final']:.6f}")
+            c12.metric("Контексты в расчете", summary["contexts_analyzed"])
+            st.info(_interpret_ip(summary["IP_final"], summary["IP_abs_final"]))
 
-        if DEFAULT_CALIBRATION_TEXTS_PATH.exists():
-            calibration_texts_df = _safe_read_csv(DEFAULT_CALIBRATION_TEXTS_PATH)
-        if DEFAULT_CALIBRATION_CONTEXTS_PATH.exists():
-            calibration_contexts_df = _safe_read_csv(DEFAULT_CALIBRATION_CONTEXTS_PATH)
-        if not calibration_texts_df.empty:
-            calibration_texts_df.to_csv(calibration_dir / "calibration_texts.csv", index=False)
-        if not calibration_contexts_df.empty:
-            calibration_contexts_df.to_csv(calibration_dir / "calibration_contexts.csv", index=False)
-
-        input_df = build_referent_input_df(file_items, int(min_year), int(max_year))
-        if input_df.empty:
-            st.error("После фильтрации по годам не осталось документов для референтного анализа.")
-            return
-
-        set_stage("find_refs", docs=len(input_df), ref=referent_target)
-        set_stage("extract_ctx", docs=len(input_df), ref=referent_target)
-        set_stage("salience", docs=len(input_df), ref=referent_target)
-        set_stage("ling", docs=len(input_df), ref=referent_target)
-        set_stage("idi", docs=len(input_df), ref=referent_target)
-        set_stage("emi", docs=len(input_df), ref=referent_target)
-        set_stage("mti", docs=len(input_df), ref=referent_target)
-        set_stage("evi", docs=len(input_df), ref=referent_target)
-        set_stage("ip", docs=len(input_df), ref=referent_target)
-
-        try:
-            stats = run_referent_analysis(
-                input_df=input_df,
-                out_dir=out_dir,
-                evi_mode="suggested",
-                exclude_technical_mentions=exclude_technical_mentions,
-                evi_manual_path=None,
-                metaphor_review_path=None,
-                calibration_path=DEFAULT_CALIBRATION_TEXTS_PATH if DEFAULT_CALIBRATION_TEXTS_PATH.exists() else None,
-                ip_formula_mode="updated: EVI_norm * (1 + IDI + EMI + MTI)",
-                aggregation_mode="weighted by S_r",
-                percentile_basis="full corpus",
-                calibration_texts_df=calibration_texts_df if not calibration_texts_df.empty else None,
-                calibration_contexts_df=calibration_contexts_df if not calibration_contexts_df.empty else None,
-                calibration_filter="full_calibration_corpus",
-                use_empirical_percentile_interpretation=True,
-                lexicon_version=str(st.session_state.get("lexicon_version", "default")),
+            st.markdown("#### Формулы и числовая подстановка")
+            context_formula = summary["EVI_norm"] * (1.0 + summary["IDI"] + summary["EMI"] + summary["MTI"])
+            st.code(
+                "IDI = N_ideol / N_content\n"
+                f"IDI = {summary['n_ideol']:.0f} / {max(summary['n_content'], 1.0):.0f} = {summary['IDI']:{fmt_raw}}\n\n"
+                "EMI = (1/3*N_e_w + 2/3*N_e_m + N_e_s) / N_content\n"
+                f"EMI = (1/3*{summary['n_ew']:.0f} + 2/3*{summary['n_em']:.0f} + {summary['n_es']:.0f}) / {max(summary['n_content'], 1.0):.0f} = {summary['EMI']:{fmt_raw}}\n\n"
+                "MTI = N_met / N_content\n"
+                f"MTI = {summary['n_met']:.0f} / {max(summary['n_content'], 1.0):.0f} = {summary['MTI']:{fmt_raw}}\n\n"
+                "EVI = P_r - N_r\n"
+                f"EVI = {summary['EVI']:.2f}; EVI_norm = EVI / 10 = {summary['EVI_norm']:.4f}\n\n"
+                "IP_i = EVI_norm_i * (1 + IDI_i + EMI_i + MTI_i)\n"
+                f"IP_context(mean) = {summary['EVI_norm']:.4f} * (1 + {summary['IDI']:{fmt_raw}} + {summary['EMI']:{fmt_raw}} + {summary['MTI']:{fmt_raw}}) = {context_formula:.6f}\n"
+                "IP_final = Σ(S_i * IP_i) / ΣS_i\n"
+                f"IP_final = {summary['ip_num']:.6f} / {summary['ip_den']:.6f} = {summary['IP_final']:.6f}\n"
+                "IP_abs_final = Σ(S_i * |IP_i|) / ΣS_i",
+                language="text",
             )
-        except Exception as e:
-            st.exception(e)
-            return
+            if show_percent_values:
+                st.caption(
+                    f"IDI={summary['IDI']*100:.4f}% | EMI={summary['EMI']*100:.4f}% | MTI={summary['MTI']*100:.4f}%"
+                )
+            if show_empirical_percentiles and "IP_percentile" in df_all.columns:
+                df_ref = df_all[df_all["ref_country"].astype(str) == str(ref_pick)].copy()
+                ip_pct = float(pd.to_numeric(df_ref.get("IP_percentile", 0), errors="coerce").fillna(0).mean()) if not df_ref.empty else 0.0
+                st.caption(f"Эмпирический процентиль IP (0–100): {ip_pct:.1f}")
 
-        st.success(f"Готово. Документов: {stats['docs']}, контекстов: {stats['contexts']}, flagged: {stats['flagged']}")
-        set_stage("calib", docs=stats["docs"], contexts=stats["contexts"], technical=stats.get("technical_excluded", 0), ref=referent_target)
-        set_stage("agg", docs=stats["docs"], contexts=stats["contexts"], technical=stats.get("technical_excluded", 0), ref=referent_target)
+    with tab_contexts:
+        if df_all.empty:
+            st.info("Нет contexts_full.csv. Запустите анализ.")
+        else:
+            df_view = _build_referent_view_df(df_all.copy())
+            if "ref_country" in df_view.columns:
+                df_view = df_view[df_view["ref_country"].astype(str) == str(st.session_state.get("res_ref_pick", referent_target))]
+            st.dataframe(df_view.head(200), use_container_width=True)
+            if not df_view.empty and "context_id" in df_view.columns:
+                ctx_ids = df_view["context_id"].astype(str).tolist()
+                ctx_pick = st.selectbox("Выберите context_id", options=ctx_ids, index=0)
+                row = df_view[df_view["context_id"].astype(str) == str(ctx_pick)].head(1)
+                if not row.empty:
+                    r = row.iloc[0]
+                    st.markdown(f"**context_id:** `{r.get('context_id','')}`")
+                    st.caption(f"source/outlet/date: {r.get('source','')} / {r.get('outlet_name','')} / {r.get('date','')}")
+                    st.caption(f"ref_country: {r.get('ref_country','')}")
+                    st.write(str(r.get("context_text", "")))
+                    st.markdown(
+                        f"- IDI={float(pd.to_numeric(r.get('IDI',0), errors='coerce')):.6f}\n"
+                        f"- EMI={float(pd.to_numeric(r.get('EMI',0), errors='coerce')):.6f}\n"
+                        f"- MTI={float(pd.to_numeric(r.get('MTI',0), errors='coerce')):.6f}\n"
+                        f"- EVI={float(pd.to_numeric(r.get('EVI_raw',0), errors='coerce')):.2f}\n"
+                        f"- EVI_norm={float(pd.to_numeric(r.get('EVI_norm',0), errors='coerce')):.4f}\n"
+                        f"- S_r={float(pd.to_numeric(r.get('referent_salience',0), errors='coerce')):.2f}\n"
+                        f"- IP_i={float(pd.to_numeric(r.get('IP_i',0), errors='coerce')):.6f}"
+                    )
+                    st.caption(f"EVI explanation: {r.get('evi_explanation','')}")
+                    st.caption(f"S_r explanation: {r.get('salience_explanation','')}")
+                    mt = tables["marker_traces"]
+                    if mt.empty:
+                        st.caption("marker_traces.csv не найден или пуст.")
+                    else:
+                        mt_ctx = mt[mt.get("context_id", "").astype(str) == str(ctx_pick)].copy()
+                        if mt_ctx.empty:
+                            st.caption("Для выбранного context_id marker traces не найдены.")
+                        else:
+                            st.dataframe(mt_ctx.head(200), use_container_width=True)
 
-        show_referent_dashboard(
-            out_dir=out_dir,
-            default_ref=referent_target,
-            default_category="all",
-            evi_mode="calibration-assisted",
-            exclude_technical_mentions=exclude_technical_mentions,
-            show_evi_rubric_details=False,
-            show_salience_diagnostics=False,
-            display_precision=int(display_precision),
-            show_percent_values=show_percent_values,
-            show_empirical_percentiles=show_empirical_percentiles,
-            percentile_basis="full corpus",
-            use_calibration_anchors=False,
-            mini_referents_raw=mini_referents_raw,
-        )
+    with tab_diag:
+        if df_all.empty:
+            st.info("Диагностика будет доступна после анализа.")
+        else:
+            ref_pick = str(st.session_state.get("res_ref_pick", referent_target))
+            summary = _compute_ref_summary(df_all, ref_pick, exclude_technical_mentions)
+            df_ref = df_all[df_all["ref_country"].astype(str) == ref_pick].copy() if "ref_country" in df_all.columns else pd.DataFrame()
+            diag = _diagnostics_lite(df_ref, summary, out_dir) if out_dir else pd.DataFrame(columns=["check", "status", "details"])
+            st.dataframe(diag, use_container_width=True)
+            if (diag["status"] == "warn").any():
+                st.warning("Есть предупреждения диагностики. Это не падение, но требует проверки корпуса/словарей.")
 
-        with st.expander("Технический предпросмотр (минимум)", expanded=False):
-            p = out_dir / "contexts_full.csv"
-            if p.exists():
-                try:
-                    prev = pd.read_csv(p)
-                    st.dataframe(prev.head(20), use_container_width=True)
-                except Exception:
-                    st.caption("contexts_full.csv не удалось отобразить в предпросмотре.")
-
-        out_zip = zip_dir_bytes(out_dir)
-        set_stage("final", docs=stats["docs"], contexts=stats["contexts"], technical=stats.get("technical_excluded", 0), ref=referent_target)
-        st.download_button(
-            label="Скачать результаты анализа (ZIP)",
-            data=out_zip,
-            file_name="mediatext_analyzator_output.zip",
-            mime="application/zip",
-        )
+    with tab_export:
+        if not out_dir or not out_dir.exists():
+            st.info("Сначала выполните анализ.")
+        else:
+            if st.session_state.get("analysis_zip", b""):
+                st.download_button(
+                    label="Скачать результаты анализа (ZIP)",
+                    data=st.session_state["analysis_zip"],
+                    file_name="media_analizator_1_1_output.zip",
+                    mime="application/zip",
+                )
+            else:
+                st.caption("ZIP ещё не сформирован.")
+            if not ENABLE_HEAVY_EXPORTS_IN_UI:
+                st.caption("Тяжёлые Excel/расширенные экспортные блоки отключены в Streamlit demo 1.1 для стабильности.")
 
 
 if __name__ == "__main__":
