@@ -125,6 +125,9 @@ COUNTRY_HINTS = {
 
 _EXCEL_ILLEGAL_RE = re.compile(r"[\x00-\x08\x0B-\x0C\x0E-\x1F]")
 _EXCEL_MAX_CELL_LEN = 32767
+_FORMULA_TRACES_MAX_CONTEXTS = 6000
+_XLSX_CONTEXTS_MAX_ROWS = 50000
+_XLSX_MARKER_TRACES_MAX_ROWS = 120000
 
 
 def _excel_safe_text(value: object) -> object:
@@ -720,6 +723,8 @@ def run_referent_analysis(
     scored = referent_core.add_multicountry_flags(scored)
     ref_countries_allowed = set(getattr(referent_core, "REF_COUNTRIES", ["China", "USA", "Russia"]))
     scored = scored[scored["ref_country"].isin(ref_countries_allowed)].copy()
+    if scored.empty:
+        raise RuntimeError("После фильтрации не осталось валидных референтных контекстов.")
     # Backward compatibility with older referent modules / column schemas.
     if "EVI" not in scored.columns:
         scored["EVI"] = 0.0
@@ -1025,7 +1030,9 @@ def run_referent_analysis(
     out_dir.mkdir(parents=True, exist_ok=True)
     all_traces = []
     trace_id_by_context: Dict[str, str] = {}
-    for _, row in scored.iterrows():
+    for idx, (_, row) in enumerate(scored.iterrows()):
+        if idx >= _FORMULA_TRACES_MAX_CONTEXTS:
+            break
         traces = build_context_formula_traces(row)
         if traces:
             trace_id_by_context[str(row.get("context_id", ""))] = traces[-1].trace_id
@@ -1049,7 +1056,14 @@ def run_referent_analysis(
         )
     marker_traces.to_csv(out_dir / "marker_traces.csv", index=False)
     marker_traces.to_json(out_dir / "marker_traces.json", orient="records", force_ascii=False, indent=2)
-    _excel_safe_df(marker_traces).to_excel(out_dir / "marker_traces.xlsx", index=False)
+    marker_traces_xlsx = marker_traces.head(_XLSX_MARKER_TRACES_MAX_ROWS)
+    _excel_safe_df(marker_traces_xlsx).to_excel(out_dir / "marker_traces.xlsx", index=False)
+    if len(marker_traces) > _XLSX_MARKER_TRACES_MAX_ROWS:
+        (out_dir / "marker_traces.xlsx.note.txt").write_text(
+            f"marker_traces.xlsx truncated to {_XLSX_MARKER_TRACES_MAX_ROWS} rows for performance. "
+            f"Full data is in marker_traces.csv/json ({len(marker_traces)} rows).",
+            encoding="utf-8",
+        )
 
     # QA: each counted marker should have at least one trace per context.
     if not scored.empty:
@@ -1096,6 +1110,12 @@ def run_referent_analysis(
     if not traces_df.empty:
         traces_df.to_json(out_dir / "formula_traces.json", orient="records", force_ascii=False, indent=2)
         _excel_safe_df(traces_df).to_excel(out_dir / "formula_traces.xlsx", index=False)
+    if len(scored) > _FORMULA_TRACES_MAX_CONTEXTS:
+        (out_dir / "formula_traces.note.txt").write_text(
+            f"Formula traces generated for first {_FORMULA_TRACES_MAX_CONTEXTS} contexts "
+            f"out of {len(scored)} for performance. Full numeric outputs remain in contexts_full.csv.",
+            encoding="utf-8",
+        )
 
     dist_idi = _distribution_stats(scored, "IDI_raw", percentile_basis)
     dist_emi = _distribution_stats(scored, "EMI_raw", percentile_basis)
@@ -1117,16 +1137,24 @@ def run_referent_analysis(
         _excel_safe_df(dist_ip).to_excel(xw, index=False, sheet_name="IP_distribution")
         _excel_safe_df(dist_ip_abs).to_excel(xw, index=False, sheet_name="IP_abs_distribution")
 
+    scored_xlsx = scored.head(_XLSX_CONTEXTS_MAX_ROWS)
+    marker_traces_sheet = marker_traces.head(_XLSX_MARKER_TRACES_MAX_ROWS)
     with pd.ExcelWriter(out_dir / "summary_matrix.xlsx", engine="openpyxl") as xw:
         _excel_safe_df(matrix).to_excel(xw, index=False, sheet_name="summary_matrix")
         _excel_safe_df(by_media_ref).to_excel(xw, index=False, sheet_name="long_table")
-        _excel_safe_df(scored).to_excel(xw, index=False, sheet_name="contexts_full")
+        _excel_safe_df(scored_xlsx).to_excel(xw, index=False, sheet_name="contexts_full")
         _excel_safe_df(flagged).to_excel(xw, index=False, sheet_name="flagged_cases")
-        _excel_safe_df(marker_traces).to_excel(xw, index=False, sheet_name="marker_traces")
+        _excel_safe_df(marker_traces_sheet).to_excel(xw, index=False, sheet_name="marker_traces")
         if 'qdf' in locals() and not qdf.empty:
             _excel_safe_df(qdf).to_excel(xw, index=False, sheet_name="lexicon_quality")
         if not calibration_report.empty:
             _excel_safe_df(calibration_report).to_excel(xw, index=False, sheet_name="calibration_report")
+    if len(scored) > _XLSX_CONTEXTS_MAX_ROWS:
+        (out_dir / "summary_matrix.xlsx.note.txt").write_text(
+            f"Sheet contexts_full truncated to {_XLSX_CONTEXTS_MAX_ROWS} rows for performance. "
+            f"Full data is in contexts_full.csv ({len(scored)} rows).",
+            encoding="utf-8",
+        )
 
     if not calibration_report.empty:
         _excel_safe_df(calibration_report).to_excel(out_dir / "calibration_report.xlsx", index=False)
